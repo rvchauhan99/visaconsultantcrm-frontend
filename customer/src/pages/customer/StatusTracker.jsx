@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api, { openReceipt } from "@/lib/api";
 import Stamp from "@/components/Stamp";
-import { RefreshCw, Upload, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { RefreshCw, Upload, Loader2, CheckCircle2, XCircle, Receipt, AlertTriangle } from "lucide-react";
 
 const STAGE_ORDER = ["new", "docs_pending", "ready_to_submit", "submitted", "decision", "closed"];
 
@@ -42,6 +42,17 @@ export default function StatusTracker() {
                 </div>
             </div>
 
+            {/* On hold — needs attention */}
+            {data.on_hold && (
+                <div className="bg-warning/10 border-l-4 border-warning rounded-xl p-5 mb-8 flex items-start gap-3" data-testid="on-hold-banner">
+                    <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                    <div>
+                        <div className="font-medium text-warning">Additional information needed</div>
+                        <div className="text-sm text-ink-muted mt-0.5">Your consultant has put this case on hold. Please check the documents below or wait for their message.</div>
+                    </div>
+                </div>
+            )}
+
             {/* Timeline — passport collecting stamps */}
             <div className="bg-white border border-border rounded-xl p-6 md:p-8 mb-8">
                 <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-6">Your journey</div>
@@ -55,7 +66,7 @@ export default function StatusTracker() {
                                     {state === "past" ? (
                                         <Stamp tone="gold" size="lg" fill="filled" className="!p-0 w-14 h-14 !rounded-full">✓</Stamp>
                                     ) : state === "current" ? (
-                                        <Stamp tone="navy" size="lg" className="!text-navy !border-navy w-14 h-14 !p-0 !rounded-full animate-stamp-in">{i + 1}</Stamp>
+                                        <Stamp tone="ink" size="lg" className="!text-navy !border-navy w-14 h-14 !p-0 !rounded-full motion-safe:animate-stamp-in">{i + 1}</Stamp>
                                     ) : (
                                         <span className="w-14 h-14 rounded-full border-2 border-dashed border-border text-ink-muted flex items-center justify-center font-mono">{i + 1}</span>
                                     )}
@@ -101,7 +112,18 @@ export default function StatusTracker() {
                         <div className="text-2xl font-display text-ink">₹{c.total_amount.toLocaleString("en-IN")}</div>
                         <div className="text-xs font-mono uppercase text-ink-muted">{c.payment_method} · {c.payment_reference}</div>
                     </div>
-                    <Stamp tone={c.payment_status === "paid" ? "success" : "warning"} size="sm">{c.payment_status}</Stamp>
+                    <div className="flex flex-col items-end gap-2">
+                        <Stamp tone={c.payment_status === "paid" ? "success" : "warning"} size="sm">{c.payment_status}</Stamp>
+                        {c.payment_status === "paid" && (
+                            <button
+                                onClick={() => openReceipt(c.id).catch(() => toast.error("Couldn't open receipt"))}
+                                data-testid="download-receipt"
+                                className="inline-flex items-center gap-1.5 text-xs text-teal hover:underline"
+                            >
+                                <Receipt className="w-3.5 h-3.5" /> Download receipt
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

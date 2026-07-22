@@ -2,21 +2,15 @@
  *  Colors match /app/design_guidelines.json exactly. */
 module.exports = {
     darkMode: ["class"],
-    content: ["./src/**/*.{js,jsx,ts,tsx}", "./public/index.html"],
+    content: [
+        "./src/**/*.{js,jsx,ts,tsx}",
+        "./public/index.html",
+        "../packages/ui/**/*.{js,jsx}",
+    ],
     theme: {
         extend: {
             colors: {
-                ink: "#16202E",
-                "ink-muted": "#5B6774",
-                surface: "#F7F7F4",
-                "surface-card": "#FFFFFF",
-                navy: "#132A4C",
-                "navy-hover": "#1B3A66",
-                teal: "#0E6E68",
-                gold: "#A9791F",
-                success: "#2E7D4F",
-                warning: "#B4791A",
-                danger: "#B23B2E",
+                ...require("../packages/ui/tokens").colors,
                 // Shadcn-compatible aliases (mapped to design tokens)
                 background: "#F7F7F4",
                 foreground: "#16202E",
@@ -27,15 +21,10 @@ module.exports = {
                 muted: { DEFAULT: "#F0EFEA", foreground: "#5B6774" },
                 accent: { DEFAULT: "#0E6E68", foreground: "#FFFFFF" },
                 destructive: { DEFAULT: "#B23B2E", foreground: "#FFFFFF" },
-                border: "#E3E1DA",
                 input: "#E3E1DA",
                 ring: "#132A4C",
             },
-            fontFamily: {
-                display: ['"Fraunces"', "serif"],
-                sans: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
-                mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
-            },
+            fontFamily: require("../packages/ui/tokens").fontFamily,
             borderRadius: {
                 DEFAULT: "12px",
                 sm: "6px",

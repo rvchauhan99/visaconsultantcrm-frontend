@@ -2,6 +2,7 @@ import React from "react";
 import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
 import { getUser, clearSession } from "@/lib/api";
 import { UserRound, LogOut, Plane } from "lucide-react";
+import NotificationBell from "@/components/customer/NotificationBell";
 
 /**
  * Customer platform layout — calm, trust-forward, generous whitespace.
@@ -39,6 +40,7 @@ export default function CustomerLayout() {
                     <div className="flex items-center gap-3">
                         {isCustomer ? (
                             <>
+                                <NotificationBell />
                                 <Link to="/account" className="hidden sm:flex items-center gap-2 text-sm text-ink-muted hover:text-ink" data-testid="nav-user">
                                     <UserRound className="w-4 h-4" />
                                     {user.full_name}

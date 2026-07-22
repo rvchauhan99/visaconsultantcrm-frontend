@@ -2,18 +2,19 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
-import { Plus } from "lucide-react";
+import { Plus, UserX } from "lucide-react";
+import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";
 
 export default function Consultants() {
     const [list, setList] = useState([]);
-    const [countries, setCountries] = useState([]);
     const [showNew, setShowNew] = useState(false);
+    const [reassignCtx, setReassignCtx] = useState(null); // { mode, cid, name, message, blocked, codes? }
 
-    useEffect(() => {
-        load();
-        api.get("/visa-products/countries").then((r) => setCountries(r.data));
-    }, []);
-    const load = () => api.get("/admin/consultants").then((r) => setList(r.data));
+    useEffect(() => { load(); }, []);
+    const load = () => api.get("/admin/consultants").then((r) => {
+        const data = Array.isArray(r.data) ? r.data : (r.data?.items || []);
+        setList(data);
+    });
 
     const create = async (form) => {
         try {
@@ -26,10 +27,74 @@ export default function Consultants() {
 
     const updateCountries = async (cid, codes) => {
         try {
-            await api.patch(`/admin/consultants/${cid}/countries`, codes);
+            const r = await api.patch(`/admin/consultants/${cid}/countries`, codes);
+            if (r.data.requires_reassignment) {
+                setReassignCtx({
+                    mode: "countries",
+                    cid,
+                    codes,
+                    message: r.data.message,
+                    blocked: r.data.blocked_countries || [],
+                });
+                return;
+            }
             toast.success("Countries updated");
             load();
         } catch (e) { toast.error("Failed"); }
+    };
+
+    const deactivate = async (cid, name) => {
+        if (!window.confirm(`Deactivate ${name}?`)) return;
+        try {
+            const r = await api.patch(`/admin/consultants/${cid}/deactivate`);
+            if (r.data.requires_reassignment) {
+                setReassignCtx({
+                    mode: "deactivate",
+                    cid,
+                    name,
+                    message: r.data.message,
+                    openCases: r.data.open_cases,
+                });
+                return;
+            }
+            toast.success("Consultant deactivated");
+            load();
+        } catch (e) {
+            toast.error(e.response?.data?.detail || "Failed");
+        }
+    };
+
+    const confirmReassign = async (toId) => {
+        if (!toId || !reassignCtx) return;
+        const { mode, cid, codes, blocked } = reassignCtx;
+        try {
+            if (mode === "countries") {
+                for (const b of blocked || []) {
+                    await api.post(`/admin/consultants/${cid}/reassign-open`, {
+                        to_consultant_id: toId,
+                        country_code: b.country_code,
+                    });
+                }
+                const r2 = await api.patch(`/admin/consultants/${cid}/countries`, codes);
+                if (r2.data.ok === false) {
+                    toast.error(r2.data.message || "Still blocked");
+                    return;
+                }
+                toast.success("Reassigned and countries updated");
+            } else {
+                await api.post(`/admin/consultants/${cid}/reassign-open`, { to_consultant_id: toId });
+                const r2 = await api.patch(`/admin/consultants/${cid}/deactivate`);
+                if (!r2.data.ok) {
+                    toast.error(r2.data.message || "Still has open cases");
+                    return;
+                }
+                toast.success("Reassigned and deactivated");
+            }
+            setReassignCtx(null);
+            load();
+        } catch (e) {
+            toast.error(e.response?.data?.detail || "Reassignment failed");
+        }
     };
 
     return (
@@ -44,7 +109,29 @@ export default function Consultants() {
                 </button>
             </div>
 
-            {showNew && <NewConsultantForm countries={countries} onCancel={() => setShowNew(false)} onCreate={create} />}
+            {showNew && <NewConsultantForm onCancel={() => setShowNew(false)} onCreate={create} />}
+
+            {reassignCtx && (
+                <div className="bg-warning/10 border border-warning rounded-sm p-4 mb-4" data-testid="reassign-panel">
+                    <div className="text-sm font-medium mb-1">Reassignment required</div>
+                    <p className="text-xs text-ink-muted mb-3">{reassignCtx.message}</p>
+                    <div className="flex flex-wrap items-end gap-3">
+                        <div className="w-64">
+                            <label className="text-[10px] uppercase font-mono text-ink-muted block mb-1">Target consultant</label>
+                            <ConsultantSelect
+                                admin
+                                value={null}
+                                excludeId={reassignCtx.cid}
+                                onChange={confirmReassign}
+                                placeholder="Search consultant…"
+                                testId="reassign-target"
+                                clearable={false}
+                            />
+                        </div>
+                        <button type="button" onClick={() => setReassignCtx(null)} className="text-xs px-3 py-1.5 border border-border rounded-sm">Cancel</button>
+                    </div>
+                </div>
+            )}
 
             <div className="bg-white border border-border rounded-sm">
                 <table className="w-full text-sm">
@@ -55,6 +142,8 @@ export default function Consultants() {
                             <th className="px-3 py-2 text-xs font-mono uppercase">Role</th>
                             <th className="px-3 py-2 text-xs font-mono uppercase">Countries</th>
                             <th className="px-3 py-2 text-xs font-mono uppercase">Open</th>
+                            <th className="px-3 py-2 text-xs font-mono uppercase">Status</th>
+                            <th className="px-3 py-2 text-xs font-mono uppercase text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody data-testid="consultants-table">
@@ -63,10 +152,26 @@ export default function Consultants() {
                                 <td className="px-3 py-2">{c.full_name}</td>
                                 <td className="px-3 py-2 font-mono text-xs">{c.email}</td>
                                 <td className="px-3 py-2"><Stamp tone={c.role === "admin" ? "gold" : "teal"} size="sm">{c.role}</Stamp></td>
-                                <td className="px-3 py-2">
-                                    <CountryPicker current={c.country_codes} all={countries} onSave={(codes) => updateCountries(c.id, codes)} testid={c.id} />
+                                <td className="px-3 py-2 min-w-[200px]">
+                                    <CountryPicker
+                                        current={c.country_codes || []}
+                                        onSave={(codes) => updateCountries(c.id, codes)}
+                                        testid={c.id}
+                                    />
                                 </td>
                                 <td className="px-3 py-2 font-mono">{c.open_cases}</td>
+                                <td className="px-3 py-2"><Stamp tone={c.active ? "success" : "muted"} size="sm">{c.active ? "active" : "inactive"}</Stamp></td>
+                                <td className="px-3 py-2 text-right">
+                                    {c.active && (
+                                        <button
+                                            onClick={() => deactivate(c.id, c.full_name)}
+                                            className="text-xs text-ink-muted hover:text-danger inline-flex items-center gap-1"
+                                            data-testid={`deactivate-${c.id}`}
+                                        >
+                                            <UserX className="w-3 h-3" /> Deactivate
+                                        </button>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -76,7 +181,7 @@ export default function Consultants() {
     );
 }
 
-function NewConsultantForm({ countries, onCancel, onCreate }) {
+function NewConsultantForm({ onCancel, onCreate }) {
     const [f, setF] = useState({ email: "", password: "", full_name: "", role: "consultant", country_codes: [] });
     return (
         <form
@@ -91,16 +196,15 @@ function NewConsultantForm({ countries, onCancel, onCreate }) {
                 <option value="consultant">consultant</option>
                 <option value="admin">admin</option>
             </select>
-            <div className="md:col-span-4 text-xs">
-                <span className="text-ink-muted block mb-1">Assign countries:</span>
-                <div className="flex flex-wrap gap-1.5">
-                    {countries.map((c) => (
-                        <label key={c.code} className={`px-2 py-0.5 border rounded-sm cursor-pointer ${f.country_codes.includes(c.code) ? "bg-navy text-white border-navy" : "border-border"}`}>
-                            <input type="checkbox" checked={f.country_codes.includes(c.code)} onChange={(e) => setF({ ...f, country_codes: e.target.checked ? [...f.country_codes, c.code] : f.country_codes.filter((x) => x !== c.code) })} className="hidden" />
-                            {c.flag} {c.name}
-                        </label>
-                    ))}
-                </div>
+            <div className="md:col-span-4">
+                <span className="text-ink-muted text-xs block mb-1">Assign countries:</span>
+                <CountrySelect
+                    multiple
+                    value={f.country_codes}
+                    onChange={(codes) => setF({ ...f, country_codes: codes || [] })}
+                    placeholder="Search & select countries…"
+                    testId="nc-countries"
+                />
             </div>
             <div className="md:col-span-4 flex justify-end gap-2">
                 <button type="button" onClick={onCancel} className="text-sm px-3 py-1.5 border border-border rounded-sm">Cancel</button>
@@ -110,30 +214,49 @@ function NewConsultantForm({ countries, onCancel, onCreate }) {
     );
 }
 
-function CountryPicker({ current, all, onSave, testid }) {
-    const [open, setOpen] = useState(false);
+function CountryPicker({ current, onSave, testid }) {
+    const [editing, setEditing] = useState(false);
     const [selected, setSelected] = useState(current);
-    return (
-        <div className="relative">
-            <button onClick={() => setOpen(!open)} className="text-xs font-mono border border-border px-2 py-0.5 rounded-sm hover:bg-surface" data-testid={`edit-countries-${testid}`}>
-                {current.join(", ") || "none"} ✎
+
+    useEffect(() => { setSelected(current); }, [current]);
+
+    if (!editing) {
+        return (
+            <button
+                onClick={() => setEditing(true)}
+                className="text-xs font-mono border border-border px-2 py-0.5 rounded-sm hover:bg-surface text-left"
+                data-testid={`edit-countries-${testid}`}
+            >
+                {(current || []).join(", ") || "none"} ✎
             </button>
-            {open && (
-                <div className="absolute z-30 top-full mt-1 bg-white border border-border rounded-sm p-2 w-80 shadow-card">
-                    <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto mb-2">
-                        {all.map((c) => (
-                            <label key={c.code} className={`text-[11px] px-1.5 py-0.5 border rounded-sm cursor-pointer ${selected.includes(c.code) ? "bg-navy text-white border-navy" : "border-border"}`}>
-                                <input type="checkbox" checked={selected.includes(c.code)} onChange={(e) => setSelected(e.target.checked ? [...selected, c.code] : selected.filter((x) => x !== c.code))} className="hidden" />
-                                {c.code}
-                            </label>
-                        ))}
-                    </div>
-                    <div className="flex justify-end gap-1">
-                        <button onClick={() => { setOpen(false); setSelected(current); }} className="text-xs px-2 py-0.5 border border-border rounded-sm">Cancel</button>
-                        <button onClick={() => { onSave(selected); setOpen(false); }} className="text-xs px-2 py-0.5 bg-navy text-white rounded-sm">Save</button>
-                    </div>
-                </div>
-            )}
+        );
+    }
+
+    return (
+        <div className="space-y-2" data-testid={`country-picker-${testid}`}>
+            <CountrySelect
+                multiple
+                value={selected}
+                onChange={(codes) => setSelected(codes || [])}
+                placeholder="Search countries…"
+                testId={`edit-countries-select-${testid}`}
+            />
+            <div className="flex gap-1">
+                <button
+                    type="button"
+                    onClick={() => { setSelected(current); setEditing(false); }}
+                    className="text-xs px-2 py-0.5 border border-border rounded-sm"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { onSave(selected); setEditing(false); }}
+                    className="text-xs px-2 py-0.5 bg-navy text-white rounded-sm"
+                >
+                    Save
+                </button>
+            </div>
         </div>
     );
 }

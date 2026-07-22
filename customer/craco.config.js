@@ -82,8 +82,31 @@ let webpackConfig = {
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      '@passage/ui': path.resolve(__dirname, '../packages/ui'),
     },
     configure: (webpackConfig) => {
+
+      // Allow @passage/ui shared package outside each app's src/
+      webpackConfig.resolve.plugins = (webpackConfig.resolve.plugins || []).filter(
+        (p) => !(p.constructor && p.constructor.name === "ModuleScopePlugin")
+      );
+
+      const oneOf = webpackConfig.module.rules.find((r) => Array.isArray(r.oneOf))?.oneOf;
+      if (oneOf) {
+        const babelRule = oneOf.find(
+          (r) => r.loader && String(r.loader).includes("babel-loader")
+        ) || oneOf.find((r) => r.options && r.options.presets);
+        if (babelRule) {
+          const uiPath = path.resolve(__dirname, "../packages/ui");
+          if (Array.isArray(babelRule.include)) {
+            babelRule.include.push(uiPath);
+          } else if (babelRule.include) {
+            babelRule.include = [babelRule.include, uiPath];
+          } else {
+            babelRule.include = [path.resolve(__dirname, "src"), uiPath];
+          }
+        }
+      }
 
       // Add ignored patterns to reduce watched directories
         webpackConfig.watchOptions = {

@@ -8,12 +8,15 @@ import CrmLogin from "@/pages/crm/CrmLogin";
 import CrmDashboard from "@/pages/crm/CrmDashboard";
 import Pipeline from "@/pages/crm/Pipeline";
 import CaseDetail from "@/pages/crm/CaseDetail";
+import Tasks from "@/pages/crm/Tasks";
 import Products from "@/pages/crm/Products";
 import ProductBuilder from "@/pages/crm/ProductBuilder";
 import Consultants from "@/pages/crm/Consultants";
 import Reports from "@/pages/crm/Reports";
 import OfflineCase from "@/pages/crm/OfflineCase";
 import PassportExpiry from "@/pages/crm/PassportExpiry";
+import DocumentMaster from "@/pages/crm/DocumentMaster";
+import FieldMaster from "@/pages/crm/FieldMaster";
 
 import { getUser } from "@/lib/api";
 
@@ -37,10 +40,13 @@ export default function App() {
                 <Route element={<RequireStaff><CrmLayout /></RequireStaff>}>
                     <Route path="/" element={<CrmDashboard />} />
                     <Route path="/pipeline" element={<Pipeline />} />
+                    <Route path="/tasks" element={<Tasks />} />
                     <Route path="/cases/:caseId" element={<CaseDetail />} />
                     <Route path="/offline-case" element={<OfflineCase />} />
                     <Route path="/products" element={<RequireAdmin><Products /></RequireAdmin>} />
                     <Route path="/products/:productId" element={<RequireAdmin><ProductBuilder /></RequireAdmin>} />
+                    <Route path="/document-master" element={<RequireAdmin><DocumentMaster /></RequireAdmin>} />
+                    <Route path="/field-master" element={<RequireAdmin><FieldMaster /></RequireAdmin>} />
                     <Route path="/consultants" element={<RequireAdmin><Consultants /></RequireAdmin>} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/passport-expiry" element={<PassportExpiry />} />

@@ -1,0 +1,7 @@
+{
+  "name": "@passage/ui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "description": "Shared Passage design tokens + Stamp motif for customer and CRM apps"
+}

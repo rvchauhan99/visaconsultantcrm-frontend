@@ -1,8 +1,9 @@
 import React from "react";
 import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
 import { getUser, clearSession } from "@/lib/api";
-import { LogOut, KanbanSquare, Layers, Users2, BarChart3, PlusSquare, LayoutGrid, StampIcon } from "lucide-react";
+import { LogOut, KanbanSquare, Layers, Users2, BarChart3, PlusSquare, LayoutGrid, StampIcon, FileText, FormInput, ListChecks } from "lucide-react";
 import NotificationBell from "@/components/crm/NotificationBell";
+import CrmSearch from "@/components/crm/CrmSearch";
 
 /**
  * CRM layout — dense, functional, tighter spacing.
@@ -32,6 +33,7 @@ export default function CrmLayout() {
                 <nav className="p-2 flex flex-col gap-0.5 text-sm">
                     <RailLink to="/" icon={<LayoutGrid className="w-4 h-4" />} label="Dashboard" testid="crm-nav-dashboard" end />
                     <RailLink to="/pipeline" icon={<KanbanSquare className="w-4 h-4" />} label="Pipeline" testid="crm-nav-pipeline" />
+                    <RailLink to="/tasks" icon={<ListChecks className="w-4 h-4" />} label="My tasks" testid="crm-nav-tasks" />
                     <RailLink to="/passport-expiry" icon={<StampIcon className="w-4 h-4" />} label="Passport expiry" testid="crm-nav-expiry" />
                     <RailLink to="/offline-case" icon={<PlusSquare className="w-4 h-4" />} label="New offline case" testid="crm-nav-offline" />
                     <RailLink to="/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" testid="crm-nav-reports" />
@@ -39,6 +41,8 @@ export default function CrmLayout() {
                         <>
                             <div className="mt-4 px-2 text-[10px] uppercase font-mono tracking-widest text-ink-muted">Admin</div>
                             <RailLink to="/products" icon={<Layers className="w-4 h-4" />} label="Visa products" testid="crm-nav-products" />
+                            <RailLink to="/document-master" icon={<FileText className="w-4 h-4" />} label="Document master" testid="crm-nav-doc-master" />
+                            <RailLink to="/field-master" icon={<FormInput className="w-4 h-4" />} label="Field master" testid="crm-nav-field-master" />
                             <RailLink to="/consultants" icon={<Users2 className="w-4 h-4" />} label="Consultants" testid="crm-nav-consultants" />
                         </>
                     )}
@@ -54,8 +58,9 @@ export default function CrmLayout() {
             </aside>
 
             <main className="flex-1 min-w-0 overflow-x-auto">
-                {/* Top bar with the notification bell */}
-                <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-border px-4 py-2 flex items-center justify-end gap-2">
+                {/* Top bar with search + the notification bell */}
+                <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-border px-4 py-2 flex items-center justify-between gap-2">
+                    <CrmSearch />
                     <NotificationBell />
                 </div>
                 <Outlet />

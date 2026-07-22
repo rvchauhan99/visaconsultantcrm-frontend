@@ -2,8 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
-import { Search, Zap, FileText, Calendar, ShieldCheck } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Search, Zap, FileText, Calendar, ShieldCheck, Gauge, Plane } from "lucide-react";
 
 const FEE_FMT = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
@@ -19,13 +18,19 @@ export default function Landing() {
     const [q, setQ] = useState("");
     const [visaType, setVisaType] = useState("");
     const [delivery, setDelivery] = useState("any");
+    const [complexity, setComplexity] = useState("");
+    const [travelDate, setTravelDate] = useState("");
 
     useEffect(() => {
-        api.get("/visa-products").then((r) => {
+        setLoading(true);
+        const params = {};
+        if (complexity) params.complexity = complexity;
+        if (travelDate) params.travel_date = travelDate;
+        api.get("/visa-products", { params }).then((r) => {
             setProducts(r.data);
             setLoading(false);
         });
-    }, []);
+    }, [complexity, travelDate]);
 
     const filtered = useMemo(() => {
         return products.filter((p) => {
@@ -84,6 +89,18 @@ export default function Landing() {
                     </div>
                     <FilterPill icon={<Zap className="w-3.5 h-3.5" />} label="Delivery" options={[["any", "Any speed"], ["fast", "Fast-track (≤7 days)"]]} value={delivery} onChange={setDelivery} testid="filter-delivery" />
                     <FilterPill icon={<FileText className="w-3.5 h-3.5" />} label="Visa type" options={[["", "All types"], ["tourist", "Tourist"], ["business", "Business"], ["transit", "Transit"]]} value={visaType} onChange={setVisaType} testid="filter-type" />
+                    <FilterPill icon={<Gauge className="w-3.5 h-3.5" />} label="Complexity" options={[["", "Any complexity"], ["simple", "Simple"], ["medium", "Medium"], ["complex", "Complex"]]} value={complexity} onChange={setComplexity} testid="filter-complexity" />
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <span className="text-ink-muted"><Plane className="w-3.5 h-3.5" /></span>
+                        <span className="text-ink-muted mr-1">Travel date</span>
+                        <input
+                            type="date"
+                            value={travelDate}
+                            onChange={(e) => setTravelDate(e.target.value)}
+                            data-testid="filter-travel-date"
+                            className="bg-transparent outline-none text-ink font-medium border-none cursor-pointer text-sm"
+                        />
+                    </label>
                 </div>
             </section>
 

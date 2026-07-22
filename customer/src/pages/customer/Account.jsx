@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import api, { getUser } from "@/lib/api";
+import { toast } from "sonner";
+import api, { getUser, openReceipt } from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import TravelerProfiles from "@/components/customer/TravelerProfiles";
 import CustomerProfile from "@/components/customer/CustomerProfile";
-import { Plus } from "lucide-react";
+import { Plus, Receipt, FileEdit } from "lucide-react";
 
 const STAGE_LABELS = {
     new: "Application received", docs_pending: "In review", ready_to_submit: "Preparing",
@@ -13,11 +14,26 @@ const STAGE_LABELS = {
 
 export default function Account() {
     const [cases, setCases] = useState([]);
+    const [drafts, setDrafts] = useState([]);
     const [loading, setLoading] = useState(true);
     const user = getUser();
 
     useEffect(() => {
         api.get("/cases/my").then((r) => { setCases(r.data); setLoading(false); });
+        api.get("/cases/drafts").then(async (r) => {
+            const raw = r.data || [];
+            const enriched = await Promise.all(
+                raw.map(async (d) => {
+                    try {
+                        const p = await api.get(`/visa-products/${d.visa_product_id}`);
+                        return { ...d, product: p.data };
+                    } catch (_) {
+                        return { ...d, product: null };
+                    }
+                })
+            );
+            setDrafts(enriched.filter((d) => d.product));
+        }).catch(() => {});
     }, []);
 
     return (
@@ -32,6 +48,35 @@ export default function Account() {
 
             {/* Saved travelers */}
             <TravelerProfiles />
+
+            {/* In-progress drafts */}
+            {drafts.length > 0 && (
+                <div>
+                    <h2 className="text-lg font-medium mb-3">Continue where you left off</h2>
+                    <div className="space-y-3">
+                        {drafts.map((d) => (
+                            <div key={d.id} className="flex items-center justify-between p-4 bg-white border border-dashed border-border rounded-xl" data-testid={`account-draft-${d.id.slice(0, 6)}`}>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{d.product.country_flag}</span>
+                                    <div>
+                                        <div className="font-medium">{d.product.title}</div>
+                                        <div className="text-xs font-mono uppercase text-ink-muted tracking-widest mt-0.5">
+                                            Started {new Date(d.created_at).toLocaleDateString("en-IN")} · step: {d.step || "traveler"}
+                                        </div>
+                                    </div>
+                                </div>
+                                <Link
+                                    to={`/apply/${d.visa_product_id}?draft=${d.id}`}
+                                    data-testid={`continue-draft-${d.id.slice(0, 6)}`}
+                                    className="inline-flex items-center gap-1.5 text-sm border border-navy text-navy rounded-full px-4 py-2 hover:bg-navy hover:text-white transition-colors"
+                                >
+                                    <FileEdit className="w-3.5 h-3.5" /> Continue application
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Applications */}
             <div>
@@ -50,13 +95,12 @@ export default function Account() {
                 ) : (
                     <div className="space-y-4">
                         {cases.map((c) => (
-                            <Link
+                            <div
                                 key={c.id}
-                                to={`/status/${c.id}`}
                                 data-testid={`account-case-${c.id.slice(0, 6)}`}
                                 className="flex items-center justify-between p-5 bg-white border border-border rounded-xl hover:shadow-card transition-shadow"
                             >
-                                <div className="flex items-center gap-4">
+                                <Link to={`/status/${c.id}`} className="flex items-center gap-4 flex-1">
                                     <span className="text-3xl">{c.config_snapshot_json.country_flag}</span>
                                     <div>
                                         <div className="font-medium">{c.config_snapshot_json.title}</div>
@@ -64,14 +108,23 @@ export default function Account() {
                                             Case #{c.id.slice(0, 8)} · {new Date(c.created_at).toLocaleDateString("en-IN")}
                                         </div>
                                     </div>
-                                </div>
+                                </Link>
                                 <div className="flex flex-col items-end gap-1.5">
                                     <Stamp tone={c.sla_status === "overdue" ? "danger" : c.sla_status === "due_soon" ? "warning" : c.sla_status === "completed" ? "gold" : "success"} size="sm">
                                         {STAGE_LABELS[c.stage] || c.stage}
                                     </Stamp>
                                     <span className="text-[10px] font-mono uppercase text-ink-muted">By {new Date(c.sla_due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                                    {c.payment_status === "paid" && (
+                                        <button
+                                            onClick={() => openReceipt(c.id).catch(() => toast.error("Couldn't open receipt"))}
+                                            data-testid={`account-receipt-${c.id.slice(0, 6)}`}
+                                            className="inline-flex items-center gap-1 text-[11px] text-teal hover:underline mt-1"
+                                        >
+                                            <Receipt className="w-3 h-3" /> Receipt
+                                        </button>
+                                    )}
                                 </div>
-                            </Link>
+                            </div>
                         ))}
                     </div>
                 )}

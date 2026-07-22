@@ -43,3 +43,10 @@ export const getUser = () => {
     return raw ? JSON.parse(raw) : null;
 };
 export const getToken = () => sessionStorage.getItem(TOKEN_KEY);
+
+/** Resolve a backend-relative file URL (e.g. "/api/documents/download?...")
+ * to an absolute URL so it can be used directly in <img>/<a> tags. */
+export const resolveFileUrl = (url) => {
+    if (!url) return url;
+    return url.startsWith("/") ? `${BACKEND_URL}${url}` : url;
+};

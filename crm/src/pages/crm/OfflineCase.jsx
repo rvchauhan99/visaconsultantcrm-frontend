@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { Loader2, Upload } from "lucide-react";
+import { ProductSelect } from "@/components/forms/selects";
 
 export default function OfflineCase() {
-    const [products, setProducts] = useState([]);
     const [productId, setProductId] = useState("");
     const [schema, setSchema] = useState(null);
     const [customer, setCustomer] = useState({ email: "", full_name: "", phone: "" });
@@ -15,10 +15,6 @@ export default function OfflineCase() {
     const [payment, setPayment] = useState({ status: "pending", method: "", reference: "" });
     const [busy, setBusy] = useState(false);
     const nav = useNavigate();
-
-    useEffect(() => {
-        api.get("/visa-products").then((r) => setProducts(r.data));
-    }, []);
 
     useEffect(() => {
         if (!productId) return setSchema(null);
@@ -68,10 +64,12 @@ export default function OfflineCase() {
             </div>
 
             <Section title="Visa product">
-                <select required className={inp} value={productId} onChange={(e) => setProductId(e.target.value)} data-testid="oc-product">
-                    <option value="">Select a visa product…</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.country_flag} {p.title}</option>)}
-                </select>
+                <ProductSelect
+                    value={productId || null}
+                    onChange={(id) => setProductId(id || "")}
+                    placeholder="Select a visa product…"
+                    testId="oc-product"
+                />
             </Section>
 
             <Section title="Customer">

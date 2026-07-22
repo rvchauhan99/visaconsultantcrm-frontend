@@ -43,3 +43,13 @@ export const getUser = () => {
     return raw ? JSON.parse(raw) : null;
 };
 export const getToken = () => sessionStorage.getItem(TOKEN_KEY);
+
+/** Fetch the HTML payment receipt (auth'd) and open it in a new tab for printing/saving. */
+export const openReceipt = async (caseId) => {
+    const res = await api.get(`/cases/${caseId}/receipt`, { responseType: "text" });
+    const win = window.open("", "_blank");
+    if (win) {
+        win.document.write(res.data);
+        win.document.close();
+    }
+};

@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import { Plus } from "lucide-react";
+import { CountrySelect } from "@/components/forms/selects";
 
 const VISA_TYPES = ["tourist", "business", "transit", "other_general"];
 
 export default function Products() {
     const [products, setProducts] = useState([]);
-    const [countries, setCountries] = useState([]);
     const [showNew, setShowNew] = useState(false);
     const nav = useNavigate();
 
-    useEffect(() => {
-        load();
-        api.get("/visa-products/countries").then((r) => setCountries(r.data));
-    }, []);
-    const load = () => api.get("/admin/visa-products").then((r) => setProducts(r.data));
+    useEffect(() => { load(); }, []);
+    const load = () => api.get("/admin/visa-products").then((r) => {
+        setProducts(Array.isArray(r.data) ? r.data : (r.data?.items || []));
+    });
 
     const createProduct = async (form) => {
         try {
@@ -42,7 +41,7 @@ export default function Products() {
                 </button>
             </div>
 
-            {showNew && <NewProductForm countries={countries} onCancel={() => setShowNew(false)} onCreate={createProduct} />}
+            {showNew && <NewProductForm onCancel={() => setShowNew(false)} onCreate={createProduct} />}
 
             <div className="bg-white border border-border rounded-sm">
                 <table className="w-full text-sm">
@@ -74,8 +73,9 @@ export default function Products() {
     );
 }
 
-function NewProductForm({ countries, onCancel, onCreate }) {
-    const [country, setCountry] = useState("");
+function NewProductForm({ onCancel, onCreate }) {
+    const [country, setCountry] = useState(null);
+    const [countryOpt, setCountryOpt] = useState(null);
     const [visaType, setVisaType] = useState("tourist");
     const [title, setTitle] = useState("");
     const [validity, setValidity] = useState(60);
@@ -84,11 +84,14 @@ function NewProductForm({ countries, onCancel, onCreate }) {
 
     const submit = (e) => {
         e.preventDefault();
-        const c = countries.find((x) => x.code === country);
-        if (!c) return;
+        if (!country || !countryOpt) return toast.error("Select a country");
         onCreate({
-            country_code: country, country_name: c.name, visa_type: visaType,
-            title, validity_days: Number(validity), processing_time_days: Number(processing),
+            country_code: country,
+            country_name: countryOpt.name,
+            visa_type: visaType,
+            title,
+            validity_days: Number(validity),
+            processing_time_days: Number(processing),
             banner_image_url: banner || null,
         });
     };
@@ -97,10 +100,12 @@ function NewProductForm({ countries, onCancel, onCreate }) {
         <form onSubmit={submit} className="bg-white border border-border rounded-sm p-4 mb-4 grid md:grid-cols-3 gap-3" data-testid="new-product-form">
             <label className="text-sm">
                 <span className="text-xs text-ink-muted block mb-1">Country</span>
-                <select required className={inp} value={country} onChange={(e) => setCountry(e.target.value)} data-testid="np-country">
-                    <option value="">Select…</option>
-                    {countries.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
-                </select>
+                <CountrySelect
+                    value={country}
+                    onChange={(code, opt) => { setCountry(code); setCountryOpt(opt); }}
+                    placeholder="Select country…"
+                    testId="np-country"
+                />
             </label>
             <label className="text-sm">
                 <span className="text-xs text-ink-muted block mb-1">Visa type</span>
@@ -122,14 +127,15 @@ function NewProductForm({ countries, onCancel, onCreate }) {
                 <input type="number" required className={inp} value={processing} onChange={(e) => setProcessing(e.target.value)} data-testid="np-processing" />
             </label>
             <label className="text-sm">
-                <span className="text-xs text-ink-muted block mb-1">Banner image URL (optional)</span>
+                <span className="text-xs text-ink-muted block mb-1">Banner URL (optional)</span>
                 <input className={inp} value={banner} onChange={(e) => setBanner(e.target.value)} data-testid="np-banner" />
             </label>
-            <div className="md:col-span-3 flex gap-2 justify-end">
+            <div className="md:col-span-3 flex justify-end gap-2">
                 <button type="button" onClick={onCancel} className="text-sm px-3 py-1.5 border border-border rounded-sm">Cancel</button>
-                <button type="submit" className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover" data-testid="np-submit">Create draft</button>
+                <button type="submit" className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover" data-testid="np-submit">Create</button>
             </div>
         </form>
     );
 }
+
 const inp = "w-full h-8 px-2 border border-border rounded-sm text-sm outline-none focus:ring-1 focus:ring-navy focus:border-navy";

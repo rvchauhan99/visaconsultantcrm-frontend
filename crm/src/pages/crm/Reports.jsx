@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 import api from "@/lib/api";
+import { Download, Loader2 } from "lucide-react";
 
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
@@ -9,6 +11,8 @@ export default function Reports() {
     const [funnel, setFunnel] = useState(null);
     const [revenue, setRevenue] = useState(null);
     const [reject, setReject] = useState([]);
+    const [consultants, setConsultants] = useState([]);
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         api.get("/crm/reports/pipeline").then((r) => setPipeline(r.data));
@@ -16,13 +20,49 @@ export default function Reports() {
         api.get("/crm/reports/funnel").then((r) => setFunnel(r.data));
         api.get("/crm/reports/revenue").then((r) => setRevenue(r.data));
         api.get("/crm/reports/doc-rejection-rate").then((r) => setReject(r.data));
+        api.get("/crm/consultants").then((r) => setConsultants(r.data));
     }, []);
+
+    const consultantName = (id) => {
+        if (id === "unassigned") return "Unassigned";
+        return consultants.find((c) => c.id === id)?.full_name || id;
+    };
+
+    const exportCsv = async () => {
+        setExporting(true);
+        try {
+            const r = await api.get("/crm/reports/export.csv", { responseType: "blob" });
+            const url = window.URL.createObjectURL(new Blob([r.data], { type: "text/csv" }));
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "passage-cases.csv";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            toast.error("Export failed");
+        } finally {
+            setExporting(false);
+        }
+    };
 
     return (
         <div className="p-6">
-            <div className="mb-4">
-                <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Analytics</div>
-                <h1 className="text-xl font-semibold">Reports</h1>
+            <div className="flex items-baseline justify-between mb-4">
+                <div>
+                    <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Analytics</div>
+                    <h1 className="text-xl font-semibold">Reports</h1>
+                </div>
+                <button
+                    onClick={exportCsv}
+                    disabled={exporting}
+                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover disabled:opacity-50"
+                    data-testid="reports-export-csv"
+                >
+                    {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                    Export CSV
+                </button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-3">
@@ -51,6 +91,42 @@ export default function Reports() {
                                         <td className="text-right font-mono">{v}</td>
                                     </tr>
                                 ))}
+                            </tbody>
+                        </table>
+                    )}
+                </ReportBox>
+
+                <ReportBox title="Open cases by country">
+                    {pipeline && (
+                        <table className="w-full text-sm">
+                            <tbody>
+                                {Object.entries(pipeline.by_country).map(([k, v]) => (
+                                    <tr key={k} className="border-b border-border last:border-0">
+                                        <td className="py-1.5 font-mono">{k}</td>
+                                        <td className="text-right font-mono">{v}</td>
+                                    </tr>
+                                ))}
+                                {Object.keys(pipeline.by_country).length === 0 && (
+                                    <tr><td className="py-2 text-ink-muted italic">No open cases yet.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
+                </ReportBox>
+
+                <ReportBox title="Open cases by consultant">
+                    {pipeline && (
+                        <table className="w-full text-sm">
+                            <tbody>
+                                {Object.entries(pipeline.by_consultant).map(([k, v]) => (
+                                    <tr key={k} className="border-b border-border last:border-0">
+                                        <td className="py-1.5">{consultantName(k)}</td>
+                                        <td className="text-right font-mono">{v}</td>
+                                    </tr>
+                                ))}
+                                {Object.keys(pipeline.by_consultant).length === 0 && (
+                                    <tr><td className="py-2 text-ink-muted italic">No open cases yet.</td></tr>
+                                )}
                             </tbody>
                         </table>
                     )}

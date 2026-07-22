@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
+import Stamp from "@/components/Stamp";
 
 export default function CrmDashboard() {
     const [pipeline, setPipeline] = useState(null);
     const [sla, setSla] = useState(null);
     const [funnel, setFunnel] = useState(null);
     const [recent, setRecent] = useState([]);
+    const [workload, setWorkload] = useState(null);
 
     useEffect(() => {
         api.get("/crm/reports/pipeline").then((r) => setPipeline(r.data));
         api.get("/crm/reports/sla").then((r) => setSla(r.data));
         api.get("/crm/reports/funnel").then((r) => setFunnel(r.data));
         api.get("/crm/cases").then((r) => setRecent(r.data.slice(0, 6)));
+        api.get("/crm/workload").then((r) => setWorkload(r.data));
     }, []);
 
     return (
@@ -59,6 +62,32 @@ export default function CrmDashboard() {
                             </li>
                         ))}
                         {recent.length === 0 && <li className="py-2 text-ink-muted italic">No cases yet.</li>}
+                    </ul>
+                </div>
+
+                <div className="bg-white border border-border rounded-sm p-4 md:col-span-2" data-testid="workload-panel">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="text-xs uppercase font-mono text-ink-muted">My workload</div>
+                        {workload && (
+                            <div className="flex items-center gap-2 text-xs font-mono">
+                                <Stamp tone="ink" size="sm">{workload.open} open</Stamp>
+                                <Stamp tone={workload.due_soon > 0 ? "warning" : "muted"} size="sm">{workload.due_soon} due soon</Stamp>
+                                <Stamp tone={workload.overdue > 0 ? "danger" : "muted"} size="sm">{workload.overdue} overdue</Stamp>
+                            </div>
+                        )}
+                    </div>
+                    <ul className="text-sm divide-y divide-border">
+                        {workload?.cases.slice(0, 8).map((c) => (
+                            <li key={c.id}>
+                                <Link to={`/cases/${c.id}`} className="flex justify-between py-1.5 hover:text-navy" data-testid={`workload-case-${c.id.slice(0, 6)}`}>
+                                    <span className="truncate">{c.country} · {c.title}</span>
+                                    <span className={`font-mono text-xs uppercase ${c.sla_status === "overdue" ? "text-danger" : c.sla_status === "due_soon" ? "text-warning" : "text-ink-muted"}`}>
+                                        {c.sla_status?.replace("_", " ")}
+                                    </span>
+                                </Link>
+                            </li>
+                        ))}
+                        {workload && workload.cases.length === 0 && <li className="py-2 text-ink-muted italic">No open cases assigned.</li>}
                     </ul>
                 </div>
             </div>
