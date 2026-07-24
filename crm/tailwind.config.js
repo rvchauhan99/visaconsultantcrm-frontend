@@ -12,6 +12,13 @@ module.exports = {
         extend: {
             colors: {
                 ...tokens.colors,
+                /* Extended palette from upgraded theme.css */
+                "navy-deep": "var(--navy-deep, #0f2820)",
+                "teal-light": "var(--teal-light, #4a8a75)",
+                "gold-light": "var(--gold-light, #c9a96e)",
+                "gold-pale":  "var(--gold-pale, #f5e8c8)",
+                "surface-warm": "var(--surface-warm, #fdf9f2)",
+                "ink-subtle": "var(--ink-subtle, #9b8e83)",
                 background: tokens.colors.surface,
                 foreground: tokens.colors.ink,
                 card: { DEFAULT: tokens.colors["surface-card"], foreground: tokens.colors.ink },
@@ -24,9 +31,16 @@ module.exports = {
                 input: tokens.colors.border,
                 ring: tokens.colors.navy,
             },
+            boxShadow: {
+                ...tokens.boxShadow,
+                "glow-navy": "0 0 0 1px rgba(31,74,58,0.2), 0 4px 16px rgba(31,74,58,0.18)",
+                "glow-gold":  "0 0 0 1px rgba(176,141,87,0.18), 0 4px 12px rgba(176,141,87,0.15)",
+            },
             fontFamily: tokens.fontFamily,
-            borderRadius: tokens.borderRadius,
-            boxShadow: tokens.boxShadow,
+            borderRadius: {
+                ...tokens.borderRadius,
+                "crm": "8px",
+            },
             keyframes: {
                 "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
                 "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },

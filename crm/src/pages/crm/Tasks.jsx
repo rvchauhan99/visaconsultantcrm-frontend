@@ -3,104 +3,136 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
-import { Check } from "lucide-react";
+import { Check, ListChecks } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmTableCard, CrmEmptyState } from "@/components/ui/crm-card";
+import { DataTable } from "@/components/ui/data-table";
+import { cn } from "@/lib/utils";
 
 export default function Tasks() {
-    const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [showDone, setShowDone] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showDone, setShowDone] = useState(false);
 
-    const load = () => {
-        setLoading(true);
-        api.get("/crm/tasks/my").then((r) => { setTasks(r.data); setLoading(false); });
-    };
-    useEffect(() => { load(); }, []);
+  const load = () => {
+    setLoading(true);
+    api.get("/crm/tasks/my").then((r) => { setTasks(r.data); setLoading(false); });
+  };
+  useEffect(() => { load(); }, []);
 
-    const now = new Date();
-    const isOverdue = (t) => t.status !== "done" && t.due_date && new Date(t.due_date) < now;
+  const now = new Date();
+  const isOverdue = (t) => t.status !== "done" && t.due_date && new Date(t.due_date) < now;
 
-    const visible = useMemo(
-        () => tasks.filter((t) => (showDone ? true : t.status !== "done")),
-        [tasks, showDone],
-    );
+  const visible = useMemo(
+    () => tasks.filter((t) => (showDone ? true : t.status !== "done")),
+    [tasks, showDone],
+  );
 
-    const complete = async (taskId) => {
-        try {
-            await api.patch(`/crm/tasks/${taskId}/done`);
-            toast.success("Task marked done");
-            load();
-        } catch (e) {
-            toast.error(e.response?.data?.detail || "Failed");
+  const complete = async (taskId) => {
+    try {
+      await api.patch(`/crm/tasks/${taskId}/done`);
+      toast.success("Task marked done");
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed");
+    }
+  };
+
+  const overdueCount = tasks.filter(isOverdue).length;
+
+  const columns = [
+    {
+      key: "description",
+      label: "Description",
+      render: (row) => (
+        <span className={cn("text-ink", row.status === "done" && "line-through text-ink-muted")}>
+          {row.description}
+        </span>
+      ),
+    },
+    {
+      key: "case_id",
+      label: "Case",
+      render: (row) =>
+        row.case_id
+          ? <Link to={`/cases/${row.case_id}`} className="font-mono text-navy hover:underline text-xs">#{row.case_id.slice(0, 8)}</Link>
+          : <span className="text-ink-muted italic text-xs">—</span>,
+    },
+    {
+      key: "due_date",
+      label: "Due date",
+      render: (row) => row.due_date
+        ? <span className={cn("font-mono text-xs", isOverdue(row) && "text-danger font-semibold")}>
+            {new Date(row.due_date).toLocaleDateString("en-IN")}
+          </span>
+        : <span className="text-ink-muted italic text-xs">no due date</span>,
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: false,
+      render: (row) =>
+        row.status === "done" ? <Stamp tone="success" size="sm">done</Stamp>
+        : isOverdue(row) ? <Stamp tone="danger" size="sm">overdue</Stamp>
+        : <Stamp tone="muted" size="sm">open</Stamp>,
+    },
+    {
+      key: "_actions",
+      label: "",
+      sortable: false,
+      headerClassName: "text-right",
+      className: "text-right",
+      render: (row) =>
+        row.status !== "done" ? (
+          <CrmButton
+            variant="success"
+            size="icon-sm"
+            onClick={(e) => { e.stopPropagation(); complete(row.id); }}
+            data-testid={`task-complete-${row.id}`}
+            title="Mark done"
+          >
+            <Check className="w-3 h-3" />
+          </CrmButton>
+        ) : null,
+    },
+  ];
+
+  return (
+    <div className="p-6">
+      <PageHeader
+        label="Assigned to me"
+        title="My tasks"
+        actions={
+          <div className="flex items-center gap-3">
+            {overdueCount > 0 && <Stamp tone="danger" size="sm">{overdueCount} overdue</Stamp>}
+            <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showDone}
+                onChange={(e) => setShowDone(e.target.checked)}
+                className="rounded"
+                data-testid="tasks-show-done"
+              />
+              Show completed
+            </label>
+          </div>
         }
-    };
+      />
 
-    const overdueCount = tasks.filter(isOverdue).length;
-
-    return (
-        <div className="p-6">
-            <div className="flex items-baseline justify-between mb-4">
-                <div>
-                    <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Assigned to me</div>
-                    <h1 className="text-xl font-semibold">My tasks</h1>
-                </div>
-                <div className="flex items-center gap-3">
-                    {overdueCount > 0 && <Stamp tone="danger" size="sm">{overdueCount} overdue</Stamp>}
-                    <label className="text-xs flex items-center gap-1.5 text-ink-muted">
-                        <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} data-testid="tasks-show-done" />
-                        Show completed
-                    </label>
-                </div>
-            </div>
-
-            {loading ? (
-                <div className="text-ink-muted p-6">Loading…</div>
-            ) : (
-                <div className="bg-surface-card border border-border rounded-sm">
-                    <table className="w-full text-sm">
-                        <thead className="bg-surface border-b border-border">
-                            <tr className="text-left">
-                                <th className="px-3 py-2 text-xs font-mono uppercase">Description</th>
-                                <th className="px-3 py-2 text-xs font-mono uppercase">Case</th>
-                                <th className="px-3 py-2 text-xs font-mono uppercase">Due date</th>
-                                <th className="px-3 py-2 text-xs font-mono uppercase">Status</th>
-                                <th className="px-3 py-2 text-xs font-mono uppercase text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody data-testid="tasks-table">
-                            {visible.map((t) => (
-                                <tr key={t.id} className={`border-b border-border last:border-0 ${isOverdue(t) ? "bg-danger/5" : ""}`} data-testid={`task-row-${t.id}`}>
-                                    <td className={`px-3 py-2 ${t.status === "done" ? "line-through text-ink-muted" : ""}`}>{t.description}</td>
-                                    <td className="px-3 py-2 font-mono text-xs">
-                                        {t.case_id ? <Link to={`/cases/${t.case_id}`} className="text-navy hover:underline">#{t.case_id.slice(0, 8)}</Link> : <span className="text-ink-muted italic">—</span>}
-                                    </td>
-                                    <td className="px-3 py-2 font-mono text-xs">
-                                        {t.due_date ? new Date(t.due_date).toLocaleDateString("en-IN") : <span className="text-ink-muted italic">no due date</span>}
-                                    </td>
-                                    <td className="px-3 py-2">
-                                        {t.status === "done" ? (
-                                            <Stamp tone="success" size="sm">done</Stamp>
-                                        ) : isOverdue(t) ? (
-                                            <Stamp tone="danger" size="sm">overdue</Stamp>
-                                        ) : (
-                                            <Stamp tone="muted" size="sm">open</Stamp>
-                                        )}
-                                    </td>
-                                    <td className="px-3 py-2 text-right">
-                                        {t.status !== "done" && (
-                                            <button onClick={() => complete(t.id)} className="p-1 border border-success text-success rounded-sm hover:bg-success hover:text-white" data-testid={`task-complete-${t.id}`}>
-                                                <Check className="w-3.5 h-3.5" />
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                            {visible.length === 0 && (
-                                <tr><td colSpan={5} className="px-3 py-4 text-ink-muted italic text-center">No tasks to show.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
-    );
+      <CrmTableCard>
+        <DataTable
+          columns={columns}
+          data={visible}
+          loading={loading}
+          rowTestId={(row) => `task-row-${row.id}`}
+          empty={{
+            icon: ListChecks,
+            title: "No tasks to show",
+            description: showDone ? "" : "Enable 'Show completed' to see past tasks.",
+          }}
+        />
+      </CrmTableCard>
+    </div>
+  );
 }

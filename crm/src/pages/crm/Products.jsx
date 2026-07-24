@@ -3,139 +3,164 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
-import { Plus } from "lucide-react";
+import { Plus, Layers } from "lucide-react";
 import { CountrySelect } from "@/components/forms/selects";
+import { PageHeader } from "@/components/ui/page-header";
+import { CrmButton } from "@/components/ui/crm-button";
+import { CrmTableCard, CrmEmptyState } from "@/components/ui/crm-card";
+import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { DataTable } from "@/components/ui/data-table";
+import { cn } from "@/lib/utils";
 
 const VISA_TYPES = ["tourist", "business", "transit", "other_general"];
 
 export default function Products() {
-    const [products, setProducts] = useState([]);
-    const [showNew, setShowNew] = useState(false);
-    const nav = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [showNew, setShowNew] = useState(false);
+  const nav = useNavigate();
 
-    useEffect(() => { load(); }, []);
-    const load = () => api.get("/admin/visa-products").then((r) => {
-        setProducts(Array.isArray(r.data) ? r.data : (r.data?.items || []));
-    });
+  useEffect(() => { load(); }, []);
+  const load = () => api.get("/admin/visa-products").then((r) => {
+    setProducts(Array.isArray(r.data) ? r.data : (r.data?.items || []));
+  });
 
-    const createProduct = async (form) => {
-        try {
-            const r = await api.post("/admin/visa-products", form);
-            toast.success("Product created");
-            setShowNew(false);
-            nav(`/products/${r.data.id}`);
-        } catch (e) {
-            toast.error(e.response?.data?.detail || "Failed");
+  const createProduct = async (form) => {
+    try {
+      const r = await api.post("/admin/visa-products", form);
+      toast.success("Product created");
+      setShowNew(false);
+      nav(`/products/${r.data.id}`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+  };
+
+  const columns = [
+    {
+      key: "country_name",
+      label: "Country",
+      render: (row) => (
+        <span className="flex items-center gap-2">
+          <span className="text-base">{row.country_flag}</span>
+          <span className="font-medium">{row.country_name}</span>
+        </span>
+      ),
+    },
+    { key: "title", label: "Title" },
+    {
+      key: "visa_type",
+      label: "Type",
+      render: (row) => <Stamp tone="ink" size="sm">{row.visa_type}</Stamp>,
+    },
+    {
+      key: "required_documents_count",
+      label: "Docs / Fields",
+      render: (row) => <span className="font-mono text-xs">{row.required_documents_count} / {row.fields_count}</span>,
+    },
+    {
+      key: "processing_time_days",
+      label: "Processing",
+      render: (row) => <span className="font-mono text-xs">{row.processing_time_days}d</span>,
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: false,
+      render: (row) => <Stamp tone={row.status === "published" ? "success" : "muted"} size="sm">{row.status}</Stamp>,
+    },
+  ];
+
+  return (
+    <div className="p-6">
+      <PageHeader
+        label="Admin"
+        title="Visa products"
+        actions={
+          <CrmButton variant="solid" size="sm" onClick={() => setShowNew(true)} data-testid="new-product-btn">
+            <Plus className="w-3.5 h-3.5" /> New product
+          </CrmButton>
         }
-    };
+      />
 
-    return (
-        <div className="p-6">
-            <div className="flex items-baseline justify-between mb-4">
-                <div>
-                    <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Admin</div>
-                    <h1 className="text-xl font-semibold">Visa products</h1>
-                </div>
-                <button onClick={() => setShowNew(true)} data-testid="new-product-btn" className="inline-flex items-center gap-1.5 bg-navy text-white text-sm px-3 py-1.5 rounded-sm hover:bg-navy-hover">
-                    <Plus className="w-4 h-4" /> New product
-                </button>
-            </div>
+      {showNew && <NewProductForm onCancel={() => setShowNew(false)} onCreate={createProduct} />}
 
-            {showNew && <NewProductForm onCancel={() => setShowNew(false)} onCreate={createProduct} />}
-
-            <div className="bg-surface-card border border-border rounded-sm">
-                <table className="w-full text-sm">
-                    <thead className="bg-surface border-b border-border">
-                        <tr className="text-left">
-                            <th className="px-3 py-2 text-xs uppercase font-mono">Country</th>
-                            <th className="px-3 py-2 text-xs uppercase font-mono">Title</th>
-                            <th className="px-3 py-2 text-xs uppercase font-mono">Type</th>
-                            <th className="px-3 py-2 text-xs uppercase font-mono">Docs / Fields</th>
-                            <th className="px-3 py-2 text-xs uppercase font-mono">Processing</th>
-                            <th className="px-3 py-2 text-xs uppercase font-mono">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody data-testid="products-table">
-                        {products.map((p) => (
-                            <tr key={p.id} className="border-b border-border last:border-0 hover:bg-surface cursor-pointer" onClick={() => nav(`/products/${p.id}`)} data-testid={`product-row-${p.country_code}`}>
-                                <td className="px-3 py-2">{p.country_flag} {p.country_name}</td>
-                                <td className="px-3 py-2 font-medium">{p.title}</td>
-                                <td className="px-3 py-2 font-mono text-xs">{p.visa_type}</td>
-                                <td className="px-3 py-2 font-mono text-xs">{p.required_documents_count} / {p.fields_count}</td>
-                                <td className="px-3 py-2 font-mono text-xs">{p.processing_time_days}d</td>
-                                <td className="px-3 py-2"><Stamp tone={p.status === "published" ? "success" : "muted"} size="sm">{p.status}</Stamp></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
+      <CrmTableCard>
+        <DataTable
+          columns={columns}
+          data={products}
+          onRowClick={(row) => nav(`/products/${row.id}`)}
+          rowTestId={(row) => `product-row-${row.country_code}`}
+          empty={{
+            icon: Layers,
+            title: "No visa products yet",
+            description: "Create a product to start managing visa applications.",
+          }}
+        />
+      </CrmTableCard>
+    </div>
+  );
 }
 
 function NewProductForm({ onCancel, onCreate }) {
-    const [country, setCountry] = useState(null);
-    const [countryOpt, setCountryOpt] = useState(null);
-    const [visaType, setVisaType] = useState("tourist");
-    const [title, setTitle] = useState("");
-    const [validity, setValidity] = useState(60);
-    const [processing, setProcessing] = useState(7);
-    const [banner, setBanner] = useState("");
+  const [country, setCountry] = useState(null);
+  const [countryOpt, setCountryOpt] = useState(null);
+  const [visaType, setVisaType] = useState("tourist");
+  const [title, setTitle] = useState("");
+  const [validity, setValidity] = useState(60);
+  const [processing, setProcessing] = useState(7);
+  const [banner, setBanner] = useState("");
 
-    const submit = (e) => {
-        e.preventDefault();
-        if (!country || !countryOpt) return toast.error("Select a country");
-        onCreate({
-            country_code: country,
-            country_name: countryOpt.name,
-            visa_type: visaType,
-            title,
-            validity_days: Number(validity),
-            processing_time_days: Number(processing),
-            banner_image_url: banner || null,
-        });
-    };
+  const submit = (e) => {
+    e.preventDefault();
+    if (!country || !countryOpt) return toast.error("Select a country");
+    onCreate({
+      country_code: country,
+      country_name: countryOpt.name,
+      visa_type: visaType,
+      title,
+      validity_days: Number(validity),
+      processing_time_days: Number(processing),
+      banner_image_url: banner || null,
+    });
+  };
 
-    return (
-        <form onSubmit={submit} className="bg-surface-card border border-border rounded-sm p-4 mb-4 grid md:grid-cols-3 gap-3" data-testid="new-product-form">
-            <label className="text-sm">
-                <span className="text-xs text-ink-muted block mb-1">Country</span>
-                <CountrySelect
-                    value={country}
-                    onChange={(code, opt) => { setCountry(code); setCountryOpt(opt); }}
-                    placeholder="Select country…"
-                    testId="np-country"
-                />
-            </label>
-            <label className="text-sm">
-                <span className="text-xs text-ink-muted block mb-1">Visa type</span>
-                <select className={inp} value={visaType} onChange={(e) => setVisaType(e.target.value)} data-testid="np-type">
-                    {VISA_TYPES.map((v) => <option key={v}>{v}</option>)}
-                </select>
-                <span className="text-[10px] text-ink-muted mt-0.5 block">Note: student visas are excluded platform-wide.</span>
-            </label>
-            <label className="text-sm">
-                <span className="text-xs text-ink-muted block mb-1">Title</span>
-                <input required className={inp} value={title} onChange={(e) => setTitle(e.target.value)} data-testid="np-title" placeholder="e.g. USA Tourist Visa" />
-            </label>
-            <label className="text-sm">
-                <span className="text-xs text-ink-muted block mb-1">Validity (days)</span>
-                <input type="number" required className={inp} value={validity} onChange={(e) => setValidity(e.target.value)} data-testid="np-validity" />
-            </label>
-            <label className="text-sm">
-                <span className="text-xs text-ink-muted block mb-1">Processing (days)</span>
-                <input type="number" required className={inp} value={processing} onChange={(e) => setProcessing(e.target.value)} data-testid="np-processing" />
-            </label>
-            <label className="text-sm">
-                <span className="text-xs text-ink-muted block mb-1">Banner URL (optional)</span>
-                <input className={inp} value={banner} onChange={(e) => setBanner(e.target.value)} data-testid="np-banner" />
-            </label>
-            <div className="md:col-span-3 flex justify-end gap-2">
-                <button type="button" onClick={onCancel} className="text-sm px-3 py-1.5 border border-border rounded-sm">Cancel</button>
-                <button type="submit" className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover" data-testid="np-submit">Create</button>
-            </div>
-        </form>
-    );
+  return (
+    <form
+      onSubmit={submit}
+      className="bg-surface-card border border-border rounded-[10px] p-5 mb-4 shadow-[var(--shadow-card)]"
+      data-testid="new-product-form"
+    >
+      <div className="text-xs uppercase font-mono tracking-widest text-ink-muted mb-4">New product</div>
+      <div className="grid md:grid-cols-3 gap-3">
+        <CrmField label="Country" required>
+          <CountrySelect
+            value={country}
+            onChange={(code, opt) => { setCountry(code); setCountryOpt(opt); }}
+            placeholder="Select country…"
+            testId="np-country"
+          />
+        </CrmField>
+        <CrmField label="Visa type">
+          <CrmSelect value={visaType} onChange={(e) => setVisaType(e.target.value)} data-testid="np-type">
+            {VISA_TYPES.map((v) => <option key={v}>{v}</option>)}
+          </CrmSelect>
+          <span className="text-[10px] text-ink-muted mt-0.5 block">Student visas excluded platform-wide.</span>
+        </CrmField>
+        <CrmField label="Title" required>
+          <CrmInput required value={title} onChange={(e) => setTitle(e.target.value)} data-testid="np-title" placeholder="e.g. USA Tourist Visa" />
+        </CrmField>
+        <CrmField label="Validity (days)" required>
+          <CrmInput type="number" required value={validity} onChange={(e) => setValidity(e.target.value)} data-testid="np-validity" />
+        </CrmField>
+        <CrmField label="Processing (days)" required>
+          <CrmInput type="number" required value={processing} onChange={(e) => setProcessing(e.target.value)} data-testid="np-processing" />
+        </CrmField>
+        <CrmField label="Banner URL (optional)">
+          <CrmInput value={banner} onChange={(e) => setBanner(e.target.value)} data-testid="np-banner" />
+        </CrmField>
+        <div className="md:col-span-3 flex justify-end gap-2">
+          <CrmButton type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</CrmButton>
+          <CrmButton type="submit" variant="solid" size="sm" data-testid="np-submit">Create product</CrmButton>
+        </div>
+      </div>
+    </form>
+  );
 }
-
-const inp = "w-full h-8 px-2 border border-border rounded-sm text-sm outline-none focus:ring-1 focus:ring-navy focus:border-navy";
