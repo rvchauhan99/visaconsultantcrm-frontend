@@ -133,7 +133,7 @@ export default function Consultants() {
                 </div>
             )}
 
-            <div className="bg-white border border-border rounded-sm">
+            <div className="bg-surface-card border border-border rounded-sm">
                 <table className="w-full text-sm">
                     <thead className="bg-surface border-b border-border">
                         <tr className="text-left">
@@ -186,7 +186,7 @@ function NewConsultantForm({ onCancel, onCreate }) {
     return (
         <form
             onSubmit={(e) => { e.preventDefault(); onCreate(f); }}
-            className="bg-white border border-border rounded-sm p-4 mb-4 grid md:grid-cols-4 gap-3"
+            className="bg-surface-card border border-border rounded-sm p-4 mb-4 grid md:grid-cols-4 gap-3"
             data-testid="new-consultant-form"
         >
             <input className={inp} required placeholder="Full name" value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} data-testid="nc-name" />

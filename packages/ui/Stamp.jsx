@@ -1,27 +1,26 @@
 import React from "react";
 
 /**
- * Stamp — passport/visa seal motif (shared across customer + CRM).
- * Prefer importing from `@passage/ui` so both apps stay aligned.
- *
+ * Seal (formerly Stamp) — foil seal motif for Passage Editorial Luxe.
  * tone: ink | gold | teal | success | warning | danger | muted
  * size: sm | md | lg
  * fill: outline | filled
+ * Keeps `.stamp` classes for backward compatibility.
  */
-export default function Stamp({ children, tone = "ink", size = "md", fill = "outline", className = "", ...rest }) {
+export default function Seal({ children, tone = "ink", size = "md", fill = "outline", className = "", ...rest }) {
   const toneClass = {
-    ink: "stamp-ink",
-    gold: "stamp-gold",
-    teal: "stamp-teal",
-    success: "stamp-success",
-    warning: "stamp-warning",
-    danger: "stamp-danger",
-    muted: "stamp-muted",
-  }[tone] || "stamp-ink";
+    ink: "stamp-ink seal-ink",
+    gold: "stamp-gold seal-brass",
+    teal: "stamp-teal seal-forest",
+    success: "stamp-success seal-success",
+    warning: "stamp-warning seal-warning",
+    danger: "stamp-danger seal-danger",
+    muted: "stamp-muted seal-muted",
+  }[tone] || "stamp-ink seal-ink";
 
-  const sizeClass = { sm: "text-[0.6rem] px-2 py-1", md: "", lg: "stamp-lg" }[size] || "";
-  const fillClass = fill === "filled" ? "stamp-filled" : "";
-  const cls = ["stamp", toneClass, sizeClass, fillClass, className].filter(Boolean).join(" ");
+  const sizeClass = { sm: "text-[0.6rem] px-2 py-1", md: "", lg: "stamp-lg seal-lg" }[size] || "";
+  const fillClass = fill === "filled" ? "stamp-filled seal-filled" : "";
+  const cls = ["stamp", "seal", toneClass, sizeClass, fillClass, className].filter(Boolean).join(" ");
 
   return (
     <span className={cls} {...rest}>
@@ -29,3 +28,6 @@ export default function Stamp({ children, tone = "ink", size = "md", fill = "out
     </span>
   );
 }
+
+/** @deprecated Use Seal — alias for migration */
+export { Seal as Stamp };

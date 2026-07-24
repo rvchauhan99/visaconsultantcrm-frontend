@@ -153,7 +153,7 @@ export default function OfflineCase() {
 
 function Section({ title, children }) {
     return (
-        <div className="bg-white border border-border rounded-sm p-4 mb-3">
+        <div className="bg-surface-card border border-border rounded-sm p-4 mb-3">
             <div className="text-xs uppercase font-mono text-ink-muted mb-2">{title}</div>
             {children}
         </div>

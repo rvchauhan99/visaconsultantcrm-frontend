@@ -91,7 +91,7 @@ export default function Pipeline() {
                 <div className="text-xs font-mono text-ink-muted">{filtered.length} of {cases.length}</div>
             </div>
 
-            <div className="bg-white border border-border rounded-sm p-2.5 mb-4 flex flex-wrap gap-3 items-center text-sm">
+            <div className="bg-surface-card border border-border rounded-sm p-2.5 mb-4 flex flex-wrap gap-3 items-center text-sm">
                 <div className="w-44">
                     <CountrySelect
                         value={filterCountry || null}
@@ -133,7 +133,7 @@ export default function Pipeline() {
                     {STAGES.map((s) => (
                         <div
                             key={s}
-                            className={`bg-white border rounded-sm ${dragOverStage === s ? "border-navy ring-1 ring-navy" : "border-border"}`}
+                            className={`bg-surface-card border rounded-sm ${dragOverStage === s ? "border-navy ring-1 ring-navy" : "border-border"}`}
                             data-testid={`pipeline-col-${s}`}
                             onDragOver={(e) => onDragOverCol(e, s)}
                             onDragLeave={() => setDragOverStage((cur) => (cur === s ? "" : cur))}

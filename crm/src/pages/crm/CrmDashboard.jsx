@@ -33,7 +33,7 @@ export default function CrmDashboard() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-3">
-                <div className="bg-white border border-border rounded-sm p-4">
+                <div className="bg-surface-card border border-border rounded-sm p-4">
                     <div className="text-xs uppercase font-mono text-ink-muted mb-3">By stage</div>
                     <table className="w-full text-sm">
                         <tbody>
@@ -50,7 +50,7 @@ export default function CrmDashboard() {
                     </table>
                 </div>
 
-                <div className="bg-white border border-border rounded-sm p-4">
+                <div className="bg-surface-card border border-border rounded-sm p-4">
                     <div className="text-xs uppercase font-mono text-ink-muted mb-3">Recent cases</div>
                     <ul className="text-sm divide-y divide-border">
                         {recent.map((c) => (
@@ -65,7 +65,7 @@ export default function CrmDashboard() {
                     </ul>
                 </div>
 
-                <div className="bg-white border border-border rounded-sm p-4 md:col-span-2" data-testid="workload-panel">
+                <div className="bg-surface-card border border-border rounded-sm p-4 md:col-span-2" data-testid="workload-panel">
                     <div className="flex items-center justify-between mb-3">
                         <div className="text-xs uppercase font-mono text-ink-muted">My workload</div>
                         {workload && (
@@ -98,7 +98,7 @@ export default function CrmDashboard() {
 function StatCard({ label, value, tone }) {
     const color = tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-ink";
     return (
-        <div className="bg-white border border-border rounded-sm p-4">
+        <div className="bg-surface-card border border-border rounded-sm p-4">
             <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-1">{label}</div>
             <div className={`font-mono text-2xl font-semibold ${color}`}>{value}</div>
         </div>

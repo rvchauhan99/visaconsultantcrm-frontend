@@ -4,15 +4,17 @@ One GitHub repo with **two apps** for separate Vercel deploys:
 
 | App | Folder | Local | Vercel Root Directory |
 |-----|--------|-------|------------------------|
-| Customer site | [`customer/`](customer/) | `npm run dev` → http://localhost:3000 | `customer` |
-| Staff CRM | [`crm/`](crm/) | `npm run dev` → http://localhost:3001 | `crm` |
+| Customer site (Next.js) | [`customer/`](customer/) | `npm run dev` → http://localhost:3000 | `customer` |
+| Staff CRM (CRA) | [`crm/`](crm/) | `npm run dev` → http://localhost:3001 | `crm` |
+
+Legacy CRA customer reference: [`customer-cra/`](customer-cra/).
 
 ## Local development
 
 ```bash
-# Customer
+# Customer (Next.js)
 cd customer
-cp .env.example .env
+cp .env.local.example .env.local
 npm install
 npm run dev
 
@@ -25,10 +27,12 @@ npm run dev
 
 ### Env vars
 
-**Customer** (`.env`):
+**Customer** (`.env.local`):
 
-- `REACT_APP_BACKEND_URL` — API origin (e.g. `http://localhost:8000`)
-- `REACT_APP_CRM_URL` — CRM site origin for “Consultant sign-in” (e.g. `http://localhost:3001`)
+- `NEXT_PUBLIC_BACKEND_URL` — API origin (e.g. `http://localhost:8000`)
+- `NEXT_PUBLIC_CRM_URL` — CRM login URL (e.g. `http://localhost:3001/login`)
+- `NEXT_PUBLIC_ALLOW_MOCK_PAYMENT` — show demo payment failure control
+- `NEXT_PUBLIC_SUPPORT_EMAIL` / `PHONE` / `WHATSAPP` — support CTAs
 
 **CRM** (`.env`):
 
@@ -38,24 +42,7 @@ Backend `CORS_ORIGINS` should allow both frontend origins in production.
 
 ## Vercel (two projects, same repo)
 
-1. Import `visaconsultantcrm-frontend` into Vercel **twice**.
-2. **Customer project**
-   - Root Directory: `customer`
-   - Build Command: `npm run build`
-   - Output Directory: `build`
-   - Env: `REACT_APP_BACKEND_URL`, `REACT_APP_CRM_URL` (CRM project URL)
-3. **CRM project**
-   - Root Directory: `crm`
-   - Build Command: `npm run build`
-   - Output Directory: `build`
-   - Env: `REACT_APP_BACKEND_URL`
+1. Project A — Root Directory `customer` (Next.js): Framework Preset Next.js, build `npm run build`
+2. Project B — Root Directory `crm` (CRA): build `npm run build`, output `build`
 
-Each app includes `vercel.json` SPA rewrites so client routes (e.g. `/account`, `/pipeline`) work on refresh.
-
-## Scripts
-
-Both apps:
-
-- `npm run dev` — CRACO/CRA start (customer `:3000`, CRM `:3001`)
-- `npm run build` — production build
-- `npm test` — tests
+Docs: [`memory/CUSTOMER_BEHAVIOR_CONTRACT.md`](../memory/CUSTOMER_BEHAVIOR_CONTRACT.md) · [`memory/CUSTOMER_UX_ROLLOUT.md`](../memory/CUSTOMER_UX_ROLLOUT.md)

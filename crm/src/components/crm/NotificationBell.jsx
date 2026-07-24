@@ -63,7 +63,7 @@ export default function NotificationBell() {
             </button>
 
             {open && (
-                <div className="absolute right-0 top-full mt-1 w-96 max-w-[calc(100vw-2rem)] bg-white border border-border rounded-sm shadow-card z-50" data-testid="crm-bell-panel">
+                <div className="absolute right-0 top-full mt-1 w-96 max-w-[calc(100vw-2rem)] bg-surface-card border border-border rounded-sm shadow-card z-50" data-testid="crm-bell-panel">
                     <div className="px-3 py-2 border-b border-border flex items-center justify-between">
                         <span className="text-xs uppercase font-mono tracking-widest">Notifications</span>
                         <button onClick={markAllRead} className="text-[10px] font-mono uppercase text-ink-muted hover:text-ink inline-flex items-center gap-1" data-testid="crm-bell-mark-read">

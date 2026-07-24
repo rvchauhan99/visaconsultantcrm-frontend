@@ -43,7 +43,7 @@ export default function Products() {
 
             {showNew && <NewProductForm onCancel={() => setShowNew(false)} onCreate={createProduct} />}
 
-            <div className="bg-white border border-border rounded-sm">
+            <div className="bg-surface-card border border-border rounded-sm">
                 <table className="w-full text-sm">
                     <thead className="bg-surface border-b border-border">
                         <tr className="text-left">
@@ -97,7 +97,7 @@ function NewProductForm({ onCancel, onCreate }) {
     };
 
     return (
-        <form onSubmit={submit} className="bg-white border border-border rounded-sm p-4 mb-4 grid md:grid-cols-3 gap-3" data-testid="new-product-form">
+        <form onSubmit={submit} className="bg-surface-card border border-border rounded-sm p-4 mb-4 grid md:grid-cols-3 gap-3" data-testid="new-product-form">
             <label className="text-sm">
                 <span className="text-xs text-ink-muted block mb-1">Country</span>
                 <CountrySelect

@@ -17,6 +17,7 @@ import OfflineCase from "@/pages/crm/OfflineCase";
 import PassportExpiry from "@/pages/crm/PassportExpiry";
 import DocumentMaster from "@/pages/crm/DocumentMaster";
 import FieldMaster from "@/pages/crm/FieldMaster";
+import StaffProfile from "@/pages/crm/StaffProfile";
 
 import { getUser } from "@/lib/api";
 
@@ -50,6 +51,7 @@ export default function App() {
                     <Route path="/consultants" element={<RequireAdmin><Consultants /></RequireAdmin>} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/passport-expiry" element={<PassportExpiry />} />
+                    <Route path="/profile" element={<StaffProfile />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

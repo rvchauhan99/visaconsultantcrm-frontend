@@ -126,7 +126,7 @@ export default function CaseDetail() {
             )}
 
             {/* Header */}
-            <div className="bg-white border border-border rounded-sm p-4 mb-4">
+            <div className="bg-surface-card border border-border rounded-sm p-4 mb-4">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                         <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Case #{c.id.slice(0, 8)}</div>
@@ -185,7 +185,7 @@ export default function CaseDetail() {
 
             {/* Tabs */}
             <Tabs defaultValue="overview">
-                <TabsList className="bg-white border border-border rounded-sm h-auto p-0.5" data-testid="case-tabs">
+                <TabsList className="bg-surface-card border border-border rounded-sm h-auto p-0.5" data-testid="case-tabs">
                     {["overview", "documents", "payment", "tasks", "notes", "activity"].map((t) => (
                         <TabsTrigger key={t} value={t} className="text-xs uppercase font-mono tracking-widest px-3 py-1.5 rounded-sm data-[state=active]:bg-navy data-[state=active]:text-white" data-testid={`case-tab-${t}`}>
                             {t}
@@ -195,7 +195,7 @@ export default function CaseDetail() {
 
                 <TabsContent value="overview">
                     <div className="grid md:grid-cols-2 gap-3 mt-3">
-                        <div className="bg-white border border-border rounded-sm p-4">
+                        <div className="bg-surface-card border border-border rounded-sm p-4">
                             <div className="text-xs uppercase font-mono text-ink-muted mb-2">Traveler</div>
                             <dl className="text-sm space-y-1">
                                 {Object.entries(c.traveler || {}).map(([k, v]) => v && (
@@ -206,7 +206,7 @@ export default function CaseDetail() {
                                 ))}
                             </dl>
                         </div>
-                        <div className="bg-white border border-border rounded-sm p-4">
+                        <div className="bg-surface-card border border-border rounded-sm p-4">
                             <div className="text-xs uppercase font-mono text-ink-muted mb-2">Custom fields</div>
                             <dl className="text-sm space-y-1" data-testid="custom-fields-list">
                                 {field_values.length === 0 ? <span className="text-ink-muted italic text-xs">None captured</span> :
@@ -219,7 +219,7 @@ export default function CaseDetail() {
                 </TabsContent>
 
                 <TabsContent value="documents">
-                    <div className="bg-white border border-border rounded-sm mt-3" data-testid="case-docs">
+                    <div className="bg-surface-card border border-border rounded-sm mt-3" data-testid="case-docs">
                         <table className="w-full text-sm">
                             <thead className="bg-surface border-b border-border">
                                 <tr className="text-left">
@@ -257,7 +257,7 @@ export default function CaseDetail() {
                 </TabsContent>
 
                 <TabsContent value="payment">
-                    <div className="bg-white border border-border rounded-sm mt-3 p-4 text-sm" data-testid="payment-panel">
+                    <div className="bg-surface-card border border-border rounded-sm mt-3 p-4 text-sm" data-testid="payment-panel">
                         <div className="grid grid-cols-2 gap-y-2">
                             <span className="text-ink-muted">Status</span><Stamp tone={c.payment_status === "paid" ? "success" : c.payment_status === "partial" ? "warning" : c.payment_status === "refunded" ? "muted" : "warning"} size="sm">{c.payment_status}</Stamp>
                             <span className="text-ink-muted">Amount</span><span className="font-mono">₹{Number(c.total_amount || 0).toLocaleString("en-IN")}</span>
@@ -272,7 +272,7 @@ export default function CaseDetail() {
                 </TabsContent>
 
                 <TabsContent value="notes">
-                    <div className="bg-white border border-border rounded-sm mt-3 p-4" data-testid="notes-panel">
+                    <div className="bg-surface-card border border-border rounded-sm mt-3 p-4" data-testid="notes-panel">
                         <div className="flex gap-2 mb-3">
                             <textarea
                                 value={noteBody}
@@ -298,7 +298,7 @@ export default function CaseDetail() {
                 </TabsContent>
 
                 <TabsContent value="activity">
-                    <div className="bg-white border border-border rounded-sm mt-3">
+                    <div className="bg-surface-card border border-border rounded-sm mt-3">
                         <ul className="text-sm divide-y divide-border" data-testid="activity-log">
                             {activity.map((a) => (
                                 <li key={a.id} className="px-3 py-2 flex items-start gap-3">
@@ -372,7 +372,7 @@ function TasksPanel({ tasks, onCreate, onComplete }) {
     };
 
     return (
-        <div className="bg-white border border-border rounded-sm mt-3 p-4" data-testid="tasks-panel">
+        <div className="bg-surface-card border border-border rounded-sm mt-3 p-4" data-testid="tasks-panel">
             <div className="flex items-center justify-between mb-3">
                 <div className="text-xs uppercase font-mono text-ink-muted">Case tasks</div>
                 <button onClick={() => setShowNew((s) => !s)} className="text-xs inline-flex items-center gap-1 border border-navy text-navy px-2 py-1 rounded-sm hover:bg-navy hover:text-white" data-testid="task-new-btn">

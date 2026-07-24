@@ -74,7 +74,7 @@ export default function FieldMaster() {
             <h1 className="text-xl font-semibold mb-1">Field Master</h1>
             <p className="text-sm text-ink-muted mb-4">Controlled application fields. Basics auto-attach when creating a new visa product.</p>
 
-            <div className="bg-white border border-border rounded-sm overflow-hidden mb-6">
+            <div className="bg-surface-card border border-border rounded-sm overflow-hidden mb-6">
                 <table className="w-full text-sm">
                     <thead className="bg-surface border-b border-border">
                         <tr>
@@ -107,7 +107,7 @@ export default function FieldMaster() {
             </div>
 
             {editing && (
-                <div className="bg-white border border-border rounded-sm p-4 mb-6 space-y-3" data-testid="edit-field-master-form">
+                <div className="bg-surface-card border border-border rounded-sm p-4 mb-6 space-y-3" data-testid="edit-field-master-form">
                     <div className="text-xs uppercase font-mono text-ink-muted">Edit · <span className="text-ink">{editing.field_key}</span> (key locked)</div>
                     <div className="grid grid-cols-3 gap-2">
                         <input className={inp} value={editing.default_label} onChange={(e) => setEditing({ ...editing, default_label: e.target.value })} />
@@ -130,7 +130,7 @@ export default function FieldMaster() {
                 </div>
             )}
 
-            <div className="bg-white border border-border rounded-sm p-4 space-y-3" data-testid="create-field-master-form">
+            <div className="bg-surface-card border border-border rounded-sm p-4 space-y-3" data-testid="create-field-master-form">
                 <div className="text-xs uppercase font-mono text-ink-muted">Add field type</div>
                 <div className="grid grid-cols-3 gap-2 text-sm">
                     <input className={inp} placeholder="field_key" value={form.field_key} onChange={(e) => setForm({ ...form, field_key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} data-testid="new-master-field-key" />

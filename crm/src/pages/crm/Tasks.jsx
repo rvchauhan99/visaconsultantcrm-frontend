@@ -55,7 +55,7 @@ export default function Tasks() {
             {loading ? (
                 <div className="text-ink-muted p-6">Loading…</div>
             ) : (
-                <div className="bg-white border border-border rounded-sm">
+                <div className="bg-surface-card border border-border rounded-sm">
                     <table className="w-full text-sm">
                         <thead className="bg-surface border-b border-border">
                             <tr className="text-left">

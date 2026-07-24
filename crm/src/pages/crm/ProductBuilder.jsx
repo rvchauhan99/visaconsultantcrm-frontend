@@ -56,7 +56,7 @@ export default function ProductBuilder() {
 
             <div className="grid lg:grid-cols-[1fr_360px] gap-4">
                 <Tabs defaultValue="basic">
-                    <TabsList className="bg-white border border-border rounded-sm h-auto p-0.5">
+                    <TabsList className="bg-surface-card border border-border rounded-sm h-auto p-0.5">
                         {["basic", "documents", "fields", "pricing"].map((t) => (
                             <TabsTrigger key={t} value={t} className="text-xs uppercase font-mono tracking-widest px-3 py-1.5 rounded-sm data-[state=active]:bg-navy data-[state=active]:text-white" data-testid={`pb-tab-${t}`}>{t}</TabsTrigger>
                         ))}
@@ -124,7 +124,7 @@ function BasicTab({ schema, reload }) {
     };
 
     return (
-        <div className="bg-white border border-border rounded-sm p-4 mt-3 space-y-3" data-testid="basic-tab">
+        <div className="bg-surface-card border border-border rounded-sm p-4 mt-3 space-y-3" data-testid="basic-tab">
             <div className="grid grid-cols-2 gap-3">
                 <F label="Title"><input className={inp} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} data-testid="basic-title" /></F>
                 <F label="Country">
@@ -237,7 +237,7 @@ function DocsTab({ schema, reload }) {
     };
 
     return (
-        <div className="bg-white border border-border rounded-sm p-4 mt-3" data-testid="docs-tab">
+        <div className="bg-surface-card border border-border rounded-sm p-4 mt-3" data-testid="docs-tab">
             <table className="w-full text-sm mb-4">
                 <thead className="bg-surface border-b border-border">
                     <tr>
@@ -426,7 +426,7 @@ function FieldsTab({ schema, reload }) {
     };
 
     return (
-        <div className="bg-white border border-border rounded-sm p-4 mt-3" data-testid="fields-tab">
+        <div className="bg-surface-card border border-border rounded-sm p-4 mt-3" data-testid="fields-tab">
             <table className="w-full text-sm mb-4">
                 <thead className="bg-surface border-b border-border">
                     <tr>
@@ -490,7 +490,7 @@ function PricingTab({ schema, reload }) {
         } catch (e) { toast.error("Failed"); }
     };
     return (
-        <div className="bg-white border border-border rounded-sm p-4 mt-3 space-y-3" data-testid="pricing-tab">
+        <div className="bg-surface-card border border-border rounded-sm p-4 mt-3 space-y-3" data-testid="pricing-tab">
             <div className="text-xs text-ink-muted">Changing pricing does NOT affect existing cases — snapshot rule §8.3.</div>
             <div className="grid grid-cols-2 gap-3">
                 <F label="Government fee (INR)"><input type="number" className={inp} value={gov} onChange={(e) => setGov(e.target.value)} data-testid="fee-govt" /></F>
@@ -507,7 +507,7 @@ function PricingTab({ schema, reload }) {
 function CustomerPreviewCard({ schema }) {
     const total = (schema.fees?.govt_fee || 0) + (schema.fees?.service_fee || 0);
     return (
-        <div className="bg-white border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface-card border border-border rounded-lg overflow-hidden">
             {schema.banner_image_url && <img src={resolveFileUrl(schema.banner_image_url)} alt="" className="w-full h-32 object-cover" />}
             <div className="p-3">
                 <div className="text-xs text-ink-muted">{schema.country_flag} {schema.country_name}</div>

@@ -53,11 +53,11 @@ export default function PassportExpiry() {
             {loading ? (
                 <div className="text-ink-muted p-6">Loading…</div>
             ) : rows.length === 0 ? (
-                <div className="bg-white border border-border rounded-sm p-8 text-center text-sm text-ink-muted">
+                <div className="bg-surface-card border border-border rounded-sm p-8 text-center text-sm text-ink-muted">
                     No passports expiring in this window. 🎉
                 </div>
             ) : (
-                <div className="bg-white border border-border rounded-sm">
+                <div className="bg-surface-card border border-border rounded-sm">
                     <table className="w-full text-sm" data-testid="expiry-table">
                         <thead className="bg-surface border-b border-border">
                             <tr className="text-left">
@@ -104,7 +104,7 @@ export default function PassportExpiry() {
 function Bucket({ label, count, tone }) {
     const color = tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-teal";
     return (
-        <div className="bg-white border border-border rounded-sm p-3">
+        <div className="bg-surface-card border border-border rounded-sm p-3">
             <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">{label}</div>
             <div className={`font-mono text-2xl font-semibold ${color}`}>{count}</div>
         </div>

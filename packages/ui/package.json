@@ -1,7 +1,20 @@
 {
   "name": "@passage/ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "index.js",
-  "description": "Shared Passage design tokens + Stamp motif for customer and CRM apps"
+  "description": "Passage Editorial Luxe — shared tokens, theme, Seal motif, and UI primitives",
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "class-variance-authority": ">=0.7",
+    "framer-motion": ">=11"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./tokens": "./tokens.js",
+    "./theme.css": "./theme.css",
+    "./motion": "./motion.js",
+    "./Stamp": "./Stamp.jsx"
+  }
 }

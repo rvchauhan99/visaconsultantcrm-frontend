@@ -56,14 +56,14 @@ export default function CrmSearch() {
                     onChange={(e) => setQ(e.target.value)}
                     onFocus={() => results && setOpen(true)}
                     placeholder="Search cases, customers…"
-                    className="w-full h-8 pl-8 pr-3 border border-border rounded-sm text-sm outline-none focus:ring-1 focus:ring-navy focus:border-navy bg-white"
+                    className="w-full h-8 pl-8 pr-3 border border-border rounded-sm text-sm outline-none focus:ring-1 focus:ring-navy focus:border-navy bg-surface-card"
                     data-testid="crm-search-input"
                 />
                 {loading && <Loader2 className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted animate-spin" />}
             </div>
 
             {open && results && (
-                <div className="absolute left-0 top-full mt-1 w-[28rem] max-w-[calc(100vw-2rem)] bg-white border border-border rounded-sm shadow-card z-50 max-h-96 overflow-y-auto" data-testid="crm-search-panel">
+                <div className="absolute left-0 top-full mt-1 w-[28rem] max-w-[calc(100vw-2rem)] bg-surface-card border border-border rounded-sm shadow-card z-50 max-h-96 overflow-y-auto" data-testid="crm-search-panel">
                     {results.cases.length === 0 && results.customers.length === 0 && (
                         <div className="p-4 text-center text-sm text-ink-muted">No results for “{q}”</div>
                     )}

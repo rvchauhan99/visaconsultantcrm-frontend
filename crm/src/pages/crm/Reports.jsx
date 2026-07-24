@@ -192,7 +192,7 @@ export default function Reports() {
 }
 function ReportBox({ title, children, className = "" }) {
     return (
-        <div className={`bg-white border border-border rounded-sm p-4 ${className}`}>
+        <div className={`bg-surface-card border border-border rounded-sm p-4 ${className}`}>
             <div className="text-xs uppercase font-mono text-ink-muted mb-3">{title}</div>
             {children}
         </div>
