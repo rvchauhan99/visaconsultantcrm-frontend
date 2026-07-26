@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -201,10 +202,18 @@ export default function PaymentsReport() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2" data-testid="payments-kpis">
-        <CrmStatCard label="Collected" value={summary ? inr(summary.total_collected) : "—"} icon={Wallet} tone="success" />
-        <CrmStatCard label="Outstanding" value={receivables ? inr(receivables.total_outstanding) : "—"} icon={CreditCard} tone="warning" />
-        <CrmStatCard label="Overdue" value={receivables ? inr(receivables.total_overdue) : "—"} icon={AlertTriangle} tone={receivables?.total_overdue > 0 ? "danger" : "default"} />
-        <CrmStatCard label="Net collected" value={summary ? inr(summary.net) : "—"} icon={TrendingUp} delta={summary ? `−${inr(summary.total_refunded)} refunds` : undefined} />
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0, duration: 0.35 }}>
+          <CrmStatCard label="Collected" value={summary ? inr(summary.total_collected) : "—"} icon={Wallet} tone="success" />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06, duration: 0.35 }}>
+          <CrmStatCard label="Outstanding" value={receivables ? inr(receivables.total_outstanding) : "—"} icon={CreditCard} tone="warning" />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.35 }}>
+          <CrmStatCard label="Overdue" value={receivables ? inr(receivables.total_overdue) : "—"} icon={AlertTriangle} tone={receivables?.total_overdue > 0 ? "danger" : "default"} />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.35 }}>
+          <CrmStatCard label="Net collected" value={summary ? inr(summary.net) : "—"} icon={TrendingUp} delta={summary ? `−${inr(summary.total_refunded)} refunds` : undefined} />
+        </motion.div>
       </div>
 
       <FilterPanel
