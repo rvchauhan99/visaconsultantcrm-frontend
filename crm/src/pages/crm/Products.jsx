@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -7,22 +7,39 @@ import { Plus, Layers } from "lucide-react";
 import { CountrySelect } from "@/components/forms/selects";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
-import { CrmTableCard, CrmEmptyState } from "@/components/ui/crm-card";
+import { CrmTableCard } from "@/components/ui/crm-card";
+import { FilterPanel } from "@/components/ui/filter-panel";
 import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
 import { DataTable } from "@/components/ui/data-table";
-import { cn } from "@/lib/utils";
+import { useListQueryState } from "@/hooks/useListQueryState";
 
 const VISA_TYPES = ["tourist", "business", "transit", "other_general"];
+const FILTER_KEYS = [];
+const LIST_DEFAULTS = {};
 
 export default function Products() {
+  const list = useListQueryState({
+    filterKeys: FILTER_KEYS,
+    defaults: LIST_DEFAULTS,
+  });
   const [products, setProducts] = useState([]);
   const [showNew, setShowNew] = useState(false);
+  const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
-  useEffect(() => { load(); }, []);
-  const load = () => api.get("/admin/visa-products").then((r) => {
-    setProducts(Array.isArray(r.data) ? r.data : (r.data?.items || []));
-  });
+  const load = useCallback(() => {
+    setLoading(true);
+    const params = {};
+    if (list.q) params.q = list.q;
+    api.get("/admin/visa-products", { params })
+      .then((r) => {
+        setProducts(Array.isArray(r.data) ? r.data : (r.data?.items || []));
+      })
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
+  }, [list.q]);
+
+  useEffect(() => { load(); }, [load]);
 
   const createProduct = async (form) => {
     try {
@@ -82,10 +99,23 @@ export default function Products() {
 
       {showNew && <NewProductForm onCancel={() => setShowNew(false)} onCreate={createProduct} />}
 
+      <FilterPanel
+        fields={[]}
+        values={{}}
+        q={list.q}
+        activeCount={list.activeFilterCount}
+        onQChange={list.setQ}
+        onApply={list.setFilters}
+        onClear={list.clearFilters}
+        searchPlaceholder="Search products…"
+        testId="products-filters"
+      />
+
       <CrmTableCard>
         <DataTable
           columns={columns}
           data={products}
+          loading={loading}
           onRowClick={(row) => nav(`/products/${row.id}`)}
           rowTestId={(row) => `product-row-${row.country_code}`}
           empty={{

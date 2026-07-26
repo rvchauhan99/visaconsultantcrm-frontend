@@ -5,6 +5,11 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+export function formatCaseNumber(caseRecord) {
+  if (!caseRecord) return "—";
+  return caseRecord.case_number || `#${String(caseRecord.id || "").slice(0, 8)}`;
+}
+
 export const INR = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",

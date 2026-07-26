@@ -23,6 +23,10 @@ api.interceptors.response.use(
                 sessionStorage.removeItem(TOKEN_KEY);
                 sessionStorage.removeItem(USER_KEY);
             }
+            const path = window.location?.pathname || "";
+            if (path !== "/login" && !path.endsWith("/login")) {
+                window.location.assign("/login");
+            }
         }
         return Promise.reject(err);
     },

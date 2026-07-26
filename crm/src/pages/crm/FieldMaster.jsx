@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
@@ -6,31 +6,64 @@ import { Check, X, FormInput, Plus, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmTableCard } from "@/components/ui/crm-card";
+import { FilterPanel } from "@/components/ui/filter-panel";
 import { DataTable } from "@/components/ui/data-table";
 import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { useListQueryState } from "@/hooks/useListQueryState";
+import { previewMasterKey } from "@/lib/keys";
 
 const TYPES = ["text", "date", "dropdown", "number"];
-const emptyForm = { field_key: "", default_label: "", default_field_type: "text", default_options: "", default_required: true, is_basic: false, active: true };
+const emptyForm = { default_label: "", default_field_type: "text", default_options: "", default_required: true, is_basic: false, active: true };
+const FILTER_KEYS = ["active"];
+const LIST_DEFAULTS = {};
 
 export default function FieldMaster() {
+  const list = useListQueryState({
+    filterKeys: FILTER_KEYS,
+    defaults: LIST_DEFAULTS,
+  });
+
   const [rows, setRows] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(null);
   const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
-    api.get("/admin/field-master").then((r) => { setRows(r.data); setLoading(false); });
-  };
-  useEffect(() => { load(); }, []);
+    const params = {};
+    if (list.q) params.q = list.q;
+    if (list.filters.active != null && list.filters.active !== "") params.active = list.filters.active;
+    api.get("/admin/field-master", { params })
+      .then((r) => { setRows(r.data); setLoading(false); })
+      .catch(() => { setRows([]); setLoading(false); });
+  }, [list.q, list.filters]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filterFields = useMemo(() => [
+    {
+      key: "active",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "true", label: "Active" },
+        { value: "false", label: "Inactive" },
+      ],
+    },
+  ], []);
+
+  const existingKeys = useMemo(() => rows.map((r) => r.field_key), [rows]);
+  const previewKey = useMemo(
+    () => previewMasterKey(form.default_label, existingKeys, "field"),
+    [form.default_label, existingKeys],
+  );
 
   const create = async (e) => {
     e.preventDefault();
-    if (!form.field_key || !form.default_label) return toast.error("Key and label required");
+    if (!form.default_label.trim()) return toast.error("Label required");
     try {
       await api.post("/admin/field-master", {
-        field_key: form.field_key.replace(/[^a-z0-9_]/g, "_"),
         default_label: form.default_label,
         default_field_type: form.default_field_type,
         default_required: form.default_required,
@@ -63,7 +96,11 @@ export default function FieldMaster() {
     {
       key: "field_key",
       label: "Field Key",
-      render: (row) => <span className="font-mono text-ink text-xs font-semibold">{row.field_key}</span>,
+      render: (row) => editing?.id === row.id ? (
+        <CrmInput value={editing.field_key} disabled data-testid="edit-field-key" className="font-mono text-xs" />
+      ) : (
+        <span className="font-mono text-ink text-xs font-semibold">{row.field_key}</span>
+      ),
     },
     {
       key: "default_label",
@@ -150,12 +187,28 @@ export default function FieldMaster() {
         }
       />
 
+      <FilterPanel
+        fields={filterFields}
+        values={list.filters}
+        q={list.q}
+        activeCount={list.activeFilterCount}
+        onQChange={list.setQ}
+        onApply={list.setFilters}
+        onClear={list.clearFilters}
+        searchPlaceholder="Search fields…"
+        testId="field-master-filters"
+      />
+
       {showNew && (
         <form onSubmit={create} className="bg-surface-card border border-border rounded-[10px] p-5 mb-5 shadow-[var(--shadow-card)]" data-testid="new-field-form">
           <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-4">Create Master Field</div>
           <div className="grid md:grid-cols-4 gap-4">
-            <CrmField label="Key (immutable)" required><CrmInput required value={form.field_key} onChange={(e) => setForm({ ...form, field_key: e.target.value.toLowerCase() })} placeholder="e.g. passport_number" data-testid="field-key-input" /></CrmField>
-            <CrmField label="Label" required><CrmInput required value={form.default_label} onChange={(e) => setForm({ ...form, default_label: e.target.value })} placeholder="e.g. Passport Number" data-testid="field-label-input" /></CrmField>
+            <CrmField label="Label" required>
+              <CrmInput required value={form.default_label} onChange={(e) => setForm({ ...form, default_label: e.target.value })} placeholder="e.g. Passport Number" data-testid="field-label-input" />
+            </CrmField>
+            <CrmField label="Key (auto-generated)">
+              <CrmInput value={form.default_label.trim() ? previewKey : ""} disabled placeholder="from label…" data-testid="field-key-input" className="font-mono text-xs" />
+            </CrmField>
             <CrmField label="Type"><CrmSelect value={form.default_field_type} onChange={(e) => setForm({ ...form, default_field_type: e.target.value })} data-testid="field-type-input">{TYPES.map((t) => <option key={t}>{t}</option>)}</CrmSelect></CrmField>
             <CrmField label="Options (csv)">
               <CrmInput value={form.default_options} onChange={(e) => setForm({ ...form, default_options: e.target.value })} disabled={form.default_field_type !== "dropdown"} placeholder="opt1,opt2" data-testid="field-opts-input" />

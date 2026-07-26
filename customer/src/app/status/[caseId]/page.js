@@ -11,7 +11,7 @@ import Stamp from "@/components/ui/stamp";
 import { Card, ErrorState, Skeleton } from "@/components/ui/card";
 import { useCaseStatus } from "@/hooks/customer-api";
 import api, { openReceipt } from "@/lib/api";
-import { formatInDate } from "@/lib/utils";
+import { formatCaseNumber, formatInDate } from "@/lib/utils";
 import { track } from "@/lib/telemetry";
 
 /** Displayed timeline excludes draft `new`; map stage index correctly. */
@@ -73,7 +73,7 @@ function StatusTracker() {
             <h1 className="font-display text-3xl text-navy leading-tight">{snapshot.title}</h1>
           </div>
           <div className="text-xs font-mono uppercase tracking-widest text-ink-muted">
-            Case #{c.id.slice(0, 8)} · Applied {formatInDate(c.created_at, { day: "numeric", month: "short", year: "numeric" })}
+            Case {formatCaseNumber(c)} · Applied {formatInDate(c.created_at, { day: "numeric", month: "short", year: "numeric" })}
           </div>
         </div>
         <div className="text-right">
@@ -89,7 +89,7 @@ function StatusTracker() {
           <div className="flex-1">
             <div className="font-medium text-warning">Additional information needed</div>
             <div className="text-sm text-ink-muted mt-0.5 mb-3">Your consultant has put this case on hold. Check rejected documents below or contact support.</div>
-            <SupportCard source="on_hold" caseId={c.id} compact />
+            <SupportCard source="on_hold" caseId={c.id} caseNumber={c.case_number} compact />
           </div>
         </div>
       )}
@@ -186,7 +186,7 @@ function StatusTracker() {
         </div>
       </Card>
 
-      {!data.on_hold && <SupportCard source="status" caseId={c.id} />}
+      {!data.on_hold && <SupportCard source="status" caseId={c.id} caseNumber={c.case_number} />}
     </div>
   );
 }

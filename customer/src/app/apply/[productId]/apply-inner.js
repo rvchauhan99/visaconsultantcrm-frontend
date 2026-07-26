@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Archive,
   Check,
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { draftKey, getUser } from "@/lib/session";
-import { INR, humanizeKey } from "@/lib/utils";
+import { INR, humanizeKey, cn } from "@/lib/utils";
 import { track } from "@/lib/telemetry";
 import { useTravelerProfiles, useVaultByKey, useVisaProduct } from "@/hooks/customer-api";
 import Stamp from "@/components/ui/stamp";
@@ -329,87 +330,127 @@ export default function ApplyPageInner() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-5 md:px-10 py-10 pb-36 md:pb-10">
-      <div className="flex items-center gap-2 md:gap-4 mb-10 overflow-x-auto pb-2" data-testid="apply-steps">
-        {STEPS.map((label, i) => (
-          <React.Fragment key={label}>
-            <div className="flex items-center gap-2 shrink-0">
-              <div
-                className={`w-9 h-9 rounded-full border-2 border-double flex items-center justify-center text-sm font-mono font-semibold ${
-                  i < step ? "border-gold text-gold" : i === step ? "border-navy text-navy" : "border-border text-ink-muted"
-                }`}
-              >
-                {i < step ? <Check className="w-4 h-4" /> : i + 1}
-              </div>
-              <span className={`text-xs uppercase font-mono tracking-wider ${i === step ? "text-navy font-medium" : "text-ink-muted"}`}>
-                {label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && <div className={`flex-1 h-px min-w-[10px] ${i < step ? "bg-gold" : "bg-border"}`} />}
-          </React.Fragment>
-        ))}
-      </div>
-
-      <div className="mb-8 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="text-2xl shrink-0">{schema.country_flag}</span>
+    <div className="max-w-4xl mx-auto px-4 md:px-6 py-2 md:py-3 pb-20 md:pb-6">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <span className="text-4xl md:text-5xl shrink-0 drop-shadow-sm">{schema.country_flag}</span>
           <div className="min-w-0">
-            <h1 className="font-display text-2xl text-navy leading-tight truncate">{schema.title}</h1>
-            <div className="text-xs font-mono uppercase tracking-widest text-ink-muted hidden md:block">
+            <h1 className="font-display text-3xl md:text-4xl text-navy leading-tight truncate">{schema.title}</h1>
+            <div className="text-xs font-mono uppercase tracking-widest text-ink-muted mt-1.5 hidden md:block">
               Processing {schema.processing_time_days} days · {INR.format(total)}
             </div>
           </div>
         </div>
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={saveAndExit}
           disabled={savingDraft || submitting}
           data-testid="apply-save-exit"
-          className="shrink-0"
+          className="shrink-0 rounded-full border-border/60 hover:bg-surface-card"
         >
           {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-          Save &amp; exit
+          <span className="hidden sm:inline">Save &amp; exit</span>
         </Button>
       </div>
 
-      <Card className="p-6 md:p-8 shadow-none">
-        {step === 0 && (
-          <TravelerStep
-            traveler={traveler}
-            setTraveler={setTraveler}
-            profiles={profiles}
-            onPrefill={prefillFromProfile}
-            saveAsProfile={saveAsProfile}
-            setSaveAsProfile={setSaveAsProfile}
-            passportMinMonths={passportMinMonths}
-            passportValid={passportValid}
-          />
-        )}
-        {step === 1 && <FieldsStep schema={schema} fields={fields} setFields={setFields} />}
-        {step === 2 && <DocsStep schema={schema} uploads={uploads} setUploads={setUploads} />}
-        {step === 3 && <ReviewStep schema={schema} traveler={traveler} fields={fields} uploads={uploads} />}
-        {step === 4 && <PaymentStep schema={schema} total={total} submit={submit} submitting={submitting} />}
+      <div className="relative overflow-hidden rounded-[24px] bg-[var(--glass)] backdrop-blur-xl border border-[var(--border-glass)] shadow-[var(--shadow-premium)]">
+        {/* Step Indicator inside the card */}
+        <div className="px-5 md:px-8 py-3 md:py-4 border-b border-[var(--border-glass)] bg-white/40">
+          <div className="flex items-center gap-2 md:gap-4 overflow-x-auto" data-testid="apply-steps">
+            {STEPS.map((label, i) => (
+              <React.Fragment key={label}>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono font-semibold transition-colors duration-300",
+                      i < step ? "bg-navy text-white" : i === step ? "border-2 border-navy text-navy bg-white" : "border-2 border-border text-ink-muted bg-white/50"
+                    )}
+                  >
+                    {i < step ? <Check className="w-4 h-4" /> : i + 1}
+                  </div>
+                  <span className={cn(
+                    "text-[11px] md:text-xs uppercase font-mono tracking-wider transition-colors duration-300",
+                    i === step ? "text-navy font-bold" : "text-ink-muted"
+                  )}>
+                    {label}
+                  </span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className="flex-1 h-px min-w-[20px] bg-border/60 overflow-hidden rounded-full">
+                    <motion.div
+                      className="h-full bg-navy"
+                      initial={{ width: "0%" }}
+                      animate={{ width: i < step ? "100%" : "0%" }}
+                      transition={{ duration: 0.4 }}
+                    />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
 
-        <div className="mt-8 flex flex-col gap-3 pt-6 border-t border-border">
-          <div className="flex items-center justify-between">
-            <Button type="button" variant="secondary" onClick={goBack} disabled={step === 0 || savingDraft} data-testid="apply-back">
-              ← Back
-            </Button>
-            {step < 4 && (
-              <Button type="button" onClick={goNext} disabled={savingDraft || continueBlocked} data-testid="apply-continue">
-                {savingDraft && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Continue →
+        {/* Form Body with Animation */}
+        <div className="p-5 md:p-8 pt-6">
+          <div className="min-h-[300px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, x: 15 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -15 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+              >
+                {step === 0 && (
+                  <TravelerStep
+                    traveler={traveler}
+                    setTraveler={setTraveler}
+                    profiles={profiles}
+                    onPrefill={prefillFromProfile}
+                    saveAsProfile={saveAsProfile}
+                    setSaveAsProfile={setSaveAsProfile}
+                    passportMinMonths={passportMinMonths}
+                    passportValid={passportValid}
+                  />
+                )}
+                {step === 1 && <FieldsStep schema={schema} fields={fields} setFields={setFields} />}
+                {step === 2 && <DocsStep schema={schema} uploads={uploads} setUploads={setUploads} />}
+                {step === 3 && <ReviewStep schema={schema} traveler={traveler} fields={fields} uploads={uploads} />}
+                {step === 4 && <PaymentStep schema={schema} total={total} submit={submit} submitting={submitting} />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-[var(--border-glass)]">
+            <div className="flex items-center justify-between">
+              <Button type="button" variant="secondary" onClick={goBack} disabled={step === 0 || savingDraft} data-testid="apply-back" className="rounded-full px-6 bg-white/50 hover:bg-white">
+                ← Back
               </Button>
+              {step < 4 && (
+                <div className="flex items-center gap-3">
+                  <Button type="button" variant="outline" onClick={saveAndExit} disabled={savingDraft || submitting} data-testid="apply-save-exit-bottom" className="rounded-full px-6 border-border/60 hover:bg-surface-card">
+                    <span className="hidden sm:inline">Save &amp; exit</span>
+                    <span className="sm:hidden">Save</span>
+                  </Button>
+                  <Button type="button" onClick={goNext} disabled={savingDraft || continueBlocked} data-testid="apply-continue" className="rounded-full px-8 shadow-sm hover:shadow transition-shadow">
+                    {savingDraft && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Continue →
+                  </Button>
+                </div>
+              )}
+            </div>
+            {blockedHint && (
+              <motion.p
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="text-xs font-medium text-danger/80 text-right mt-3" data-testid="apply-blocked-hint" role="status"
+              >
+                {blockedHint}
+              </motion.p>
             )}
           </div>
-          {blockedHint && (
-            <p className="text-xs text-ink-muted text-right" data-testid="apply-blocked-hint" role="status">
-              {blockedHint}
-            </p>
-          )}
         </div>
-      </Card>
+      </div>
 
       <ApplyFeeSheet schema={schema} total={total} processingDays={schema.processing_time_days} />
     </div>
@@ -505,17 +546,19 @@ function TravelerStep({
   };
 
   return (
-    <div>
-      <h2 className="font-display text-xl text-navy mb-1">Traveler details</h2>
-      <p className="text-sm text-ink-muted mb-4">As per your passport. We only accept Indian passports.</p>
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="mb-4">
+        <h2 className="font-display text-xl text-navy mb-0.5">Traveler details</h2>
+        <p className="text-sm text-ink-muted">As per your passport. We only accept Indian passports.</p>
+      </div>
 
       <div className="flex flex-wrap gap-3 mb-4">
         <label
-          className="inline-flex items-center gap-2 text-sm bg-navy text-white rounded-full px-4 py-2 cursor-pointer hover:bg-navy-hover"
+          className="group relative inline-flex items-center gap-2 text-sm bg-navy text-white rounded-full px-5 py-2.5 cursor-pointer hover:bg-navy/90 shadow-md transition-all hover:shadow-lg"
           data-testid="scan-passport-btn"
         >
-          {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
-          {scanning ? "Reading passport…" : "Scan passport to autofill"}
+          {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+          <span className="font-medium">{scanning ? "Reading passport…" : "Scan passport to autofill"}</span>
           <input
             type="file"
             hidden
@@ -525,11 +568,11 @@ function TravelerStep({
             data-testid="scan-passport-input"
           />
         </label>
-        <span className="text-xs text-ink-muted self-center">Optional — you can also fill fields manually.</span>
+        <span className="text-xs text-ink-muted self-center">Optional</span>
       </div>
 
       {profiles.length > 0 && (
-        <div className="bg-surface border border-border rounded-xl p-3 mb-6 flex flex-wrap items-center gap-3" data-testid="prefill-panel">
+        <div className="bg-surface border border-border rounded-xl p-3 mb-4 flex flex-wrap items-center gap-3" data-testid="prefill-panel">
           <User className="w-4 h-4 text-navy" />
           <span className="text-sm text-ink-muted">Prefill from a saved traveler:</span>
           <Select onChange={(e) => onPrefill(e.target.value)} defaultValue="" data-testid="prefill-select" className="w-auto min-w-[12rem]">
@@ -543,7 +586,7 @@ function TravelerStep({
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-5">
+      <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
         <Field label="Full name (as on passport)" required>
           <Input data-testid="traveler-name" value={traveler.full_name || ""} onChange={(e) => upd("full_name", e.target.value)} />
         </Field>
@@ -613,10 +656,12 @@ function FieldsStep({ schema, fields, setFields }) {
   }
   const upd = (k, v) => setFields((p) => ({ ...p, [k]: v }));
   return (
-    <div>
-      <h2 className="font-display text-xl text-navy mb-1">A few more details</h2>
-      <p className="text-sm text-ink-muted mb-6">Specific to {schema.country_name}.</p>
-      <div className="grid md:grid-cols-2 gap-5">
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="mb-4">
+        <h2 className="font-display text-xl text-navy mb-0.5">A few more details</h2>
+        <p className="text-sm text-ink-muted">Specific to {schema.country_name}.</p>
+      </div>
+      <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
         {schema.fields.map((f) => (
           <Field key={f.field_key} label={f.label} required={f.required}>
             {f.type === "dropdown" ? (
@@ -662,9 +707,11 @@ function FieldsStep({ schema, fields, setFields }) {
 
 function DocsStep({ schema, uploads, setUploads }) {
   return (
-    <div>
-      <h2 className="font-display text-xl text-navy mb-1">Upload your documents</h2>
-      <p className="text-sm text-ink-muted mb-6">Files are private and encrypted. Only your consultant sees them.</p>
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="mb-4">
+        <h2 className="font-display text-xl text-navy mb-0.5">Upload your documents</h2>
+        <p className="text-sm text-ink-muted">Files are private and encrypted. Only your consultant sees them.</p>
+      </div>
       <div className="space-y-4">
         {(schema.documents || []).map((d) => (
           <DocUploader
@@ -722,6 +769,8 @@ function DocUploader({ doc, value, onUpload }) {
       e.target.value = "";
     }
   };
+
+  const inp = "w-full h-9 px-4 border border-border rounded-lg bg-white/80 text-sm text-ink outline-none focus:bg-white focus:ring-2 focus:ring-navy focus:border-navy transition-all shadow-sm";
 
   return (
     <div className="p-4 bg-surface border border-border rounded-xl" data-testid={`upload-${doc.doc_key}`}>
@@ -807,9 +856,13 @@ function DocUploader({ doc, value, onUpload }) {
 
 function ReviewStep({ schema, traveler, fields, uploads }) {
   return (
-    <div>
-      <h2 className="font-display text-xl text-navy mb-1">Review everything</h2>
-      <p className="text-sm text-ink-muted mb-6">Please confirm before payment.</p>
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h2 className="font-display text-xl text-navy mb-0.5">Review &amp; confirm</h2>
+          <p className="text-sm text-ink-muted">Please verify all details before payment. Incorrect info leads to rejection.</p>
+        </div>
+      </div>
       <div className="space-y-6">
         <ReviewBlock title="Traveler">
           {Object.entries(traveler).map(([k, v]) => (v ? <ReviewRow key={k} label={humanizeKey(k)} value={v} /> : null))}
@@ -839,16 +892,16 @@ function ReviewBlock({ title, children }) {
   return (
     <div>
       <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-2">{title}</div>
-      <div className="border border-border rounded-xl divide-y divide-border">{children}</div>
+      <div className="border border-border rounded-xl divide-y divide-border overflow-hidden">{children}</div>
     </div>
   );
 }
 
 function ReviewRow({ label, value }) {
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 text-sm gap-3">
+    <div className="flex items-center justify-between px-4 py-3 text-sm gap-3 hover:bg-surface-card/50 transition-colors">
       <span className="text-ink-muted capitalize">{label}</span>
-      <span className="text-ink font-mono truncate max-w-[60%] text-right">{value}</span>
+      <span className="text-ink font-mono truncate max-w-[60%] text-right font-medium">{value}</span>
     </div>
   );
 }
@@ -857,7 +910,7 @@ function PaymentStep({ schema, total, submit, submitting }) {
   return (
     <div>
       <h2 className="font-display text-xl text-navy mb-1">Payment</h2>
-      <p className="text-sm text-ink-muted mb-6">Government fee and service fee shown separately. No hidden charges.</p>
+      <p className="text-sm text-ink-muted mb-4">Government fee and service fee shown separately. No hidden charges.</p>
       <div className="bg-surface border border-border rounded-xl p-6 max-w-md mx-auto">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-ink-muted">Government fee</span>

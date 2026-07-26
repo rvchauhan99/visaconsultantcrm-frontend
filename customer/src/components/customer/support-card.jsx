@@ -6,7 +6,7 @@ import { track } from "@/lib/telemetry";
 import { Card } from "@/components/ui/card";
 import Stamp from "@/components/ui/stamp";
 
-export default function SupportCard({ source = "generic", caseId, compact = false }) {
+export default function SupportCard({ source = "generic", caseId, caseNumber, compact = false }) {
   const click = (channel) => track("support_click", { channel, source, case_id: caseId });
 
   return (
@@ -25,7 +25,7 @@ export default function SupportCard({ source = "generic", caseId, compact = fals
           </p>
           <div className="flex flex-wrap gap-2">
             <a
-              href={`mailto:${SUPPORT.email}${caseId ? `?subject=Case%20${encodeURIComponent(caseId.slice(0, 8))}` : ""}`}
+              href={`mailto:${SUPPORT.email}${caseId ? `?subject=Case%20${encodeURIComponent(caseNumber || caseId.slice(0, 8))}` : ""}`}
               onClick={() => click("email")}
               className="inline-flex items-center gap-1.5 text-sm border border-border rounded-full px-3 py-1.5 hover:border-navy hover:text-navy"
             >

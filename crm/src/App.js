@@ -18,6 +18,14 @@ import PassportExpiry from "@/pages/crm/PassportExpiry";
 import DocumentMaster from "@/pages/crm/DocumentMaster";
 import FieldMaster from "@/pages/crm/FieldMaster";
 import StaffProfile from "@/pages/crm/StaffProfile";
+import Leads from "@/pages/crm/Leads";
+import LeadFollowUps from "@/pages/crm/LeadFollowUps";
+import Finance from "@/pages/crm/Finance";
+import Inbox from "@/pages/crm/Inbox";
+import Playbooks from "@/pages/crm/Playbooks";
+import CaseNumberSettings from "@/pages/crm/CaseNumberSettings";
+import ClosedCases from "@/pages/crm/ClosedCases";
+import PaymentsReport from "@/pages/crm/PaymentsReport";
 
 import { getUser } from "@/lib/api";
 
@@ -41,15 +49,23 @@ export default function App() {
                 <Route element={<RequireStaff><CrmLayout /></RequireStaff>}>
                     <Route path="/" element={<CrmDashboard />} />
                     <Route path="/pipeline" element={<Pipeline />} />
+                    <Route path="/cases/closed" element={<ClosedCases />} />
                     <Route path="/tasks" element={<Tasks />} />
+                    <Route path="/leads" element={<Leads />} />
+                    <Route path="/follow-ups" element={<LeadFollowUps />} />
+                    <Route path="/finance" element={<Finance />} />
+                    <Route path="/reports/payments" element={<PaymentsReport />} />
+                    <Route path="/inbox" element={<Inbox />} />
                     <Route path="/cases/:caseId" element={<CaseDetail />} />
                     <Route path="/offline-case" element={<OfflineCase />} />
                     <Route path="/products" element={<RequireAdmin><Products /></RequireAdmin>} />
                     <Route path="/products/:productId" element={<RequireAdmin><ProductBuilder /></RequireAdmin>} />
                     <Route path="/document-master" element={<RequireAdmin><DocumentMaster /></RequireAdmin>} />
                     <Route path="/field-master" element={<RequireAdmin><FieldMaster /></RequireAdmin>} />
+                    <Route path="/playbooks" element={<RequireAdmin><Playbooks /></RequireAdmin>} />
                     <Route path="/consultants" element={<RequireAdmin><Consultants /></RequireAdmin>} />
-                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/case-number-settings" element={<RequireAdmin><CaseNumberSettings /></RequireAdmin>} />
+                    <Route path="/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
                     <Route path="/passport-expiry" element={<PassportExpiry />} />
                     <Route path="/profile" element={<StaffProfile />} />
                 </Route>

@@ -187,9 +187,9 @@ export default function Apply() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto px-6 md:px-10 py-10 pb-28 md:pb-10">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-1 md:py-2 pb-16 md:pb-4">
             {/* Steps indicator */}
-            <div className="flex items-center gap-2 md:gap-4 mb-10 overflow-x-auto pb-2" data-testid="apply-steps">
+            <div className="flex items-center gap-2 md:gap-4 mb-4 overflow-x-auto pb-1" data-testid="apply-steps">
                 {STEPS.map((label, i) => (
                     <React.Fragment key={i}>
                         <div className="flex items-center gap-2 shrink-0">
@@ -204,7 +204,7 @@ export default function Apply() {
             </div>
 
             {/* Header */}
-            <div className="mb-8 flex items-center gap-3">
+            <div className="mb-4 flex items-center gap-3">
                 <span className="text-2xl">{schema.country_flag}</span>
                 <div>
                     <h1 className="font-display text-2xl text-navy leading-tight">{schema.title}</h1>
@@ -212,14 +212,14 @@ export default function Apply() {
                 </div>
             </div>
 
-            <div className="bg-white border border-border rounded-xl p-6 md:p-8">
+            <div className="bg-white border border-border rounded-xl p-4 md:p-5">
                 {step === 0 && <TravelerStep traveler={traveler} setTraveler={setTraveler} profiles={profiles} onPrefill={prefillFromProfile} saveAsProfile={saveAsProfile} setSaveAsProfile={setSaveAsProfile} passportMinMonths={passportMinMonths} passportValid={passportValid} />}
                 {step === 1 && <FieldsStep schema={schema} fields={fields} setFields={setFields} />}
                 {step === 2 && <DocsStep schema={schema} uploads={uploads} setUploads={setUploads} />}
                 {step === 3 && <ReviewStep schema={schema} traveler={traveler} fields={fields} uploads={uploads} />}
                 {step === 4 && <PaymentStep schema={schema} total={total} submit={submit} submitting={submitting} />}
 
-                <div className="mt-8 flex items-center justify-between pt-6 border-t border-border">
+                <div className="mt-4 flex items-center justify-between pt-3 border-t border-border">
                     <button
                         onClick={() => setStep((s) => Math.max(0, s - 1))}
                         disabled={step === 0}
@@ -229,14 +229,25 @@ export default function Apply() {
                         ← Back
                     </button>
                     {step < 4 && (
-                        <button
-                            onClick={goNext}
-                            data-testid="apply-continue"
-                            disabled={savingDraft || (step === 0 && !travelerReady) || (step === 1 && !allFieldsFilled) || (step === 2 && !allRequiredUploaded)}
-                            className="text-sm px-6 py-2.5 rounded-full bg-navy text-white hover:bg-navy-hover disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
-                        >
-                            {savingDraft && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Continue →
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={saveAndExit}
+                                disabled={savingDraft || submitting}
+                                data-testid="apply-save-exit"
+                                className="text-sm px-4 py-2.5 rounded-full border border-border text-ink hover:bg-surface-card"
+                            >
+                                <span className="hidden sm:inline">Save &amp; exit</span>
+                                <span className="sm:hidden">Save</span>
+                            </button>
+                            <button
+                                onClick={goNext}
+                                data-testid="apply-continue"
+                                disabled={savingDraft || (step === 0 && !travelerReady) || (step === 1 && !allFieldsFilled) || (step === 2 && !allRequiredUploaded)}
+                                className="text-sm px-6 py-2.5 rounded-full bg-navy text-white hover:bg-navy-hover disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                            >
+                                {savingDraft && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Continue →
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -312,10 +323,10 @@ function TravelerStep({ traveler, setTraveler, profiles, onPrefill, saveAsProfil
 
     return (
         <div>
-            <h2 className="font-display text-xl text-navy mb-1">Traveler details</h2>
-            <p className="text-sm text-ink-muted mb-4">As per your passport. We only accept Indian passports.</p>
+            <h2 className="font-display text-xl text-navy mb-0.5">Traveler details</h2>
+            <p className="text-sm text-ink-muted mb-2">As per your passport. We only accept Indian passports.</p>
 
-            <div className="flex flex-wrap gap-3 mb-4">
+            <div className="flex flex-wrap gap-3 mb-3">
                 <label className="inline-flex items-center gap-2 text-sm bg-navy text-white rounded-full px-4 py-2 cursor-pointer hover:bg-navy-hover" data-testid="scan-passport-btn">
                     {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
                     {scanning ? "Reading passport…" : "Scan passport to autofill"}
@@ -342,7 +353,7 @@ function TravelerStep({ traveler, setTraveler, profiles, onPrefill, saveAsProfil
                 </div>
             )}
 
-            <div className="grid md:grid-cols-2 gap-5">
+            <div className="grid md:grid-cols-2 gap-x-4 gap-y-3">
                 <Field label="Full name (as on passport)" required><input data-testid="traveler-name" className={inp} value={traveler.full_name || ""} onChange={(e) => upd("full_name", e.target.value)} /></Field>
                 <Field label="Date of birth" required><input type="date" data-testid="traveler-dob" className={inp} value={traveler.dob || ""} onChange={(e) => upd("dob", e.target.value)} /></Field>
                 <Field label="Passport number" required><input data-testid="traveler-passport" className={inp} value={traveler.passport_number || ""} onChange={(e) => upd("passport_number", e.target.value.toUpperCase())} /></Field>
@@ -377,8 +388,8 @@ function FieldsStep({ schema, fields, setFields }) {
     return (
         <div>
             <h2 className="font-display text-xl text-navy mb-1">A few more details</h2>
-            <p className="text-sm text-ink-muted mb-6">Specific to {schema.country_name}.</p>
-            <div className="grid md:grid-cols-2 gap-5">
+            <p className="text-sm text-ink-muted mb-4">Specific to {schema.country_name}.</p>
+            <div className="grid md:grid-cols-2 gap-x-4 gap-y-3">
                 {schema.fields.map((f) => (
                     <Field key={f.field_key} label={f.label} required={f.required}>
                         {f.type === "dropdown" ? (
@@ -404,7 +415,7 @@ function DocsStep({ schema, uploads, setUploads }) {
     return (
         <div>
             <h2 className="font-display text-xl text-navy mb-1">Upload your documents</h2>
-            <p className="text-sm text-ink-muted mb-6">Files are private and encrypted. Only your consultant sees them.</p>
+            <p className="text-sm text-ink-muted mb-4">Files are private and encrypted. Only your consultant sees them.</p>
             <div className="space-y-4">
                 {schema.documents.map((d) => (
                     <DocUploader key={d.doc_key} doc={d} value={uploads[d.doc_key]} onUpload={(u) => setUploads((prev) => ({ ...prev, [d.doc_key]: u }))} />
@@ -522,11 +533,16 @@ function DocUploader({ doc, value, onUpload }) {
     );
 }
 
-function ReviewStep({ schema, traveler, fields, uploads }) {
+function ReviewStep({ schema, traveler, fields, uploads, onSaveExit }) {
     return (
         <div>
-            <h2 className="font-display text-xl text-navy mb-1">Review everything</h2>
-            <p className="text-sm text-ink-muted mb-6">Please confirm before payment.</p>
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h2 className="font-display text-xl text-navy mb-1">Review &amp; confirm</h2>
+                    <p className="text-sm text-ink-muted">Please verify all details before payment. Incorrect info leads to rejection.</p>
+                </div>
+                <button onClick={onSaveExit} className="text-sm text-ink-muted underline hover:text-navy">Save &amp; exit</button>
+            </div>
             <div className="space-y-6">
                 <ReviewBlock title="Traveler">
                     {Object.entries(traveler).map(([k, v]) => v && <ReviewRow key={k} label={k.replace(/_/g, " ")} value={v} />)}
@@ -600,7 +616,7 @@ function PaymentStep({ schema, total, submit, submitting }) {
     );
 }
 
-const inp = "w-full h-10 px-3 border border-border rounded-md bg-white text-sm text-ink outline-none focus:ring-2 focus:ring-navy focus:border-navy";
+const inp = "w-full h-9 px-3 border border-border rounded-md bg-white text-sm text-ink outline-none focus:ring-2 focus:ring-navy focus:border-navy";
 function Field({ label, required, children }) {
     return (
         <label className="block">

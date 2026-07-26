@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import api, { getUser } from "@/lib/api";
+import api, { getUser, resolveFileUrl } from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, X, ArrowRight, Pencil, AlertTriangle, PauseCircle, Plus, FileCheck, FileX, Clock, ChevronLeft } from "lucide-react";
@@ -9,7 +9,7 @@ import { ConsultantSelect } from "@/components/forms/selects";
 import { CrmCard, CrmTableCard, CrmCardHeader, CrmEmptyState } from "@/components/ui/crm-card";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
-import { cn } from "@/lib/utils";
+import { cn, formatCaseNumber } from "@/lib/utils";
 
 const STAGES = ["new", "docs_pending", "ready_to_submit", "submitted", "decision", "closed"];
 const STAGE_LABELS = {
@@ -119,7 +119,7 @@ export default function CaseDetail() {
               {duplicate_open_applications.map((d, i) => (
                 <React.Fragment key={d.id}>
                   {i > 0 && ", "}
-                  <Link to={`/cases/${d.id}`} className="underline font-mono">#{d.id.slice(0, 8)} ({d.stage})</Link>
+                  <Link to={`/cases/${d.id}`} className="underline font-mono">{formatCaseNumber(d)} ({d.stage})</Link>
                 </React.Fragment>
               ))}
             </div>
@@ -131,7 +131,7 @@ export default function CaseDetail() {
       <CrmCard className="p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
           <div>
-            <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-1">Case #{c.id.slice(0, 8)}</div>
+            <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-1">Case {formatCaseNumber(c)}</div>
             <h1 className="text-xl font-semibold flex items-center gap-2.5">
               <span className="text-2xl">{c.config_snapshot_json.country_flag}</span>
               <span>{c.config_snapshot_json.country_name} · <span className="font-normal text-ink-muted">{c.config_snapshot_json.visa_type}</span></span>
@@ -224,7 +224,7 @@ export default function CaseDetail() {
           className="bg-surface-card border border-border rounded-[10px] h-auto p-1 flex gap-0.5"
           data-testid="case-tabs"
         >
-          {["overview", "documents", "payment", "tasks", "notes", "activity"].map((t) => (
+          {["overview", "documents", "payment", "tasks", "notes", "comms", "activity"].map((t) => (
             <TabsTrigger
               key={t}
               value={t}
@@ -295,7 +295,19 @@ export default function CaseDetail() {
                       <Stamp tone={DOC_STAMP[d.status] ?? "muted"} size="sm">{d.status}</Stamp>
                     </td>
                     <td className="font-mono text-xs max-w-[160px] truncate">
-                      {d.filename || <span className="text-ink-muted italic">—</span>}
+                      {d.file_url ? (
+                        <a
+                          href={resolveFileUrl(d.file_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-navy hover:underline"
+                          title={`Open ${d.filename || d.doc_name || d.doc_key}`}
+                        >
+                          {d.filename || "Open file"}
+                        </a>
+                      ) : (
+                        <span className="text-ink-muted italic">—</span>
+                      )}
                     </td>
                     <td className="text-right">
                       {d.status === "received" ? (
@@ -382,6 +394,11 @@ export default function CaseDetail() {
           </CrmCard>
         </TabsContent>
 
+        {/* Communications */}
+        <TabsContent value="comms">
+          <CaseCommsPanel caseId={caseId} />
+        </TabsContent>
+
         {/* Activity */}
         <TabsContent value="activity">
           <CrmTableCard className="mt-3">
@@ -445,6 +462,99 @@ function EditableField({ f, onSave }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/* ─── CaseCommsPanel ─── */
+function CaseCommsPanel({ caseId }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [channel, setChannel] = useState("email");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    api.get("/crm/communications", { params: { case_id: caseId } })
+      .then((r) => setRows(Array.isArray(r.data) ? r.data : (r.data?.items || [])))
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [caseId]); // eslint-disable-line
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setSaving(true);
+    try {
+      await api.post("/crm/communications", {
+        case_id: caseId,
+        channel,
+        subject: subject.trim() || null,
+        body: body.trim(),
+        direction: "outbound",
+      });
+      toast.success("Logged");
+      setSubject("");
+      setBody("");
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to log communication");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <CrmCard className="mt-3 p-4" data-testid="comms-panel">
+      <form onSubmit={submit} className="space-y-3 mb-4 border-b border-border pb-4">
+        <div className="grid md:grid-cols-[140px_1fr] gap-2">
+          <CrmField label="Channel">
+            <select className="crm-input" value={channel} onChange={(e) => setChannel(e.target.value)} data-testid="comms-channel">
+              <option value="email">Email</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="sms">SMS</option>
+              <option value="call">Call</option>
+              <option value="portal">Portal</option>
+              <option value="other">Other</option>
+            </select>
+          </CrmField>
+          <CrmField label="Subject">
+            <CrmInput value={subject} onChange={(e) => setSubject(e.target.value)} data-testid="comms-subject" />
+          </CrmField>
+        </div>
+        <CrmField label="Body" required>
+          <CrmTextarea rows={3} required value={body} onChange={(e) => setBody(e.target.value)} data-testid="comms-body" />
+        </CrmField>
+        <div className="flex justify-end">
+          <CrmButton type="submit" variant="solid" size="sm" loading={saving} data-testid="comms-submit">
+            Log communication
+          </CrmButton>
+        </div>
+      </form>
+      {loading ? (
+        <div className="text-xs text-ink-muted py-4">Loading…</div>
+      ) : rows.length === 0 ? (
+        <CrmEmptyState title="No communications logged" />
+      ) : (
+        <ul className="divide-y divide-border" data-testid="comms-list">
+          {rows.map((r) => (
+            <li key={r.id} className="py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Stamp tone="muted" size="sm">{r.channel || "—"}</Stamp>
+                <span className="text-[10px] font-mono text-ink-muted uppercase tracking-widest">
+                  {r.created_at ? new Date(r.created_at).toLocaleString("en-IN") : ""}
+                </span>
+              </div>
+              {r.subject && <div className="text-xs font-medium text-ink mb-0.5">{r.subject}</div>}
+              {r.body && <div className="text-sm text-ink whitespace-pre-wrap">{r.body}</div>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </CrmCard>
   );
 }
 

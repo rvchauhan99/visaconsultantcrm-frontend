@@ -1,27 +1,55 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import { StampIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
-import { CrmStatCard, CrmTableCard, CrmEmptyState } from "@/components/ui/crm-card";
-import { CrmSelect } from "@/components/ui/crm-field";
+import { CrmStatCard, CrmTableCard } from "@/components/ui/crm-card";
+import { FilterPanel } from "@/components/ui/filter-panel";
 import { DataTable } from "@/components/ui/data-table";
+import { useListQueryState } from "@/hooks/useListQueryState";
+
+const FILTER_KEYS = ["days"];
+const LIST_DEFAULTS = {};
+const DAY_OPTIONS = [
+  { value: "30", label: "Next 30 days" },
+  { value: "90", label: "Next 90 days" },
+  { value: "180", label: "Next 180 days" },
+  { value: "365", label: "Next 365 days" },
+  { value: "3650", label: "All expiries on file" },
+];
 
 const urgencyTone = (u) =>
   u === "expired" || u === "critical" ? "danger" : u === "urgent" ? "warning" : "teal";
 
 export default function PassportExpiry() {
+  const list = useListQueryState({
+    filterKeys: FILTER_KEYS,
+    defaults: LIST_DEFAULTS,
+  });
+
+  const days = [30, 90, 180, 365, 3650].includes(Number(list.filters.days))
+    ? String(list.filters.days)
+    : "180";
+
   const [rows, setRows] = useState([]);
-  const [window_, setWindow] = useState(180);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    api.get(`/crm/passport-expiry?days=${window_}`)
+    api.get("/crm/passport-expiry", { params: { days } })
       .then((r) => setRows(r.data))
       .finally(() => setLoading(false));
-  }, [window_]);
+  }, [days]);
+
+  const filterFields = useMemo(() => [
+    {
+      key: "days",
+      label: "Window",
+      type: "select",
+      options: DAY_OPTIONS,
+    },
+  ], []);
 
   const buckets = {
     expired:  rows.filter((r) => r.urgency === "expired"),
@@ -68,28 +96,23 @@ export default function PassportExpiry() {
   ];
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 space-y-4">
       <PageHeader
         label="Renewal watch"
         title="Passport expiry"
-        actions={
-          <CrmSelect
-            value={window_}
-            onChange={(e) => setWindow(Number(e.target.value))}
-            className="w-44"
-            data-testid="expiry-window"
-          >
-            <option value={30}>Next 30 days</option>
-            <option value={90}>Next 90 days</option>
-            <option value={180}>Next 180 days</option>
-            <option value={365}>Next 365 days</option>
-            <option value={3650}>All expiries on file</option>
-          </CrmSelect>
-        }
       />
 
-      {/* Bucket stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <FilterPanel
+        fields={filterFields}
+        values={{ ...list.filters, days }}
+        activeCount={list.filters.days ? 1 : 0}
+        onApply={list.setFilters}
+        onClear={list.clearFilters}
+        defaultOpen
+        testId="expiry-filters"
+      />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <CrmStatCard label="Expired" value={buckets.expired.length} tone={buckets.expired.length > 0 ? "danger" : "default"} />
         <CrmStatCard label="≤ 30 days" value={buckets.critical.length} tone={buckets.critical.length > 0 ? "danger" : "default"} />
         <CrmStatCard label="≤ 90 days" value={buckets.urgent.length} tone={buckets.urgent.length > 0 ? "warning" : "default"} />
@@ -101,11 +124,13 @@ export default function PassportExpiry() {
           columns={columns}
           data={rows}
           loading={loading}
+          density="compact"
+          stickyHeader
           rowTestId={(_, i) => `expiry-row-${i}`}
           empty={{
             icon: StampIcon,
             title: "No passports expiring in this window",
-            description: "All clear! 🎉",
+            description: "All clear for this window.",
           }}
         />
       </CrmTableCard>

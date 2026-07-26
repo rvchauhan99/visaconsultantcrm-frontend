@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
@@ -7,23 +7,35 @@ import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmTableCard } from "@/components/ui/crm-card";
+import { FilterPanel } from "@/components/ui/filter-panel";
 import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
 import { DataTable } from "@/components/ui/data-table";
+import { useListQueryState } from "@/hooks/useListQueryState";
+
+const FILTER_KEYS = [];
+const LIST_DEFAULTS = {};
 
 export default function Consultants() {
-  const [list, setList] = useState([]);
+  const list = useListQueryState({
+    filterKeys: FILTER_KEYS,
+    defaults: LIST_DEFAULTS,
+  });
+  const [rows, setRows] = useState([]);
   const [showNew, setShowNew] = useState(false);
   const [reassignCtx, setReassignCtx] = useState(null); // { mode, cid, name, message, blocked, codes? }
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, []);
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
-    api.get("/admin/consultants").then((r) => {
-      setList(Array.isArray(r.data) ? r.data : (r.data?.items || []));
+    const params = {};
+    if (list.q) params.q = list.q;
+    api.get("/admin/consultants", { params }).then((r) => {
+      setRows(Array.isArray(r.data) ? r.data : (r.data?.items || []));
       setLoading(false);
-    });
-  };
+    }).catch(() => { setRows([]); setLoading(false); });
+  }, [list.q]);
+
+  useEffect(() => { load(); }, [load]);
 
   const create = async (form) => {
     try {
@@ -157,10 +169,22 @@ export default function Consultants() {
 
       {showNew && <NewConsultantForm onCancel={() => setShowNew(false)} onCreate={create} />}
 
+      <FilterPanel
+        fields={[]}
+        values={{}}
+        q={list.q}
+        activeCount={list.activeFilterCount}
+        onQChange={list.setQ}
+        onApply={list.setFilters}
+        onClear={list.clearFilters}
+        searchPlaceholder="Search consultants…"
+        testId="consultants-filters"
+      />
+
       <CrmTableCard>
         <DataTable
           columns={columns}
-          data={list}
+          data={rows}
           loading={loading}
           rowTestId={(row) => `consultant-row-${row.id.slice(0, 4)}`}
           empty={{ icon: Users2, title: "No consultants found" }}

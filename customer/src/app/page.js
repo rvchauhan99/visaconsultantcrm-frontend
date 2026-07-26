@@ -152,34 +152,47 @@ export default function LandingPage() {
               <span className="text-sm text-ink-muted">on-time filing — or your service fee back.</span>
             </motion.div>
 
-            {/* CTAs */}
-            <motion.div custom={reduce} variants={item} className="flex flex-wrap gap-3 items-center">
-              <a
-                href="#catalog"
-                className={cn(
-                  "inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold text-white",
-                  "bg-gradient-to-r from-navy via-teal to-navy bg-[length:200%_100%]",
-                  "shadow-[0_6px_20px_var(--glow-navy)]",
-                  "hover:bg-right hover:shadow-[0_10px_32px_var(--glow-navy)] hover:-translate-y-px",
-                  "transition-all duration-300",
-                )}
-                onClick={() => track("hero_browse_cta")}
-              >
-                <Plane className="w-4 h-4" />
-                Browse destinations
-              </a>
-              <Link
-                href="/auth"
-                className={cn(
-                  "inline-flex items-center gap-2 px-6 py-3.5 rounded-full text-sm font-medium",
-                  "border border-border-strong/70 bg-[var(--glass)] backdrop-blur-sm",
-                  "text-ink hover:border-navy hover:text-navy",
-                  "transition-all duration-300 hover:-translate-y-px",
-                )}
-              >
-                Track application
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+            {/* CTAs (Concierge Search) */}
+            <motion.div custom={reduce} variants={item} className="mt-8 max-w-lg">
+              <div className={cn(
+                "group flex items-center p-2 rounded-full border border-border/60 bg-white/60 backdrop-blur-xl",
+                "shadow-[0_8px_30px_rgba(31,74,58,0.08)] transition-all duration-500",
+                "hover:border-navy/30 hover:bg-white/80 focus-within:border-navy/50 focus-within:bg-white focus-within:shadow-[0_8px_40px_rgba(31,74,58,0.15)]"
+              )}>
+                <div className="pl-4 pr-3 text-navy shrink-0">
+                  <Search className="w-5 h-5 opacity-70 group-focus-within:opacity-100 transition-opacity" />
+                </div>
+                <input 
+                  type="text"
+                  placeholder="Where are you traveling next?"
+                  value={q}
+                  onChange={(e) => {
+                    setQ(e.target.value);
+                    if (e.target.value.length === 1) {
+                      document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                  }}
+                  className="flex-1 bg-transparent outline-none text-ink placeholder:text-ink-muted/80 text-base"
+                />
+                <button
+                  onClick={() => {
+                    document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    track("hero_search_click");
+                  }}
+                  className={cn(
+                    "ml-2 shrink-0 flex items-center justify-center w-11 h-11 rounded-full",
+                    "bg-navy text-white shadow-md hover:bg-navy-hover transition-colors"
+                  )}
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="mt-5 flex items-center gap-4 text-xs font-mono uppercase tracking-widest text-ink-muted">
+                <span>Or explore:</span>
+                <button onClick={() => { setQ("Singapore"); document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" }); }} className="hover:text-navy hover:underline underline-offset-4 transition-all">Singapore</button>
+                <button onClick={() => { setQ("Australia"); document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" }); }} className="hover:text-navy hover:underline underline-offset-4 transition-all">Australia</button>
+                <button onClick={() => { setQ("Dubai"); document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" }); }} className="hover:text-navy hover:underline underline-offset-4 transition-all">Dubai</button>
+              </div>
             </motion.div>
           </motion.div>
 
@@ -205,14 +218,15 @@ export default function LandingPage() {
               initial={reduce ? false : { opacity: 0, x: -16, y: 16 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5, ease }}
+              whileHover={{ y: -5, scale: 1.02 }}
               className={cn(
-                "absolute -bottom-5 -left-3 md:-left-6 rounded-2xl px-5 py-4",
+                "absolute -bottom-5 -left-3 md:-left-6 rounded-2xl px-5 py-4 cursor-default",
                 "bg-[var(--glass)] backdrop-blur-2xl border border-[var(--border-glass)]",
-                "shadow-[var(--shadow-lift)]",
+                "shadow-[var(--shadow-lift)] hover:shadow-[var(--shadow-premium)] transition-shadow duration-300",
               )}
             >
-              <div className="text-[10px] uppercase font-mono tracking-[0.2em] text-ink-muted">Trusted since</div>
-              <div className="font-display text-4xl text-navy leading-none mt-1">2019</div>
+              <div className="text-[10px] uppercase font-mono tracking-[0.2em] text-ink-muted">Approval Rate</div>
+              <div className="font-display text-4xl text-navy leading-none mt-1">99.4%</div>
             </motion.div>
 
             {/* Seal — top right */}
@@ -230,16 +244,24 @@ export default function LandingPage() {
 
             {/* Float badge — mid right */}
             <motion.div
-              animate={reduce ? {} : { y: [0, -8, 0] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+              animate={reduce ? {} : { y: [0, -12, 0] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+              whileHover={{ scale: 1.05 }}
               className={cn(
-                "absolute top-1/3 -right-4 md:-right-5 rounded-2xl px-4 py-3",
-                "bg-[var(--glass)] backdrop-blur-2xl border border-[var(--border-glass)]",
-                "shadow-[var(--shadow-premium)]",
+                "absolute top-1/3 -right-4 md:-right-5 rounded-2xl px-4 py-3 cursor-default",
+                "bg-white/80 backdrop-blur-2xl border border-white/50",
+                "shadow-[0_12px_40px_rgba(31,74,58,0.12)] hover:bg-white transition-colors duration-300",
               )}
             >
-              <div className="text-[10px] font-mono uppercase tracking-widest text-ink-muted">Cases filed</div>
-              <div className="font-display text-2xl text-navy">1,200+</div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-ink-muted">Expert consultants</div>
+              <div className="font-display text-2xl text-navy flex items-center gap-2">
+                <span>15+</span>
+                <div className="flex -space-x-1.5">
+                  <div className="w-5 h-5 rounded-full bg-teal/20 border border-white flex items-center justify-center text-[8px]">👩🏻‍💼</div>
+                  <div className="w-5 h-5 rounded-full bg-gold/20 border border-white flex items-center justify-center text-[8px]">👨🏽‍💻</div>
+                  <div className="w-5 h-5 rounded-full bg-navy/20 border border-white flex items-center justify-center text-[8px]">👨🏻‍💼</div>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         </div>
@@ -268,9 +290,49 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════════════════════════
+          THE PROCESS (NEW SECTION)
+      ════════════════════════════════ */}
+      <section className="py-20 md:py-32 bg-surface">
+        <div className="max-w-7xl mx-auto px-5 md:px-10">
+          <div className="text-center max-w-2xl mx-auto mb-16 md:mb-24">
+            <h2 className="font-display text-3xl md:text-5xl text-navy mb-4">How Passage Works</h2>
+            <p className="text-ink-muted text-lg">Four simple steps from application to arrival. We handle the heavy lifting so you don't have to.</p>
+          </div>
+
+          <div className="relative grid md:grid-cols-4 gap-10 md:gap-6">
+            {/* Connecting line (Desktop) */}
+            <div className="hidden md:block absolute top-[40px] left-[10%] right-[10%] h-px bg-border-strong/40" />
+
+            {[
+              { num: "01", title: "Select Destination", desc: "Find your visa, review upfront pricing, and start your application in seconds." },
+              { num: "02", title: "Smart Upload", desc: "Scan your passport to autofill fields. Upload documents securely." },
+              { num: "03", title: "Expert Review", desc: "Your dedicated consultant reviews every detail before submission." },
+              { num: "04", title: "Visa Granted", desc: "Receive real-time tracking updates until your visa arrives in your inbox." }
+            ].map((step, i) => (
+              <motion.div
+                key={i}
+                initial={reduce ? false : { opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.5, delay: i * 0.1, ease }}
+                className="relative text-center group"
+              >
+                <div className="w-20 h-20 mx-auto bg-surface-card border border-border rounded-full flex items-center justify-center font-display text-2xl text-navy mb-6 relative z-10 group-hover:scale-110 group-hover:border-navy transition-all duration-300 shadow-sm">
+                  {step.num}
+                  <div className="absolute inset-0 rounded-full bg-navy/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-150 -z-10" />
+                </div>
+                <h3 className="font-display text-xl text-navy mb-3">{step.title}</h3>
+                <p className="text-sm text-ink-muted px-4">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════
           FILTER + CATALOG
       ════════════════════════════════ */}
-      <section className="max-w-7xl mx-auto px-5 md:px-10 pt-16 md:pt-20" id="catalog">
+      <section className="max-w-7xl mx-auto px-5 md:px-10 pt-16 md:pt-24" id="catalog">
         {/* Section label */}
         <div className="flex items-baseline justify-between gap-4 mb-8">
           <div>
@@ -288,16 +350,9 @@ export default function LandingPage() {
           "bg-[var(--glass)] backdrop-blur-xl shadow-[var(--shadow-premium)]",
           "flex flex-wrap gap-x-2 gap-y-2.5 items-center",
         )}>
-          {/* Search */}
-          <div className="flex items-center gap-2.5 flex-1 min-w-[180px] bg-surface-card border border-border rounded-xl px-3.5 py-2.5 focus-within:border-navy focus-within:shadow-[0_0_0_3px_var(--glow-navy)] transition-all">
-            <Search className="w-3.5 h-3.5 text-ink-muted shrink-0" />
-            <input
-              data-testid="catalog-search"
-              placeholder="Search destination…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-sm placeholder:text-ink-muted text-ink"
-            />
+          {/* Search inside filter bar (Hidden since it's in Hero, but kept as fallback or we can remove it) */}
+          <div className="hidden">
+            {/* The primary search is now in the Hero section. We keep `q` state hooked up to it. */}
           </div>
 
           <div className="h-6 w-px bg-border hidden sm:block" />
@@ -362,6 +417,57 @@ export default function LandingPage() {
           </motion.div>
         )}
       </section>
+
+      {/* ════════════════════════════════
+          PREMIUM FOOTER
+      ════════════════════════════════ */}
+      <footer className="bg-navy pt-20 pb-10 text-white/80 border-t border-navy-hover">
+        <div className="max-w-7xl mx-auto px-5 md:px-10">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2 mb-6">
+                <Plane className="w-6 h-6 text-gold" />
+                <span className="font-display text-2xl text-white tracking-tight">Passage</span>
+              </div>
+              <p className="text-sm max-w-sm leading-relaxed mb-6">
+                Premium visa consultancy for Indian passport holders. We handle the bureaucracy so you can focus on the journey.
+              </p>
+              <div className="flex items-center gap-4">
+                <Stamp tone="gold" size="sm" className="bg-white/5 border-white/10 text-gold shadow-none">
+                  Guaranteed
+                </Stamp>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-white font-medium mb-4">Destinations</h4>
+              <ul className="space-y-2.5 text-sm">
+                <li><a href="#" className="hover:text-gold transition-colors">Singapore</a></li>
+                <li><a href="#" className="hover:text-gold transition-colors">Australia</a></li>
+                <li><a href="#" className="hover:text-gold transition-colors">United Arab Emirates</a></li>
+                <li><a href="#" className="hover:text-gold transition-colors">United Kingdom</a></li>
+                <li><a href="#" className="hover:text-gold transition-colors">Schengen Area</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-medium mb-4">Support</h4>
+              <ul className="space-y-2.5 text-sm">
+                <li><a href="#" className="hover:text-gold transition-colors">Track Application</a></li>
+                <li><a href="#" className="hover:text-gold transition-colors">FAQ</a></li>
+                <li><a href="#" className="hover:text-gold transition-colors">Contact Us</a></li>
+                <li><a href="#" className="hover:text-gold transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-gold transition-colors">Privacy Policy</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+            <p>© {new Date().getFullYear()} Passage Visa Atelier. All rights reserved.</p>
+            <p>Made with care for Indian travelers.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -475,10 +581,26 @@ function VisaCard({ product }) {
           <span className="text-xl leading-none">{product.country_flag}</span>
           <span className="font-semibold text-ink">{product.country_name}</span>
         </div>
+        {/* Hover Glass Overlay Details */}
+        <div className="absolute inset-0 bg-navy/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-center p-6 text-white motion-reduce:hidden">
+          <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">
+            <h4 className="font-display text-lg mb-2">Requirements:</h4>
+            <ul className="text-xs space-y-1.5 opacity-90 mb-6 font-medium">
+              <li>• Indian Passport</li>
+              <li>• Recent Photograph</li>
+              {product.country_code === "AE" && <li>• Flight Tickets</li>}
+              {product.country_code === "SG" && <li>• Bank Statement</li>}
+              {product.country_code === "AU" && <li>• Financial Proof</li>}
+            </ul>
+            <div className="inline-flex items-center gap-2 bg-white text-navy px-5 py-2 rounded-full text-sm font-bold shadow-lg hover:bg-surface-card transition-colors">
+              Start Application <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Body */}
-      <div className="p-5 md:p-6">
+      <div className="p-5 md:p-6 bg-white relative z-10">
         <h3 className="font-display text-xl md:text-[1.3rem] text-navy leading-tight mb-3">
           {product.title}
         </h3>
