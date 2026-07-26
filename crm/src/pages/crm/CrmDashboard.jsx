@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -188,77 +189,69 @@ export default function CrmDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2" data-testid="dashboard-metrics">
-        <Link to={appendScope("/pipeline", scopeQuery)} className="block hover:opacity-90">
-          {loading.pipeline && !pipeline ? <CrmSkeleton className="h-[88px]" /> : (
-            <CrmStatCard label="Open cases" value={pipeline?.total_open ?? (errors.pipeline ? "!" : "—")} icon={Briefcase} />
-          )}
-        </Link>
-        <Link to={appendScope("/pipeline?sla=overdue", scopeQuery)} className="block hover:opacity-90">
-          <CrmStatCard
-            label="Overdue"
-            value={sla?.overdue ?? (errors.sla ? "!" : "—")}
-            icon={AlertTriangle}
-            tone={sla?.overdue > 0 ? "danger" : "default"}
-          />
-        </Link>
-        <Link to={appendScope("/pipeline?sla=due_soon", scopeQuery)} className="block hover:opacity-90">
-          <CrmStatCard
-            label="Due soon"
-            value={sla?.due_soon ?? "—"}
-            icon={Clock}
-            tone={sla?.due_soon > 0 ? "warning" : "default"}
-          />
-        </Link>
-        <Link to={appendScope("/cases/closed", scopeQuery)} className="block hover:opacity-90">
-          <CrmStatCard label="Completed" value={funnel?.closed ?? "—"} icon={CheckCircle2} delta="closed cases" />
-        </Link>
+        {[
+          { to: appendScope("/pipeline", scopeQuery), loading: loading.pipeline && !pipeline, content: <CrmStatCard label="Open cases" value={pipeline?.total_open ?? (errors.pipeline ? "!" : "—")} icon={Briefcase} /> },
+          { to: appendScope("/pipeline?sla=overdue", scopeQuery), content: <CrmStatCard label="Overdue" value={sla?.overdue ?? (errors.sla ? "!" : "—")} icon={AlertTriangle} tone={sla?.overdue > 0 ? "danger" : "default"} /> },
+          { to: appendScope("/pipeline?sla=due_soon", scopeQuery), content: <CrmStatCard label="Due soon" value={sla?.due_soon ?? "—"} icon={Clock} tone={sla?.due_soon > 0 ? "warning" : "default"} /> },
+          { to: appendScope("/cases/closed", scopeQuery), content: <CrmStatCard label="Completed" value={funnel?.closed ?? "—"} icon={CheckCircle2} delta="closed cases" /> },
+        ].map((card, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, duration: 0.35 }}>
+            <Link to={card.to} className="block hover:opacity-90 transition-opacity">
+              {card.loading ? <CrmSkeleton className="h-[88px]" /> : card.content}
+            </Link>
+          </motion.div>
+        ))}
       </div>
 
       {/* Collections snapshot */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Link to={appendScope("/reports/payments", scopeQuery)} className="block">
-          <CrmStatCard label="Collected" value={collections ? inr(collections.total_collected) : "—"} icon={Wallet} tone="success" />
-        </Link>
-        <CrmStatCard label="Refunds" value={collections ? inr(collections.total_refunded) : "—"} />
-        <CrmStatCard label="Net" value={collections ? inr(collections.net) : "—"} icon={CreditCard} />
-        <Link to={appendScope("/reports/payments", scopeQuery)} className="block">
-          <CrmStatCard label="Payment desk" value="Open →" icon={CreditCard} />
-        </Link>
+        {[
+          { to: appendScope("/reports/payments", scopeQuery), content: <CrmStatCard label="Collected" value={collections ? inr(collections.total_collected) : "—"} icon={Wallet} tone="success" /> },
+          { content: <CrmStatCard label="Refunds" value={collections ? inr(collections.total_refunded) : "—"} /> },
+          { content: <CrmStatCard label="Net" value={collections ? inr(collections.net) : "—"} icon={CreditCard} /> },
+          { to: appendScope("/reports/payments", scopeQuery), content: <CrmStatCard label="Payment desk" value="Open →" icon={CreditCard} /> },
+        ].map((card, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 + i * 0.06, duration: 0.35 }}>
+            {card.to ? <Link to={card.to} className="block">{card.content}</Link> : card.content}
+          </motion.div>
+        ))}
       </div>
 
       {/* Ops queues */}
-      <div data-testid="ops-queues">
+      <motion.div data-testid="ops-queues" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.4 }}>
         <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-2">Work queues</div>
         {errors.queues ? (
           <WidgetError message="Queues unavailable" onRetry={load} />
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {QUEUE_CARDS.map((q) => {
+            {QUEUE_CARDS.map((q, i) => {
               const count = queueCount(queues, q.key);
               const Icon = q.icon;
               return (
-                <Link key={q.key} to={appendScope(q.to, pickScope(scopeQuery, q.scopeKeys))} data-testid={`queue-${q.key}`}>
-                  <CrmCard hover className="p-3">
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted leading-none">
-                        {q.label}
+                <motion.div key={q.key} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.55 + i * 0.04, duration: 0.3 }}>
+                  <Link to={appendScope(q.to, pickScope(scopeQuery, q.scopeKeys))} data-testid={`queue-${q.key}`}>
+                    <CrmCard hover className="p-3">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted leading-none">
+                          {q.label}
+                        </div>
+                        <Icon className="w-3.5 h-3.5 text-ink-muted shrink-0" />
                       </div>
-                      <Icon className="w-3.5 h-3.5 text-ink-muted shrink-0" />
-                    </div>
-                    <div className={`font-mono text-xl font-semibold ${
-                      q.tone === "danger" && count > 0 ? "text-danger"
-                        : q.tone === "warning" && count > 0 ? "text-warning"
-                          : "text-ink"
-                    }`}>
-                      {queues ? count : (loading.queues ? "…" : "—")}
-                    </div>
-                  </CrmCard>
-                </Link>
+                      <div className={`font-mono text-xl font-semibold ${
+                        q.tone === "danger" && count > 0 ? "text-danger"
+                          : q.tone === "warning" && count > 0 ? "text-warning"
+                            : "text-ink"
+                      }`}>
+                        {queues ? count : (loading.queues ? "…" : "—")}
+                      </div>
+                    </CrmCard>
+                  </Link>
+                </motion.div>
               );
             })}
           </div>
         )}
-      </div>
+      </motion.div>
 
       <div className="grid md:grid-cols-2 gap-3">
         <CrmTableCard>

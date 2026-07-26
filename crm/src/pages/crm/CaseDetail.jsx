@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import api, { getUser, resolveFileUrl } from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -167,14 +168,19 @@ export default function CaseDetail() {
           {STAGES.map((s, i) => (
             <React.Fragment key={s}>
               <div className="flex flex-col items-center flex-1 min-w-0">
-                <div className={cn(
-                  "w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold z-10 relative",
-                  i < currentStageIdx ? "border-navy bg-navy text-white"
-                  : i === currentStageIdx ? "border-navy bg-white text-navy ring-2 ring-navy/20"
-                  : "border-border bg-surface text-ink-muted"
-                )}>
+                <motion.div
+                  initial={false}
+                  animate={{ scale: i === currentStageIdx ? 1.1 : 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className={cn(
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold z-10 relative shadow-sm",
+                    i < currentStageIdx ? "border-navy bg-navy text-white shadow-navy/20"
+                    : i === currentStageIdx ? "border-navy bg-white text-navy ring-4 ring-navy/10"
+                    : "border-border bg-surface text-ink-muted"
+                  )}
+                >
                   {i < currentStageIdx ? <Check className="w-2.5 h-2.5" /> : i + 1}
-                </div>
+                </motion.div>
                 <div className={cn(
                   "text-[9px] font-mono uppercase tracking-wider mt-1 text-center",
                   i === currentStageIdx ? "text-navy font-semibold" : "text-ink-muted"
@@ -183,7 +189,14 @@ export default function CaseDetail() {
                 </div>
               </div>
               {i < STAGES.length - 1 && (
-                <div className={cn("h-0.5 flex-1 -mt-4 mx-0.5", i < currentStageIdx ? "bg-navy" : "bg-border")} />
+                <div className="h-0.5 flex-1 -mt-4 mx-0.5 bg-border overflow-hidden relative">
+                  <motion.div
+                    className="absolute inset-y-0 left-0 bg-navy"
+                    initial={{ width: "0%" }}
+                    animate={{ width: i < currentStageIdx ? "100%" : "0%" }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                  />
+                </div>
               )}
             </React.Fragment>
           ))}

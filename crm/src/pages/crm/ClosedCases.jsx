@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { motion } from "framer-motion";
 import Stamp from "@/components/Stamp";
 import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";
 import { PageHeader } from "@/components/ui/page-header";
@@ -194,10 +195,18 @@ export default function ClosedCases() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <CrmStatCard label="Closed total" value={meta.total ?? "—"} icon={CheckCircle2} />
-        <CrmStatCard label="Approved" value={approved} tone="success" />
-        <CrmStatCard label="Rejected" value={rejected} tone={rejected ? "danger" : "default"} />
-        <CrmStatCard label="Approval rate" value={`${approvalRate}%`} icon={Timer} delta="of decided" />
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0, duration: 0.35 }}>
+          <CrmStatCard label="Closed total" value={meta.total ?? "—"} icon={CheckCircle2} />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06, duration: 0.35 }}>
+          <CrmStatCard label="Approved" value={approved} tone="success" />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.35 }}>
+          <CrmStatCard label="Rejected" value={rejected} tone={rejected ? "danger" : "default"} />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.35 }}>
+          <CrmStatCard label="Approval rate" value={`${approvalRate}%`} icon={Timer} delta="of decided" />
+        </motion.div>
       </div>
 
       <FilterPanel

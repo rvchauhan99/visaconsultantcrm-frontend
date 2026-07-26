@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { Inbox as InboxIcon } from "lucide-react";
+import { Inbox as InboxIcon, Mail, MessageCircle, MessageSquare, Phone, Globe, FileText } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
@@ -17,6 +17,15 @@ const CHANNEL_TONE = {
   call: "muted",
   portal: "gold",
   note: "muted",
+};
+
+const CHANNEL_ICON = {
+  email: Mail,
+  whatsapp: MessageCircle,
+  sms: MessageSquare,
+  call: Phone,
+  portal: Globe,
+  note: FileText,
 };
 
 const FILTER_KEYS = ["channel", "direction", "status", "case_id", "lead_id", "from_date", "to_date"];
@@ -82,11 +91,15 @@ export default function Inbox() {
     {
       key: "channel",
       label: "Channel",
-      render: (row) => (
-        <Stamp tone={CHANNEL_TONE[row.channel] || "muted"} size="sm">
-          {row.channel || "—"}
-        </Stamp>
-      ),
+      render: (row) => {
+        const Icon = CHANNEL_ICON[row.channel] || FileText;
+        return (
+          <Stamp tone={CHANNEL_TONE[row.channel] || "muted"} size="sm" className="inline-flex items-center gap-1.5">
+            <Icon className="w-3 h-3" />
+            {row.channel || "—"}
+          </Stamp>
+        );
+      },
     },
     {
       key: "subject",

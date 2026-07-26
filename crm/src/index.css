@@ -133,8 +133,6 @@
 
   /* ── Pipeline kanban ── */
   .kanban-col {
-    min-width: 210px;
-    max-width: 210px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--surface-card);

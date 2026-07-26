@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { PhoneCall, Plus, RefreshCw, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";

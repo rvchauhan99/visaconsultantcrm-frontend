@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Stamp from "@/components/Stamp";
+import { motion, AnimatePresence } from "framer-motion";
 import { Check, ListChecks, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
@@ -211,29 +212,33 @@ export default function Tasks() {
         testId="tasks-filters"
       />
 
-      {showForm && (
-        <CrmCard className="p-4">
-          <form onSubmit={createTask} className="grid md:grid-cols-[1fr_140px_120px_140px_auto] gap-3 items-end" data-testid="task-new-form">
-            <CrmField label="Description" required>
-              <CrmInput required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} data-testid="task-desc-input" />
-            </CrmField>
-            <CrmField label="Due date">
-              <CrmInput type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} data-testid="task-due-input" />
-            </CrmField>
-            <CrmField label="Priority">
-              <CrmSelect value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} data-testid="task-priority-input">
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-              </CrmSelect>
-            </CrmField>
-            <CrmField label="Category">
-              <CrmInput value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="optional" data-testid="task-category-input" />
-            </CrmField>
-            <CrmButton variant="solid" size="sm" type="submit" loading={saving} data-testid="task-create-submit">Create</CrmButton>
-          </form>
-        </CrmCard>
-      )}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <CrmCard className="p-4">
+              <form onSubmit={createTask} className="grid md:grid-cols-[1fr_140px_120px_140px_auto] gap-3 items-end" data-testid="task-new-form">
+                <CrmField label="Description" required>
+                  <CrmInput required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} data-testid="task-desc-input" />
+                </CrmField>
+                <CrmField label="Due date">
+                  <CrmInput type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} data-testid="task-due-input" />
+                </CrmField>
+                <CrmField label="Priority">
+                  <CrmSelect value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} data-testid="task-priority-input">
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                  </CrmSelect>
+                </CrmField>
+                <CrmField label="Category">
+                  <CrmInput value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="optional" data-testid="task-category-input" />
+                </CrmField>
+                <CrmButton variant="solid" size="sm" type="submit" loading={saving} data-testid="task-create-submit">Create</CrmButton>
+              </form>
+            </CrmCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <PaginatedTable
         columns={columns}

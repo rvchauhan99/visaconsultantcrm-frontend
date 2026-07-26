@@ -5,6 +5,7 @@ import {
   LogOut, KanbanSquare, Layers, Users2, BarChart3,
   PlusSquare, LayoutGrid, StampIcon, FileText, FormInput,
   ListChecks, ChevronDown, User, Menu, X, UserPlus, Wallet, Inbox, BookOpen, Archive, CreditCard, PhoneCall,
+  ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import NotificationBell from "@/components/crm/NotificationBell";
 import CrmSearch from "@/components/crm/CrmSearch";
@@ -36,6 +37,7 @@ const ROUTE_LABELS = {
  * CRM layout — Editorial Luxe at compact density.
  * Dark navy-deep sidebar, ivory content area.
  * Collapsible drawer on narrow screens.
+ * Collapsible sidebar on desktop (icon-only ↔ full).
  */
 export default function CrmLayout() {
   const user = getUser();
@@ -44,8 +46,28 @@ export default function CrmLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Collapsible sidebar state — persisted to localStorage
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem("crm_sidebar_collapsed") === "true"; } catch { return false; }
+  });
+  // Hover-to-expand when collapsed
+  const [hoverExpanded, setHoverExpanded] = useState(false);
+
+  const toggleCollapse = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("crm_sidebar_collapsed", String(next)); } catch {}
+      return next;
+    });
+    setHoverExpanded(false);
+  };
+
+  // Whether sidebar is visually expanded (either not collapsed, or hover-expanded)
+  const isExpanded = !collapsed || hoverExpanded;
+
   useEffect(() => {
     setSidebarOpen(false);
+    setProfileOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -76,124 +98,195 @@ export default function CrmLayout() {
           ? `Case #${pathParts[1].slice(0, 8)}`
           : ROUTE_LABELS[`/${pathParts[0]}`] ?? pathParts[0];
 
-  const sidebar = (
-    <>
-      <div className="px-3 py-3.5 border-b border-navy-sidebar flex items-center justify-between gap-2">
-        <Link to="/" className="flex items-center gap-2.5 min-w-0" data-testid="crm-logo">
-          <span className={cn(
-            "inline-flex w-8 h-8 items-center justify-center rounded-md shrink-0",
-            "border border-double text-xs font-mono font-bold",
-            "border-[rgba(176,141,87,0.5)] text-[rgba(176,141,87,0.85)]",
-            "bg-[rgba(255,252,247,0.04)]",
-          )}>
-            PC
-          </span>
-          <div className="min-w-0">
-            <div className="text-sm font-semibold leading-tight text-navy-sidebar-active truncate">Passage CRM</div>
-            <div className="text-[10px] font-mono uppercase tracking-widest text-[rgba(255,252,247,0.35)]">Ops desk</div>
-          </div>
-        </Link>
-        <button
-          type="button"
-          className="lg:hidden p-1.5 rounded-md text-[rgba(255,252,247,0.6)] hover:bg-navy-sidebar-hover"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Close menu"
-          data-testid="crm-sidebar-close"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+  let hoverTimeout;
+  const onSidebarMouseEnter = () => {
+    if (!collapsed) return;
+    hoverTimeout = setTimeout(() => setHoverExpanded(true), 150);
+  };
+  const onSidebarMouseLeave = () => {
+    clearTimeout(hoverTimeout);
+    setHoverExpanded(false);
+    setProfileOpen(false);
+  };
 
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-        <RailLink to="/" icon={<LayoutGrid className="w-4 h-4" />} label="Dashboard" testid="crm-nav-dashboard" end />
-        <RailLink to="/pipeline" icon={<KanbanSquare className="w-4 h-4" />} label="Pipeline" testid="crm-nav-pipeline" />
-        <RailLink to="/cases/closed" icon={<Archive className="w-4 h-4" />} label="Closed cases" testid="crm-nav-closed" />
-        <RailLink to="/tasks" icon={<ListChecks className="w-4 h-4" />} label="My tasks" testid="crm-nav-tasks" />
-        <RailLink to="/leads" icon={<UserPlus className="w-4 h-4" />} label="Leads" testid="crm-nav-leads" />
-        <RailLink to="/follow-ups" icon={<PhoneCall className="w-4 h-4" />} label="Follow-ups" testid="crm-nav-follow-ups" />
-        <RailLink to="/finance" icon={<Wallet className="w-4 h-4" />} label="Finance" testid="crm-nav-finance" />
-        <RailLink to="/reports/payments" icon={<CreditCard className="w-4 h-4" />} label="Payments" testid="crm-nav-payments" />
-        <RailLink to="/inbox" icon={<Inbox className="w-4 h-4" />} label="Inbox" testid="crm-nav-inbox" />
-        <RailLink to="/passport-expiry" icon={<StampIcon className="w-4 h-4" />} label="Passport expiry" testid="crm-nav-expiry" />
-        <RailLink to="/offline-case" icon={<PlusSquare className="w-4 h-4" />} label="New offline case" testid="crm-nav-offline" />
-        <RailLink to="/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" testid="crm-nav-reports" />
-
-        {user?.role === "admin" && (
-          <>
-            <div className="mt-4 mb-1 px-2 text-[9px] uppercase font-mono tracking-[0.2em] text-[rgba(255,252,247,0.3)]">
-              Admin
-            </div>
-            <RailLink to="/products" icon={<Layers className="w-4 h-4" />} label="Visa products" testid="crm-nav-products" />
-            <RailLink to="/document-master" icon={<FileText className="w-4 h-4" />} label="Document master" testid="crm-nav-doc-master" />
-            <RailLink to="/field-master" icon={<FormInput className="w-4 h-4" />} label="Field master" testid="crm-nav-field-master" />
-            <RailLink to="/consultants" icon={<Users2 className="w-4 h-4" />} label="Consultants" testid="crm-nav-consultants" />
-              <RailLink to="/case-number-settings" icon={<ListChecks className="w-4 h-4" />} label="Case numbers" testid="crm-nav-case-number-settings" />
-              <RailLink to="/playbooks" icon={<BookOpen className="w-4 h-4" />} label="Playbooks" testid="crm-nav-playbooks" />
-            </>
-          )}
-      </nav>
-
-      <div className="p-2 border-t border-navy-sidebar">
-        <div className="relative">
-          <button
-            onClick={() => setProfileOpen((o) => !o)}
-            className={cn(
-              "w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left",
-              "hover:bg-navy-sidebar-hover transition-colors",
-            )}
-            data-testid="crm-profile-trigger"
-          >
+  const sidebarContent = (forceFull = false) => {
+    const showLabels = forceFull || isExpanded;
+    return (
+      <>
+        <div className={cn(
+          "border-b border-navy-sidebar flex items-center gap-2.5",
+          showLabels ? "px-3 py-3.5 justify-between" : "px-2 py-3.5 justify-center"
+        )}>
+          <Link to="/" className={cn("flex items-center min-w-0", showLabels ? "gap-2.5" : "gap-0")} data-testid="crm-logo">
             <span className={cn(
-              "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-              "bg-[rgba(47,107,90,0.5)] text-[rgba(255,252,247,0.9)] border border-[rgba(255,252,247,0.1)]",
+              "inline-flex items-center justify-center rounded-md shrink-0",
+              "border border-double text-xs font-mono font-bold",
+              "border-[rgba(176,141,87,0.5)] text-[rgba(176,141,87,0.85)]",
+              "bg-[rgba(255,252,247,0.04)]",
+              showLabels ? "w-8 h-8" : "w-8 h-8"
             )}>
-              {initials}
+              PC
             </span>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium text-navy-sidebar-active truncate">{user?.full_name}</div>
-              <div className="text-[10px] font-mono uppercase text-[rgba(255,252,247,0.35)] capitalize">{user?.role}</div>
-            </div>
-            <ChevronDown className={cn("w-3.5 h-3.5 text-[rgba(255,252,247,0.4)] shrink-0 transition-transform", profileOpen && "rotate-180")} />
-          </button>
-
-          {profileOpen && (
-            <div className={cn(
-              "absolute bottom-full left-0 right-0 mb-1 rounded-md overflow-hidden",
-              "bg-[#1a3d2e] border border-[rgba(255,252,247,0.1)]",
-              "shadow-[0_-4px_20px_rgba(0,0,0,0.3)]",
-            )}>
-              <Link
-                to="/profile"
-                onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 text-xs text-navy-sidebar hover:bg-navy-sidebar-hover transition-colors"
-                data-testid="crm-nav-profile"
-              >
-                <User className="w-3.5 h-3.5" />
-                Profile &amp; settings
-              </Link>
-              <button
-                onClick={logout}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-[rgba(155,61,50,0.9)] hover:bg-[rgba(155,61,50,0.1)] transition-colors"
-                data-testid="crm-logout"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign out
-              </button>
-            </div>
+            {showLabels && (
+              <div className="min-w-0 transition-opacity duration-200">
+                <div className="text-sm font-semibold leading-tight text-navy-sidebar-active truncate">Passage CRM</div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[rgba(255,252,247,0.35)]">Ops desk</div>
+              </div>
+            )}
+          </Link>
+          {/* Close button for mobile only */}
+          {forceFull && (
+            <button
+              type="button"
+              className="lg:hidden p-1.5 rounded-md text-[rgba(255,252,247,0.6)] hover:bg-navy-sidebar-hover"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close menu"
+              data-testid="crm-sidebar-close"
+            >
+              <X className="w-4 h-4" />
+            </button>
           )}
         </div>
-      </div>
-    </>
-  );
+
+        <nav className={cn(
+          "flex-1 overflow-y-auto",
+          showLabels ? "p-2 space-y-0.5" : "p-1.5 space-y-0.5"
+        )}>
+          <RailLink to="/" icon={<LayoutGrid className="w-4 h-4" />} label="Dashboard" testid="crm-nav-dashboard" end showLabel={showLabels} />
+          <RailLink to="/pipeline" icon={<KanbanSquare className="w-4 h-4" />} label="Pipeline" testid="crm-nav-pipeline" showLabel={showLabels} />
+          <RailLink to="/cases/closed" icon={<Archive className="w-4 h-4" />} label="Closed cases" testid="crm-nav-closed" showLabel={showLabels} />
+          <RailLink to="/tasks" icon={<ListChecks className="w-4 h-4" />} label="My tasks" testid="crm-nav-tasks" showLabel={showLabels} />
+          <RailLink to="/leads" icon={<UserPlus className="w-4 h-4" />} label="Leads" testid="crm-nav-leads" showLabel={showLabels} />
+          <RailLink to="/follow-ups" icon={<PhoneCall className="w-4 h-4" />} label="Follow-ups" testid="crm-nav-follow-ups" showLabel={showLabels} />
+          <RailLink to="/finance" icon={<Wallet className="w-4 h-4" />} label="Finance" testid="crm-nav-finance" showLabel={showLabels} />
+          <RailLink to="/reports/payments" icon={<CreditCard className="w-4 h-4" />} label="Payments" testid="crm-nav-payments" showLabel={showLabels} />
+          <RailLink to="/inbox" icon={<Inbox className="w-4 h-4" />} label="Inbox" testid="crm-nav-inbox" showLabel={showLabels} />
+          <RailLink to="/passport-expiry" icon={<StampIcon className="w-4 h-4" />} label="Passport expiry" testid="crm-nav-expiry" showLabel={showLabels} />
+          <RailLink to="/offline-case" icon={<PlusSquare className="w-4 h-4" />} label="New offline case" testid="crm-nav-offline" showLabel={showLabels} />
+          <RailLink to="/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" testid="crm-nav-reports" showLabel={showLabels} />
+
+          {user?.role === "admin" && (
+            <>
+              {showLabels ? (
+                <div className="mt-4 mb-1 px-2 text-[9px] uppercase font-mono tracking-[0.2em] text-[rgba(255,252,247,0.3)]">
+                  Admin
+                </div>
+              ) : (
+                <div className="mt-3 mb-1 mx-auto w-5 border-t border-[rgba(255,252,247,0.12)]" />
+              )}
+              <RailLink to="/products" icon={<Layers className="w-4 h-4" />} label="Visa products" testid="crm-nav-products" showLabel={showLabels} />
+              <RailLink to="/document-master" icon={<FileText className="w-4 h-4" />} label="Document master" testid="crm-nav-doc-master" showLabel={showLabels} />
+              <RailLink to="/field-master" icon={<FormInput className="w-4 h-4" />} label="Field master" testid="crm-nav-field-master" showLabel={showLabels} />
+              <RailLink to="/consultants" icon={<Users2 className="w-4 h-4" />} label="Consultants" testid="crm-nav-consultants" showLabel={showLabels} />
+              <RailLink to="/case-number-settings" icon={<ListChecks className="w-4 h-4" />} label="Case numbers" testid="crm-nav-case-number-settings" showLabel={showLabels} />
+              <RailLink to="/playbooks" icon={<BookOpen className="w-4 h-4" />} label="Playbooks" testid="crm-nav-playbooks" showLabel={showLabels} />
+            </>
+          )}
+        </nav>
+
+        {/* Collapse toggle — desktop only */}
+        {!forceFull && (
+          <div className="hidden lg:block px-2 py-1.5 border-t border-navy-sidebar">
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs",
+                "text-[rgba(255,252,247,0.5)] hover:text-[rgba(255,252,247,0.8)] hover:bg-navy-sidebar-hover transition-colors",
+                !showLabels && "justify-center"
+              )}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              data-testid="crm-sidebar-collapse-toggle"
+            >
+              {collapsed ? <ChevronsRight className="w-4 h-4 shrink-0" /> : <ChevronsLeft className="w-4 h-4 shrink-0" />}
+              {showLabels && <span>{collapsed ? "Expand" : "Collapse"}</span>}
+            </button>
+          </div>
+        )}
+
+        <div className={cn("border-t border-navy-sidebar", showLabels ? "p-2" : "p-1.5")}>
+          <div className="relative">
+            <button
+              onClick={() => setProfileOpen((o) => !o)}
+              className={cn(
+                "w-full flex items-center rounded-md text-left",
+                "hover:bg-navy-sidebar-hover transition-colors",
+                showLabels ? "gap-2.5 px-2 py-2" : "justify-center px-1.5 py-2"
+              )}
+              data-testid="crm-profile-trigger"
+            >
+              <span className={cn(
+                "rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                "bg-[rgba(47,107,90,0.5)] text-[rgba(255,252,247,0.9)] border border-[rgba(255,252,247,0.1)]",
+                showLabels ? "w-7 h-7" : "w-8 h-8"
+              )}>
+                {initials}
+              </span>
+              {showLabels && (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-navy-sidebar-active truncate">{user?.full_name}</div>
+                    <div className="text-[10px] font-mono uppercase text-[rgba(255,252,247,0.35)] capitalize">{user?.role}</div>
+                  </div>
+                  <ChevronDown className={cn("w-3.5 h-3.5 text-[rgba(255,252,247,0.4)] shrink-0 transition-transform", profileOpen && "rotate-180")} />
+                </>
+              )}
+            </button>
+
+            {profileOpen && (
+              <div className={cn(
+                "absolute bottom-full left-0 right-0 mb-1 rounded-md overflow-hidden",
+                "bg-[#1a3d2e] border border-[rgba(255,252,247,0.1)]",
+                "shadow-[0_-4px_20px_rgba(0,0,0,0.3)]",
+              )}>
+                <Link
+                  to="/profile"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2.5 text-xs text-navy-sidebar hover:bg-navy-sidebar-hover transition-colors"
+                  data-testid="crm-nav-profile"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  Profile &amp; settings
+                </Link>
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-[rgba(155,61,50,0.9)] hover:bg-[rgba(155,61,50,0.1)] transition-colors"
+                  data-testid="crm-logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="crm-shell min-h-screen text-ink font-sans flex" style={{ background: "var(--surface)" }}>
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — collapsible */}
       <aside
-        className="hidden lg:flex w-[220px] shrink-0 flex-col"
+        className={cn(
+          "hidden lg:flex shrink-0 flex-col transition-all duration-200 ease-in-out relative",
+          collapsed && !hoverExpanded ? "w-[60px]" : "w-[220px]",
+        )}
         style={{ background: "var(--navy-deep, #0f2820)" }}
+        onMouseEnter={onSidebarMouseEnter}
+        onMouseLeave={onSidebarMouseLeave}
       >
-        {sidebar}
+        {/* When hover-expanded over a collapsed sidebar, show an elevated overlay */}
+        {collapsed && hoverExpanded ? (
+          <div
+            className="absolute inset-y-0 left-0 w-[220px] z-50 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.3)]"
+            style={{ background: "var(--navy-deep, #0f2820)" }}
+          >
+            {sidebarContent(false)}
+          </div>
+        ) : (
+          sidebarContent(false)
+        )}
       </aside>
 
       {/* Mobile drawer overlay */}
@@ -212,7 +305,7 @@ export default function CrmLayout() {
         style={{ background: "var(--navy-deep, #0f2820)" }}
         data-testid="crm-sidebar-drawer"
       >
-        {sidebar}
+        {sidebarContent(true)}
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
@@ -252,15 +345,17 @@ export default function CrmLayout() {
   );
 }
 
-function RailLink({ to, icon, label, testid, end }) {
+function RailLink({ to, icon, label, testid, end, showLabel = true }) {
   return (
     <NavLink
       to={to}
       end={end}
       data-testid={testid}
+      title={!showLabel ? label : undefined}
       className={({ isActive }) =>
         cn(
-          "relative flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-all duration-150",
+          "relative flex items-center rounded-md text-xs font-medium transition-all duration-150",
+          showLabel ? "gap-2.5 px-2.5 py-2" : "justify-center px-2 py-2.5",
           isActive
             ? [
                 "bg-navy-sidebar-active text-navy-sidebar-active",
@@ -272,7 +367,7 @@ function RailLink({ to, icon, label, testid, end }) {
       }
     >
       <span className="shrink-0">{icon}</span>
-      <span className="truncate">{label}</span>
+      {showLabel && <span className="truncate">{label}</span>}
     </NavLink>
   );
 }

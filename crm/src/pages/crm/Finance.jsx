@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/ui/page-header";
@@ -20,14 +21,19 @@ const INV_DEFAULTS = { limit: "25", sort_by: "created_at", sort_order: "desc" };
 const Q_FILTER_KEYS = ["status", "case_id", "from_date", "to_date"];
 const Q_DEFAULTS = { limit: "25", sort_by: "created_at", sort_order: "desc" };
 
+const tabMotion = {
+  initial: { opacity: 0, y: 5 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -5 },
+  transition: { duration: 0.2 },
+};
+
 export default function Finance() {
-  // URL-backed filters for invoices (primary list)
   const invList = useListQueryState({
     filterKeys: INV_FILTER_KEYS,
     defaults: INV_DEFAULTS,
   });
 
-  // Prefixed URL params so quotation filters do not collide with invoices
   const qList = useListQueryState({
     filterKeys: Q_FILTER_KEYS,
     defaults: Q_DEFAULTS,
@@ -251,119 +257,125 @@ export default function Finance() {
         </TabsList>
 
         <TabsContent value="invoices" className="space-y-3 mt-3">
-          <FilterPanel
-            fields={invFilterFields}
-            values={invList.filters}
-            q={invList.q}
-            activeCount={invList.activeFilterCount}
-            onQChange={invList.setQ}
-            onApply={invList.setFilters}
-            onClear={invList.clearFilters}
-            searchPlaceholder="Search invoices…"
-            testId="inv-filters"
-          />
-          <CrmCard className="p-3">
-            <form onSubmit={createInvoice} className="grid md:grid-cols-4 gap-2 items-end" data-testid="invoice-form">
-              <CrmField label="Case ID">
-                <CrmInput value={iForm.case_id} onChange={(e) => setIForm({ ...iForm, case_id: e.target.value })} data-testid="i-case-id" />
-              </CrmField>
-              <CrmField label="Amount" required>
-                <CrmInput type="number" min="0" step="1" required value={iForm.amount} onChange={(e) => setIForm({ ...iForm, amount: e.target.value })} data-testid="i-amount" />
-              </CrmField>
-              <CrmField label="Due date">
-                <CrmInput type="date" value={iForm.due_date} onChange={(e) => setIForm({ ...iForm, due_date: e.target.value })} data-testid="i-due" />
-              </CrmField>
-              <CrmButton type="submit" variant="solid" size="sm" loading={saving === "i"} data-testid="i-submit">Create invoice</CrmButton>
-            </form>
-          </CrmCard>
-          <PaginatedTable
-            columns={iCols}
-            data={invoices}
-            loading={loadingI}
-            empty={{ title: "No invoices yet" }}
-            page={invList.page}
-            limit={invList.limit}
-            total={metaI.total || 0}
-            onPageChange={invList.setPage}
-            onLimitChange={invList.setLimit}
-            sortKey={invList.sortBy}
-            sortDir={invList.sortOrder}
-            onSortChange={invList.setSort}
-            serverSort
-            testId="inv-table"
-          />
+          <motion.div {...tabMotion}>
+              <FilterPanel
+                fields={invFilterFields}
+                values={invList.filters}
+                q={invList.q}
+                activeCount={invList.activeFilterCount}
+                onQChange={invList.setQ}
+                onApply={invList.setFilters}
+                onClear={invList.clearFilters}
+                searchPlaceholder="Search invoices…"
+                testId="inv-filters"
+              />
+              <CrmCard className="p-3">
+                <form onSubmit={createInvoice} className="grid md:grid-cols-4 gap-2 items-end" data-testid="invoice-form">
+                  <CrmField label="Case ID">
+                    <CrmInput value={iForm.case_id} onChange={(e) => setIForm({ ...iForm, case_id: e.target.value })} data-testid="i-case-id" />
+                  </CrmField>
+                  <CrmField label="Amount" required>
+                    <CrmInput type="number" min="0" step="1" required value={iForm.amount} onChange={(e) => setIForm({ ...iForm, amount: e.target.value })} data-testid="i-amount" />
+                  </CrmField>
+                  <CrmField label="Due date">
+                    <CrmInput type="date" value={iForm.due_date} onChange={(e) => setIForm({ ...iForm, due_date: e.target.value })} data-testid="i-due" />
+                  </CrmField>
+                  <CrmButton type="submit" variant="solid" size="sm" loading={saving === "i"} data-testid="i-submit">Create invoice</CrmButton>
+                </form>
+              </CrmCard>
+              <PaginatedTable
+                columns={iCols}
+                data={invoices}
+                loading={loadingI}
+                empty={{ title: "No invoices yet" }}
+                page={invList.page}
+                limit={invList.limit}
+                total={metaI.total || 0}
+                onPageChange={invList.setPage}
+                onLimitChange={invList.setLimit}
+                sortKey={invList.sortBy}
+                sortDir={invList.sortOrder}
+                onSortChange={invList.setSort}
+                serverSort
+                testId="inv-table"
+              />
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="quotations" className="space-y-3 mt-3">
-          <FilterPanel
-            fields={qFilterFields}
-            values={qList.filters}
-            q={qList.q}
-            activeCount={qList.activeFilterCount}
-            onQChange={qList.setQ}
-            onApply={qList.setFilters}
-            onClear={qList.clearFilters}
-            searchPlaceholder="Search quotations…"
-            testId="q-filters"
-          />
-          <CrmCard className="p-3">
-            <form onSubmit={createQuotation} className="grid md:grid-cols-4 gap-2 items-end" data-testid="quotation-form">
-              <CrmField label="Case ID">
-                <CrmInput value={qForm.case_id} onChange={(e) => setQForm({ ...qForm, case_id: e.target.value })} data-testid="q-case-id" />
-              </CrmField>
-              <CrmField label="Amount" required>
-                <CrmInput type="number" min="0" step="1" required value={qForm.amount} onChange={(e) => setQForm({ ...qForm, amount: e.target.value })} data-testid="q-amount" />
-              </CrmField>
-              <CrmField label="Notes">
-                <CrmInput value={qForm.notes} onChange={(e) => setQForm({ ...qForm, notes: e.target.value })} data-testid="q-notes" />
-              </CrmField>
-              <CrmButton type="submit" variant="solid" size="sm" loading={saving === "q"} data-testid="q-submit">Create quotation</CrmButton>
-            </form>
-          </CrmCard>
-          <PaginatedTable
-            columns={qCols}
-            data={quotations}
-            loading={loadingQ}
-            empty={{ title: "No quotations yet" }}
-            page={qList.page}
-            limit={qList.limit}
-            total={metaQ.total || 0}
-            onPageChange={qList.setPage}
-            onLimitChange={qList.setLimit}
-            sortKey={qList.sortBy}
-            sortDir={qList.sortOrder}
-            onSortChange={qList.setSort}
-            serverSort
-            testId="q-table"
-          />
+          <motion.div {...tabMotion}>
+              <FilterPanel
+                fields={qFilterFields}
+                values={qList.filters}
+                q={qList.q}
+                activeCount={qList.activeFilterCount}
+                onQChange={qList.setQ}
+                onApply={qList.setFilters}
+                onClear={qList.clearFilters}
+                searchPlaceholder="Search quotations…"
+                testId="q-filters"
+              />
+              <CrmCard className="p-3">
+                <form onSubmit={createQuotation} className="grid md:grid-cols-4 gap-2 items-end" data-testid="quotation-form">
+                  <CrmField label="Case ID">
+                    <CrmInput value={qForm.case_id} onChange={(e) => setQForm({ ...qForm, case_id: e.target.value })} data-testid="q-case-id" />
+                  </CrmField>
+                  <CrmField label="Amount" required>
+                    <CrmInput type="number" min="0" step="1" required value={qForm.amount} onChange={(e) => setQForm({ ...qForm, amount: e.target.value })} data-testid="q-amount" />
+                  </CrmField>
+                  <CrmField label="Notes">
+                    <CrmInput value={qForm.notes} onChange={(e) => setQForm({ ...qForm, notes: e.target.value })} data-testid="q-notes" />
+                  </CrmField>
+                  <CrmButton type="submit" variant="solid" size="sm" loading={saving === "q"} data-testid="q-submit">Create quotation</CrmButton>
+                </form>
+              </CrmCard>
+              <PaginatedTable
+                columns={qCols}
+                data={quotations}
+                loading={loadingQ}
+                empty={{ title: "No quotations yet" }}
+                page={qList.page}
+                limit={qList.limit}
+                total={metaQ.total || 0}
+                onPageChange={qList.setPage}
+                onLimitChange={qList.setLimit}
+                sortKey={qList.sortBy}
+                sortDir={qList.sortOrder}
+                onSortChange={qList.setSort}
+                serverSort
+                testId="q-table"
+              />
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="payment" className="mt-3">
-          <CrmCard className="p-4 max-w-xl">
-            <form onSubmit={recordPayment} className="space-y-3" data-testid="payment-form">
-              <CrmField label="Invoice ID" required>
-                <CrmInput required value={pForm.invoice_id} onChange={(e) => setPForm({ ...pForm, invoice_id: e.target.value })} data-testid="p-invoice-id" />
-              </CrmField>
-              <div className="grid grid-cols-2 gap-3">
-                <CrmField label="Amount" required>
-                  <CrmInput type="number" min="0" step="1" required value={pForm.amount} onChange={(e) => setPForm({ ...pForm, amount: e.target.value })} data-testid="p-amount" />
-                </CrmField>
-                <CrmField label="Method">
-                  <CrmSelect value={pForm.method} onChange={(e) => setPForm({ ...pForm, method: e.target.value })} data-testid="p-method">
-                    <option value="upi">UPI</option>
-                    <option value="bank_transfer">Bank transfer</option>
-                    <option value="card">Card</option>
-                    <option value="cash">Cash</option>
-                    <option value="other">Other</option>
-                  </CrmSelect>
-                </CrmField>
-              </div>
-              <CrmField label="Reference">
-                <CrmInput value={pForm.reference} onChange={(e) => setPForm({ ...pForm, reference: e.target.value })} data-testid="p-reference" />
-              </CrmField>
-              <CrmButton type="submit" variant="solid" size="sm" loading={saving === "p"} data-testid="p-submit">Record payment</CrmButton>
-            </form>
-          </CrmCard>
+          <motion.div {...tabMotion}>
+              <CrmCard className="p-4 max-w-xl">
+                <form onSubmit={recordPayment} className="space-y-3" data-testid="payment-form">
+                  <CrmField label="Invoice ID" required>
+                    <CrmInput required value={pForm.invoice_id} onChange={(e) => setPForm({ ...pForm, invoice_id: e.target.value })} data-testid="p-invoice-id" />
+                  </CrmField>
+                  <div className="grid grid-cols-2 gap-3">
+                    <CrmField label="Amount" required>
+                      <CrmInput type="number" min="0" step="1" required value={pForm.amount} onChange={(e) => setPForm({ ...pForm, amount: e.target.value })} data-testid="p-amount" />
+                    </CrmField>
+                    <CrmField label="Method">
+                      <CrmSelect value={pForm.method} onChange={(e) => setPForm({ ...pForm, method: e.target.value })} data-testid="p-method">
+                        <option value="upi">UPI</option>
+                        <option value="bank_transfer">Bank transfer</option>
+                        <option value="card">Card</option>
+                        <option value="cash">Cash</option>
+                        <option value="other">Other</option>
+                      </CrmSelect>
+                    </CrmField>
+                  </div>
+                  <CrmField label="Reference">
+                    <CrmInput value={pForm.reference} onChange={(e) => setPForm({ ...pForm, reference: e.target.value })} data-testid="p-reference" />
+                  </CrmField>
+                  <CrmButton type="submit" variant="solid" size="sm" loading={saving === "p"} data-testid="p-submit">Record payment</CrmButton>
+                </form>
+              </CrmCard>
+          </motion.div>
         </TabsContent>
       </Tabs>
     </div>

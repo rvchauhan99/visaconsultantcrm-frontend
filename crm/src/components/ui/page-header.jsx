@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  */
 export function PageHeader({ label, title, subtitle, actions, className }) {
   return (
-    <div className={cn("flex items-start justify-between gap-4 mb-5", className)}>
+    <div className={cn("flex items-start justify-between gap-4 mb-3", className)}>
       <div className="min-w-0">
         {label && (
           <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-1">{label}</div>
