@@ -51,7 +51,12 @@ export default function Apply() {
             setFields(d.field_values || {});
             const um = {};
             (d.document_uploads || []).forEach((u) => {
-                um[u.doc_key] = { file_url: u.file_url, filename: u.filename, size_mb: 0 };
+                um[u.doc_key] = {
+                    file_url: u.file_url,
+                    filename: u.filename,
+                    storage_key: u.storage_key || u.key || null,
+                    size_mb: 0,
+                };
             });
             setUploads(um);
             setDraftId(d.id);
@@ -66,7 +71,12 @@ export default function Apply() {
         if (draftId) sessionStorage.setItem(`vc_draft_${productId}`, draftId);
     }, [draftId, productId]);
 
-    const uploadsArray = () => Object.entries(uploads).map(([doc_key, u]) => ({ doc_key, file_url: u.file_url, filename: u.filename }));
+    const uploadsArray = () => Object.entries(uploads).map(([doc_key, u]) => ({
+        doc_key,
+        file_url: u.file_url,
+        filename: u.filename,
+        storage_key: u.storage_key || u.key || null,
+    }));
 
     /** Create the draft on first save, then keep it in sync with a PATCH on every step change. */
     const persistDraft = async (stepKey) => {
@@ -440,7 +450,13 @@ function DocUploader({ doc, value, onUpload }) {
     }, [doc.doc_key]);
 
     const reuseFromVault = (v) => {
-        onUpload({ file_url: v.file_url, filename: v.filename, size_mb: 0, from_vault: true });
+        onUpload({
+            file_url: v.file_url,
+            filename: v.filename,
+            storage_key: v.storage_key || null,
+            size_mb: 0,
+            from_vault: true,
+        });
         setShowVault(false);
         toast.success(`Reused ${v.filename} from your vault`);
     };

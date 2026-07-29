@@ -150,7 +150,11 @@ function ResubmitDoc({ doc, caseId, onDone }) {
             const form = new FormData();
             form.append("file", file);
             const up = await api.post("/documents/upload", form, { headers: { "Content-Type": "multipart/form-data" } });
-            await api.post(`/cases/${caseId}/documents/${doc.id}/resubmit`, { file_url: up.data.file_url, filename: up.data.filename });
+            await api.post(`/cases/${caseId}/documents/${doc.id}/resubmit`, {
+                file_url: up.data.file_url,
+                filename: up.data.filename,
+                storage_key: up.data.storage_key || up.data.key || null,
+            });
             toast.success("Document re-uploaded — we'll review shortly.");
             onDone();
         } catch (e) {

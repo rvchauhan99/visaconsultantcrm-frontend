@@ -79,7 +79,12 @@ export default function ApplyPageInner() {
         setFields(d.field_values || {});
         const um = {};
         (d.document_uploads || []).forEach((u) => {
-          um[u.doc_key] = { file_url: u.file_url, filename: u.filename, size_mb: 0 };
+          um[u.doc_key] = {
+            file_url: u.file_url,
+            filename: u.filename,
+            storage_key: u.storage_key || u.key || null,
+            size_mb: 0,
+          };
         });
         setUploads(um);
         setDraftId(d.id);
@@ -113,6 +118,7 @@ export default function ApplyPageInner() {
       doc_key,
       file_url: u.file_url,
       filename: u.filename,
+      storage_key: u.storage_key || u.key || null,
     }));
 
   /** Create the draft on first save, then keep it in sync with a PATCH on every step change. */
@@ -732,7 +738,13 @@ function DocUploader({ doc, value, onUpload }) {
   const { data: vaultOptions = [] } = useVaultByKey(doc.doc_key, Boolean(doc.vault_eligible));
 
   const reuseFromVault = (v) => {
-    onUpload({ file_url: v.file_url, filename: v.filename, size_mb: 0, from_vault: true });
+    onUpload({
+      file_url: v.file_url,
+      filename: v.filename,
+      storage_key: v.storage_key || null,
+      size_mb: 0,
+      from_vault: true,
+    });
     setShowVault(false);
     track("vault_reuse", { doc_key: doc.doc_key, vault_id: v.id });
     toast.success(`Reused ${v.filename} from your vault`);
