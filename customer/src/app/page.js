@@ -297,7 +297,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-5 md:px-10">
           <div className="text-center max-w-2xl mx-auto mb-16 md:mb-24">
             <h2 className="font-display text-3xl md:text-5xl text-navy mb-4">How AmaraVisa works</h2>
-            <p className="text-ink-muted text-lg">Four simple steps from application to arrival. We handle the heavy lifting so you don't have to.</p>
+            <p className="text-ink-muted text-lg">Four simple steps from application to arrival. We handle the heavy lifting so you don&apos;t have to.</p>
           </div>
 
           <div className="relative grid md:grid-cols-4 gap-10 md:gap-6">
