@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api, { saveSession } from "@/lib/api";
-import { Loader2, Mail, Lock, ShieldCheck, Clock, BarChart3, Plane } from "lucide-react";
+import { Loader2, Mail, Lock, ShieldCheck, Clock, BarChart3 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
 import { cn } from "@/lib/utils";
 
 const FEATURES = [
@@ -124,13 +125,10 @@ export default function CrmLogin() {
 
         <div className="relative flex flex-col h-full p-10 lg:p-12">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-16">
-            <span className="inline-flex w-9 h-9 items-center justify-center rounded-md border border-double border-[rgba(176,141,87,0.5)] text-[rgba(176,141,87,0.8)] text-xs font-mono font-bold bg-[rgba(255,252,247,0.03)]">
-              PC
-            </span>
-            <div>
-              <div className="text-sm font-semibold text-[rgba(255,252,247,0.9)]">Passage CRM</div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[rgba(255,252,247,0.35)]">Ops desk</div>
+          <div className="mb-16">
+            <AmaraVisaLogo size="md" invert className="opacity-95" />
+            <div className="mt-2 text-[10px] font-mono uppercase tracking-widest text-[rgba(255,252,247,0.35)]">
+              AmaraVisa CRM · Ops desk
             </div>
           </div>
 
@@ -154,7 +152,7 @@ export default function CrmLogin() {
             </div>
           </div>
 
-          <div className="text-[11px] text-[rgba(255,252,247,0.2)] font-mono">© Passage · Staff access only</div>
+          <div className="text-[11px] text-[rgba(255,252,247,0.2)] font-mono">© AmaraVisa · Staff access only</div>
         </div>
       </div>
 
@@ -164,8 +162,8 @@ export default function CrmLogin() {
 
           {/* Mobile logo */}
           <div className="md:hidden mb-8">
-            <div className="text-sm font-semibold text-ink">Passage CRM</div>
-            <div className="text-[10px] font-mono uppercase tracking-widest text-ink-muted">Ops desk</div>
+            <AmaraVisaLogo size="md" className="mb-1" />
+            <div className="text-[10px] font-mono uppercase tracking-widest text-ink-muted">AmaraVisa CRM · Ops desk</div>
           </div>
 
           <div className="mb-7">
@@ -184,7 +182,7 @@ export default function CrmLogin() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@passage.desk"
+                  placeholder="you@amaravisa.com"
                   className="crm-input pl-8 w-full"
                   data-testid="crm-login-email"
                 />

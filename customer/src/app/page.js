@@ -10,6 +10,7 @@ import {
 import Stamp from "@/components/ui/stamp";
 import { Card, EmptyState, ErrorState, Skeleton } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
 import { useVisaProducts } from "@/hooks/customer-api";
 import { INR, guaranteedByText } from "@/lib/utils";
 import { track } from "@/lib/telemetry";
@@ -239,7 +240,7 @@ export default function LandingPage() {
                 "motion-safe:animate-stamp-in",
               )}
             >
-              Passage seal
+              AmaraVisa seal
             </Stamp>
 
             {/* Float badge — mid right */}
@@ -295,7 +296,7 @@ export default function LandingPage() {
       <section className="py-20 md:py-32 bg-surface">
         <div className="max-w-7xl mx-auto px-5 md:px-10">
           <div className="text-center max-w-2xl mx-auto mb-16 md:mb-24">
-            <h2 className="font-display text-3xl md:text-5xl text-navy mb-4">How Passage Works</h2>
+            <h2 className="font-display text-3xl md:text-5xl text-navy mb-4">How AmaraVisa works</h2>
             <p className="text-ink-muted text-lg">Four simple steps from application to arrival. We handle the heavy lifting so you don't have to.</p>
           </div>
 
@@ -425,9 +426,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-5 md:px-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-6">
-                <Plane className="w-6 h-6 text-gold" />
-                <span className="font-display text-2xl text-white tracking-tight">Passage</span>
+              <div className="mb-6">
+                <AmaraVisaLogo size="lg" invert className="opacity-95" />
               </div>
               <p className="text-sm max-w-sm leading-relaxed mb-6">
                 Premium visa consultancy for Indian passport holders. We handle the bureaucracy so you can focus on the journey.
@@ -463,7 +463,7 @@ export default function LandingPage() {
           </div>
 
           <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-            <p>© {new Date().getFullYear()} Passage Visa Atelier. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} AmaraVisa. All rights reserved.</p>
             <p>Made with care for Indian travelers.</p>
           </div>
         </div>

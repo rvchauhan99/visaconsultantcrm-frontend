@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "main": "index.js",
-  "description": "Passage Editorial Luxe — shared tokens, theme, Seal motif, and UI primitives",
+  "description": "AmaraVisa · Editorial Luxe — shared tokens, theme, Seal motif, and UI primitives",
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18",

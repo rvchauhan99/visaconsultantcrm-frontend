@@ -11,6 +11,7 @@ import Stamp from "@/components/ui/stamp";
 import { FloatField } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { SUPPORT, cn } from "@/lib/utils";
+import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
 import { track } from "@/lib/telemetry";
 
 const ease = [0.16, 1, 0.3, 1];
@@ -83,17 +84,14 @@ export default function AuthPage() {
 
         <div className="relative flex flex-col h-full p-10 lg:p-14">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-16">
-            <span className="inline-flex items-center justify-center w-9 h-9 rounded-full border-2 border-double border-gold/60 text-gold/80">
-              <Plane className="w-3.5 h-3.5 -rotate-45" strokeWidth={2} />
-            </span>
-            <span className="font-display text-2xl text-surface-card tracking-tight">Passage</span>
+          <div className="mb-16">
+            <AmaraVisaLogo size="lg" invert className="opacity-95" />
           </div>
 
           {/* Hero text */}
           <div className="flex-1 flex flex-col justify-center">
             <Stamp tone="gold" size="sm" className="mb-6 self-start">
-              Editorial visa atelier
+              Visa consultancy
             </Stamp>
 
             <h2 className="font-display text-4xl lg:text-5xl text-surface-card leading-[1.08] tracking-tight mb-6">
@@ -142,13 +140,8 @@ export default function AuthPage() {
         <div className="w-full max-w-md">
 
           {/* Mobile logo */}
-          <div className="md:hidden text-center mb-8">
-            <div className="inline-flex items-center gap-2 mb-2">
-              <span className="w-8 h-8 rounded-full border-2 border-double border-navy text-navy flex items-center justify-center">
-                <Plane className="w-3 h-3 -rotate-45" strokeWidth={2} />
-              </span>
-              <span className="font-display text-2xl text-navy">Passage</span>
-            </div>
+          <div className="md:hidden text-center mb-8 flex justify-center">
+            <AmaraVisaLogo size="md" />
           </div>
 
           {/* Mode toggle tabs */}

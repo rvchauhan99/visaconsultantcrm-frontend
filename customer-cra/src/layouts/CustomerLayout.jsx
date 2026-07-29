@@ -1,12 +1,11 @@
 import React from "react";
 import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
 import { getUser, clearSession } from "@/lib/api";
-import { UserRound, LogOut, Plane } from "lucide-react";
+import { UserRound, LogOut } from "lucide-react";
 import NotificationBell from "@/components/customer/NotificationBell";
 
 /**
  * Customer platform layout — calm, trust-forward, generous whitespace.
- * Fraunces used for the wordmark; body remains IBM Plex Sans.
  */
 export default function CustomerLayout() {
     const user = getUser();
@@ -23,10 +22,11 @@ export default function CustomerLayout() {
             <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur border-b border-border">
                 <div className="max-w-7xl mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
                     <Link to="/" data-testid="brand-logo" className="flex items-center gap-2.5 group">
-                        <span className="inline-flex items-center justify-center w-9 h-9 rounded-full border-2 border-double border-navy text-navy">
-                            <Plane className="w-4 h-4 -rotate-45" strokeWidth={2} />
-                        </span>
-                        <span className="font-display text-2xl font-semibold tracking-tight text-navy">Passage</span>
+                        <img
+                          src={`${process.env.PUBLIC_URL || ""}/brand/amaravisa-logo.png`}
+                          alt="amaravisa"
+                          className="h-8 w-auto object-contain"
+                        />
                         <span className="hidden sm:inline text-xs uppercase tracking-[0.22em] text-ink-muted ml-1">Visa Consultancy</span>
                     </Link>
 
@@ -65,7 +65,7 @@ export default function CustomerLayout() {
             <footer className="mt-24 border-t border-border">
                 <div className="max-w-7xl mx-auto px-6 md:px-10 py-10 grid md:grid-cols-3 gap-8 text-sm text-ink-muted">
                     <div>
-                        <div className="font-display text-navy text-lg mb-2">Passage</div>
+                        <div className="font-display text-navy text-lg mb-2">AmaraVisa</div>
                         <p className="max-w-xs leading-relaxed">Visa guidance for Indian passport holders. Real people, careful review, on time — or we make it right.</p>
                     </div>
                     <div>

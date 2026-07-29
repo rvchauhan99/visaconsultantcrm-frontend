@@ -36,7 +36,7 @@ export default function AuthPage() {
     return (
         <div className="max-w-md mx-auto px-6 py-16">
             <div className="text-center mb-8">
-                <Stamp tone="gold" size="md" className="mx-auto mb-4">Passage</Stamp>
+                <Stamp tone="gold" size="md" className="mx-auto mb-4">AmaraVisa</Stamp>
                 <h1 className="font-display text-3xl text-navy">{mode === "login" ? "Welcome back" : "Create your account"}</h1>
                 <p className="text-sm text-ink-muted mt-2">For Indian passport holders applying for a visa.</p>
             </div>

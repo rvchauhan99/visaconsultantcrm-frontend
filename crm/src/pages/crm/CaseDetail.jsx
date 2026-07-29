@@ -83,9 +83,14 @@ export default function CaseDetail() {
       toast.success("Field updated"); load();
     } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
   };
-  const createTask = async ({ description, due_date }) => {
+  const createTask = async ({ description, due_date, assigned_to }) => {
     try {
-      await api.post("/crm/tasks", { case_id: caseId, description, due_date: due_date || null });
+      await api.post("/crm/tasks", {
+        case_id: caseId,
+        description,
+        due_date: due_date || null,
+        assigned_to: assigned_to || getUser()?.id || null,
+      });
       toast.success("Task created"); load();
     } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
   };
@@ -573,34 +578,51 @@ function CaseCommsPanel({ caseId }) {
 
 /* ─── TasksPanel ─── */
 function TasksPanel({ tasks, onCreate, onComplete }) {
+  const me = getUser();
   const [showNew, setShowNew] = useState(false);
   const [desc, setDesc] = useState("");
   const [due, setDue] = useState("");
+  const [assignedTo, setAssignedTo] = useState(me?.id || null);
   const now = new Date();
   const isOverdue = (t) => t.status !== "done" && t.due_date && new Date(t.due_date) < now;
 
+  const openForm = () => {
+    setShowNew((s) => {
+      if (!s) setAssignedTo(me?.id || null);
+      return !s;
+    });
+  };
+
   const submit = () => {
     if (!desc.trim()) return;
-    onCreate({ description: desc.trim(), due_date: due });
-    setDesc(""); setDue(""); setShowNew(false);
+    onCreate({ description: desc.trim(), due_date: due, assigned_to: assignedTo || me?.id });
+    setDesc(""); setDue(""); setAssignedTo(me?.id || null); setShowNew(false);
   };
 
   return (
     <CrmCard className="mt-3 p-4" data-testid="tasks-panel">
       <div className="flex items-center justify-between mb-3">
         <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Case tasks</div>
-        <CrmButton variant="outline" size="sm" onClick={() => setShowNew((s) => !s)} data-testid="task-new-btn">
+        <CrmButton variant="outline" size="sm" onClick={openForm} data-testid="task-new-btn">
           <Plus className="w-3 h-3" /> New task
         </CrmButton>
       </div>
 
       {showNew && (
-        <div className="grid grid-cols-[1fr_140px_auto] gap-2 mb-3 items-end" data-testid="task-new-form">
+        <div className="grid md:grid-cols-[1fr_140px_1fr_auto] gap-2 mb-3 items-end" data-testid="task-new-form">
           <CrmField label="Description">
             <CrmInput value={desc} onChange={(e) => setDesc(e.target.value)} data-testid="task-desc-input" />
           </CrmField>
           <CrmField label="Due date">
             <CrmInput type="date" value={due} onChange={(e) => setDue(e.target.value)} data-testid="task-due-input" />
+          </CrmField>
+          <CrmField label="Assigned to">
+            <ConsultantSelect
+              value={assignedTo}
+              onChange={(id) => setAssignedTo(id || me?.id || null)}
+              placeholder="Select owner…"
+              testId="task-assignee-select"
+            />
           </CrmField>
           <CrmButton variant="solid" size="sm" onClick={submit} disabled={!desc.trim()} data-testid="task-create-submit" className="mt-5">
             Create
@@ -620,6 +642,8 @@ function TasksPanel({ tasks, onCreate, onComplete }) {
               </div>
               <div className="text-[10px] font-mono text-ink-muted mt-0.5">
                 {t.due_date ? `Due ${new Date(t.due_date).toLocaleDateString("en-IN")}` : "No due date"}
+                {" · "}
+                Owner · {t.assigned_name || "—"}
               </div>
             </div>
             {t.status === "done" ? (

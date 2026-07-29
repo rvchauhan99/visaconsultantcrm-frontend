@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api, { getUser } from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ListChecks, Plus } from "lucide-react";
@@ -13,13 +13,16 @@ import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { Segmented } from "@/components/ui/segmented";
 import { useListQueryState, unwrapListResponse } from "@/hooks/useListQueryState";
+import { ConsultantSelect } from "@/components/forms/selects";
 import { cn, formatCaseNumber } from "@/lib/utils";
 
 const PRIORITY_TONE = { high: "danger", normal: "muted", low: "teal" };
-const FILTER_KEYS = ["status", "priority", "category", "due", "from_date", "to_date"];
+const FILTER_KEYS = ["status", "priority", "category", "due", "from_date", "to_date", "assigned_to"];
 const LIST_DEFAULTS = { status: "open", limit: "25", sort_by: "due_date", sort_order: "asc" };
 
 export default function Tasks() {
+  const user = getUser();
+  const isAdmin = user?.role === "admin";
   const list = useListQueryState({
     filterKeys: FILTER_KEYS,
     defaults: LIST_DEFAULTS,
@@ -29,7 +32,13 @@ export default function Tasks() {
   const [meta, setMeta] = useState({ total: 0 });
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ description: "", due_date: "", priority: "normal", category: "" });
+  const [form, setForm] = useState({
+    description: "",
+    due_date: "",
+    priority: "normal",
+    category: "",
+    assigned_to: user?.id || null,
+  });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
@@ -59,6 +68,21 @@ export default function Tasks() {
     }
   };
 
+  const openForm = () => {
+    setShowForm((s) => {
+      if (!s) {
+        setForm({
+          description: "",
+          due_date: "",
+          priority: "normal",
+          category: "",
+          assigned_to: user?.id || null,
+        });
+      }
+      return !s;
+    });
+  };
+
   const createTask = async (e) => {
     e.preventDefault();
     if (!form.description.trim()) return;
@@ -68,11 +92,18 @@ export default function Tasks() {
         description: form.description.trim(),
         due_date: form.due_date || null,
         priority: form.priority || "normal",
+        assigned_to: form.assigned_to || user?.id || null,
       };
       if (form.category.trim()) body.category = form.category.trim();
       await api.post("/crm/tasks", body);
       toast.success("Task created");
-      setForm({ description: "", due_date: "", priority: "normal", category: "" });
+      setForm({
+        description: "",
+        due_date: "",
+        priority: "normal",
+        category: "",
+        assigned_to: user?.id || null,
+      });
       setShowForm(false);
       load();
     } catch (err) {
@@ -82,29 +113,47 @@ export default function Tasks() {
     }
   };
 
-  const filterFields = useMemo(() => [
-    {
-      key: "priority",
-      label: "Priority",
-      type: "select",
-      options: [
-        { value: "high", label: "High" },
-        { value: "normal", label: "Normal" },
-        { value: "low", label: "Low" },
-      ],
-    },
-    { key: "category", label: "Category", type: "text", placeholder: "Category" },
-    {
-      key: "due",
-      label: "Due bucket",
-      type: "select",
-      options: [
-        { value: "overdue", label: "Overdue" },
-        { value: "today", label: "Due today" },
-      ],
-    },
-    { key: "due_range", label: "Due date", type: "daterange", fromKey: "from_date", toKey: "to_date" },
-  ], []);
+  const filterFields = useMemo(() => {
+    const fields = [
+      {
+        key: "priority",
+        label: "Priority",
+        type: "select",
+        options: [
+          { value: "high", label: "High" },
+          { value: "normal", label: "Normal" },
+          { value: "low", label: "Low" },
+        ],
+      },
+      { key: "category", label: "Category", type: "text", placeholder: "Category" },
+      {
+        key: "due",
+        label: "Due bucket",
+        type: "select",
+        options: [
+          { value: "overdue", label: "Overdue" },
+          { value: "today", label: "Due today" },
+        ],
+      },
+      { key: "due_range", label: "Due date", type: "daterange", fromKey: "from_date", toKey: "to_date" },
+    ];
+    if (isAdmin) {
+      fields.unshift({
+        key: "assigned_to",
+        label: "Owner",
+        type: "async",
+        render: (value, onChange) => (
+          <ConsultantSelect
+            value={value || null}
+            onChange={(v) => onChange(v || "")}
+            placeholder="All owners"
+            testId="tasks-filter-owner"
+          />
+        ),
+      });
+    }
+    return fields;
+  }, [isAdmin]);
 
   const columns = [
     {
@@ -115,6 +164,15 @@ export default function Tasks() {
           {row.description}
         </span>
       ),
+    },
+    {
+      key: "assigned_to",
+      label: "Owner",
+      sortable: false,
+      render: (row) =>
+        row.assigned_name
+          ? <span className="text-xs text-ink">{row.assigned_name}</span>
+          : <span className="text-ink-muted text-xs">—</span>,
     },
     {
       key: "priority",
@@ -181,10 +239,10 @@ export default function Tasks() {
   return (
     <div className="p-4 space-y-3">
       <PageHeader
-        label="Assigned to me"
-        title="My tasks"
+        label={isAdmin ? "All tasks" : "Assigned to me"}
+        title={isAdmin ? "Tasks" : "My tasks"}
         actions={
-          <CrmButton variant="outline" size="sm" onClick={() => setShowForm((s) => !s)} data-testid="task-new-btn">
+          <CrmButton variant="outline" size="sm" onClick={openForm} data-testid="task-new-btn">
             <Plus className="w-3.5 h-3.5" /> New task
           </CrmButton>
         }
@@ -216,7 +274,7 @@ export default function Tasks() {
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             <CrmCard className="p-4">
-              <form onSubmit={createTask} className="grid md:grid-cols-[1fr_140px_120px_140px_auto] gap-3 items-end" data-testid="task-new-form">
+              <form onSubmit={createTask} className="grid md:grid-cols-[1fr_140px_120px_140px_1fr_auto] gap-3 items-end" data-testid="task-new-form">
                 <CrmField label="Description" required>
                   <CrmInput required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} data-testid="task-desc-input" />
                 </CrmField>
@@ -232,6 +290,14 @@ export default function Tasks() {
                 </CrmField>
                 <CrmField label="Category">
                   <CrmInput value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="optional" data-testid="task-category-input" />
+                </CrmField>
+                <CrmField label="Assigned to">
+                  <ConsultantSelect
+                    value={form.assigned_to}
+                    onChange={(id) => setForm({ ...form, assigned_to: id || user?.id || null })}
+                    placeholder="Select owner…"
+                    testId="task-assignee-select"
+                  />
                 </CrmField>
                 <CrmButton variant="solid" size="sm" type="submit" loading={saving} data-testid="task-create-submit">Create</CrmButton>
               </form>

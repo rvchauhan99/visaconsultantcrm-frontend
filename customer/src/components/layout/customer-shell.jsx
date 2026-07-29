@@ -4,10 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
-import { Briefcase, Home, LogOut, Plane, UserRound, X, Menu, ChevronRight } from "lucide-react";
+import { Briefcase, Home, LogOut, UserRound, X, Menu, ChevronRight } from "lucide-react";
 import { clearSession, getUser } from "@/lib/session";
 import { SUPPORT, cn } from "@/lib/utils";
 import NotificationBell from "@/components/customer/notification-bell";
+import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
 import { track } from "@/lib/telemetry";
 
 export default function CustomerShell({ children }) {
@@ -69,23 +70,11 @@ export default function CustomerShell({ children }) {
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-3.5 flex items-center justify-between gap-4">
 
           {/* Logo */}
-          <Link href="/" data-testid="brand-logo" className="flex items-center gap-3 group shrink-0">
-            <span className={cn(
-              "inline-flex items-center justify-center w-9 h-9 rounded-full",
-              "border-2 border-double border-navy text-navy bg-surface-card",
-              "shadow-[var(--shadow-card)] group-hover:shadow-[var(--shadow-glow-navy)]",
-              "transition-all duration-300",
-            )}>
-              <Plane className="w-3.5 h-3.5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" strokeWidth={2} />
+          <Link href="/" data-testid="brand-logo" className="flex items-center gap-2.5 group shrink-0">
+            <AmaraVisaLogo size="md" priority className="transition-opacity group-hover:opacity-90" />
+            <span className="hidden sm:block text-[10px] uppercase tracking-[0.26em] text-ink-muted">
+              Visa consultancy
             </span>
-            <div className="leading-none">
-              <span className="font-display text-[1.55rem] font-semibold tracking-tight text-navy block leading-none group-hover:text-gradient-brand transition-all">
-                Passage
-              </span>
-              <span className="hidden sm:block text-[10px] uppercase tracking-[0.26em] text-ink-muted mt-0.5">
-                Visa Atelier
-              </span>
-            </div>
           </Link>
 
           {/* Desktop nav */}
@@ -213,11 +202,8 @@ export default function CustomerShell({ children }) {
 
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-2.5 mb-4">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full border-2 border-double border-gold/60 text-gold/80">
-                <Plane className="w-3 h-3 -rotate-45" strokeWidth={2} />
-              </span>
-              <span className="font-display text-xl text-surface-card tracking-tight">Passage</span>
+            <div className="mb-4">
+              <AmaraVisaLogo size="md" invert className="opacity-95" />
             </div>
             <p className="text-sm text-surface-muted/70 leading-relaxed max-w-[200px]">
               A quieter way to travel papers. Human consultants, transparent fees, a case journey you can feel.
@@ -295,7 +281,7 @@ export default function CustomerShell({ children }) {
         {/* Bottom strip */}
         <div className="border-t border-surface-muted/10 px-5 md:px-10 py-4 max-w-7xl mx-auto flex items-center justify-between">
           <p className="text-[11px] font-mono uppercase tracking-widest text-surface-muted/40">
-            © Passage · Indian passport holders
+            © AmaraVisa · Indian passport holders
           </p>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-gold/60 animate-pulse" />
@@ -307,7 +293,7 @@ export default function CustomerShell({ children }) {
       {/* Mobile footer — minimal */}
       <div className="md:hidden border-t border-border/60 bg-navy-deep px-5 py-6 text-center mt-8 mb-16">
         <p className="text-[11px] font-mono uppercase tracking-widest text-surface-muted/40">
-          © Passage · Indian passport holders
+          © AmaraVisa · Indian passport holders
         </p>
       </div>
 

@@ -1,6 +1,6 @@
-# Customer Next.js app (Passage)
+# Customer Next.js app (AmaraVisa)
 
-Premium customer panel — Next.js 15 App Router + React Query + Passage design tokens.
+Premium customer panel — Next.js 15 App Router + React Query + AmaraVisa design tokens.
 
 ## Run
 

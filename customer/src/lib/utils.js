@@ -41,7 +41,7 @@ export const STAGE_LABELS = {
 };
 
 export const SUPPORT = {
-  email: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "hello@passage.visa",
+  email: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "hello@amaravisa.com",
   phone: process.env.NEXT_PUBLIC_SUPPORT_PHONE || "+91-80-0000-0000",
   whatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "https://wa.me/918000000000",
   crmUrl: process.env.NEXT_PUBLIC_CRM_URL || "http://localhost:3001/login",

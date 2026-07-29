@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { apiErrorMessage } from "@/lib/utils";
 import Stamp from "@/components/Stamp";
 import { Users2, UserX, Plus } from "lucide-react";
 import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";
@@ -14,6 +15,11 @@ import { useListQueryState } from "@/hooks/useListQueryState";
 
 const FILTER_KEYS = [];
 const LIST_DEFAULTS = {};
+
+function isConsultantActive(row) {
+  if (typeof row?.is_active === "boolean") return row.is_active;
+  return row?.active !== false;
+}
 
 export default function Consultants() {
   const list = useListQueryState({
@@ -43,7 +49,9 @@ export default function Consultants() {
       toast.success("Consultant created");
       setShowNew(false);
       load();
-    } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Failed to create consultant"));
+    }
   };
 
   const updateCountries = async (cid, codes) => {
@@ -56,7 +64,9 @@ export default function Consultants() {
         return;
       }
       toast.success("Countries updated"); load();
-    } catch (e) { toast.error("Failed"); }
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Failed to update countries"));
+    }
   };
 
   const deactivate = async (cid, name) => {
@@ -70,22 +80,29 @@ export default function Consultants() {
         return;
       }
       toast.success("Consultant deactivated"); load();
-    } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Failed to deactivate"));
+    }
   };
 
   const execReassign = async (targetCid) => {
     try {
       if (reassignCtx.mode === "deactivate") {
-        await api.post(`/admin/consultants/${reassignCtx.cid}/reassign-and-deactivate`, { target_consultant_id: targetCid });
+        await api.post(`/admin/consultants/${reassignCtx.cid}/reassign-and-deactivate`, {
+          target_consultant_id: targetCid,
+        });
         toast.success("Reassigned & deactivated");
       } else {
         await api.post(`/admin/consultants/${reassignCtx.cid}/reassign-and-update-countries`, {
-          target_consultant_id: targetCid, new_country_codes: reassignCtx.codes,
+          target_consultant_id: targetCid,
+          new_country_codes: reassignCtx.codes,
         });
         toast.success("Reassigned & countries updated");
       }
       setReassignCtx(null); load();
-    } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Reassignment failed"));
+    }
   };
 
   const columns = [
@@ -95,7 +112,7 @@ export default function Consultants() {
       render: (row) => (
         <div className="flex items-center gap-3">
           <span className="w-8 h-8 rounded-full bg-surface-muted border border-border flex items-center justify-center text-xs font-bold text-ink-muted shrink-0">
-            {row.full_name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+            {(row.full_name || "?").split(" ").map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()}
           </span>
           <div>
             <div className="font-medium text-ink leading-tight">{row.full_name}</div>
@@ -124,12 +141,15 @@ export default function Consultants() {
     {
       key: "is_active",
       label: "Status",
-      render: (row) => (
-        <div className="flex items-center gap-1.5">
-          <span className={`status-dot ${row.is_active ? "status-dot-success" : "status-dot-danger"}`} />
-          <span className="text-xs">{row.is_active ? "Active" : "Inactive"}</span>
-        </div>
-      ),
+      render: (row) => {
+        const active = isConsultantActive(row);
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className={`status-dot ${active ? "status-dot-success" : "status-dot-danger"}`} />
+            <span className="text-xs">{active ? "Active" : "Inactive"}</span>
+          </div>
+        );
+      },
     },
     {
       key: "_actions",
@@ -137,10 +157,10 @@ export default function Consultants() {
       sortable: false,
       headerClassName: "text-right",
       className: "text-right",
-      render: (row) => row.is_active && row.role !== "admin" ? (
+      render: (row) => isConsultantActive(row) && row.role !== "admin" ? (
         <div className="inline-flex gap-2 items-center">
           <CountrySelect
-            value={row.country_codes}
+            value={row.country_codes || []}
             onChange={(codes) => updateCountries(row.id, codes)}
             multiple
             placeholder="Edit…"
@@ -205,32 +225,78 @@ export default function Consultants() {
 function NewConsultantForm({ onCancel, onCreate }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState("consultant");
+  const [countryCodes, setCountryCodes] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    onCreate({ email, full_name: name, role });
+    if (role === "consultant" && countryCodes.length === 0) {
+      toast.error("Select at least one country for a consultant");
+      return;
+    }
+    if (!password || password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onCreate({
+        email: email.trim(),
+        full_name: name.trim(),
+        password,
+        role,
+        country_codes: role === "admin" ? [] : countryCodes,
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <form onSubmit={submit} className="bg-surface-card border border-border rounded-[10px] p-5 mb-5 shadow-[var(--shadow-card)]" data-testid="new-consultant-form">
       <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-4">New staff account</div>
-      <div className="grid md:grid-cols-3 gap-3">
+      <div className="grid md:grid-cols-2 gap-3">
         <CrmField label="Email" required>
-          <CrmInput type="email" required value={email} onChange={(e) => setEmail(e.target.value)} data-testid="nc-email" placeholder="staff@passage.desk" />
+          <CrmInput type="email" required value={email} onChange={(e) => setEmail(e.target.value)} data-testid="nc-email" placeholder="staff@amaravisa.com" autoComplete="off" />
         </CrmField>
         <CrmField label="Full name" required>
           <CrmInput required value={name} onChange={(e) => setName(e.target.value)} data-testid="nc-name" placeholder="Priya Sharma" />
         </CrmField>
+        <CrmField label="Temporary password" required hint="Min. 6 characters — share securely with the staff member">
+          <CrmInput type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} data-testid="nc-password" placeholder="••••••••" autoComplete="new-password" />
+        </CrmField>
         <CrmField label="Role">
-          <CrmSelect value={role} onChange={(e) => setRole(e.target.value)} data-testid="nc-role">
+          <CrmSelect
+            value={role}
+            onChange={(e) => {
+              const next = e.target.value;
+              setRole(next);
+              if (next === "admin") setCountryCodes([]);
+            }}
+            data-testid="nc-role"
+          >
             <option value="consultant">Consultant</option>
             <option value="admin">Admin</option>
           </CrmSelect>
         </CrmField>
-        <div className="md:col-span-3 flex justify-end gap-2 mt-2">
-          <CrmButton type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</CrmButton>
-          <CrmButton type="submit" variant="solid" size="sm" data-testid="nc-submit">Create consultant</CrmButton>
+        {role === "consultant" && (
+          <CrmField label="Countries managed" required className="md:col-span-2" hint="Consultants only see cases for these destinations">
+            <CountrySelect
+              value={countryCodes}
+              onChange={setCountryCodes}
+              multiple
+              placeholder="Select countries…"
+              testId="nc-countries"
+            />
+          </CrmField>
+        )}
+        <div className="md:col-span-2 flex justify-end gap-2 mt-2">
+          <CrmButton type="button" variant="outline" size="sm" onClick={onCancel} disabled={submitting}>Cancel</CrmButton>
+          <CrmButton type="submit" variant="solid" size="sm" data-testid="nc-submit" disabled={submitting}>
+            {submitting ? "Creating…" : "Create consultant"}
+          </CrmButton>
         </div>
       </div>
     </form>
@@ -243,11 +309,13 @@ function ReassignOverlay({ ctx, onCancel, onConfirm }) {
     <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface-card border border-border rounded-[10px] shadow-[var(--shadow-lift)] max-w-md w-full p-6">
         <h2 className="text-lg font-semibold text-ink mb-2">Reassignment required</h2>
-        <p className="text-sm text-ink-muted mb-4">{ctx.message}</p>
+        <p className="text-sm text-ink-muted mb-4">{typeof ctx.message === "string" ? ctx.message : "Reassign open cases before continuing."}</p>
         <CrmField label="Reassign affected cases to">
           <ConsultantSelect
             value={target}
             onChange={setTarget}
+            admin
+            excludeId={ctx.cid}
             placeholder="Select consultant…"
             testId="reassign-target-select"
           />

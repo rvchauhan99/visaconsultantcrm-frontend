@@ -1,8 +1,8 @@
 /**
- * Passage — Editorial Luxe design tokens
+ * AmaraVisa · Editorial Luxe design tokens
  * Shared by customer (spacious) and CRM (dense).
  * Token NAMES stay stable so Tailwind utilities (text-navy, bg-gold, …) keep working;
- * VALUES are the new Editorial Luxe palette.
+ * VALUES are the Editorial Luxe palette plus AmaraVisa brand accents.
  */
 module.exports = {
   colors: {
@@ -15,10 +15,14 @@ module.exports = {
     "surface-muted": "#EFE8DC",
 
     // Brand (mapped to legacy names for compatibility)
-    navy: "#1F4A3A", // bottle green — primary
+    navy: "#1F4A3A", // bottle green — primary UI
     "navy-hover": "#16382C",
     teal: "#2F6B5A", // forest accent
     gold: "#B08D57", // brass foil — seal only
+
+    // AmaraVisa logo accents
+    "brand-blue": "#2B5CFF",
+    "brand-purple": "#7B3FE4",
 
     // Semantic (warm-tuned)
     success: "#3D6B4F",

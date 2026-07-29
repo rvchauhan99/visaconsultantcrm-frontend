@@ -1,5 +1,5 @@
 /**
- * Passage Editorial Luxe — shared theme CSS v3 (Atelier Motion)
+ * AmaraVisa · Editorial Luxe — shared theme CSS v3 (Atelier Motion)
  * Import from both customer (Next/Tailwind v4) and CRM (CRA/Tailwind v3).
  */
 
@@ -25,6 +25,11 @@
   --gold: #b08d57;
   --gold-light: #c9a96e;
   --gold-pale: #f5e8c8;
+
+  /* ── AmaraVisa logo accents ── */
+  --brand-blue: #2b5cff;
+  --brand-purple: #7b3fe4;
+  --glow-brand: rgba(43, 92, 255, 0.18);
 
   /* ── Glass & glow ── */
   --glass: rgba(255, 252, 247, 0.82);
@@ -59,11 +64,12 @@
 
   /* ── Gradients ── */
   --gradient-hero: linear-gradient(145deg, #1f4a3a 0%, #2f6b5a 55%, #1f4a3a 100%);
-  --gradient-brand: linear-gradient(135deg, var(--navy) 0%, var(--teal) 100%);
+  --gradient-amara: linear-gradient(90deg, var(--brand-blue) 0%, var(--brand-purple) 100%);
+  --gradient-brand: var(--gradient-amara);
   --gradient-gold: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
   --gradient-surface: linear-gradient(180deg, var(--surface) 0%, var(--surface-warm) 100%);
   --gradient-card: linear-gradient(160deg, var(--surface-card) 0%, var(--surface-warm) 100%);
-  --gradient-text: linear-gradient(135deg, var(--navy) 0%, var(--teal) 100%);
+  --gradient-text: var(--gradient-amara);
 
   /* ── Type ── */
   --font-display: "Newsreader", "Fraunces", Georgia, serif;

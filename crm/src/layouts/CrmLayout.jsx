@@ -4,11 +4,12 @@ import { getUser, clearSession } from "@/lib/api";
 import {
   LogOut, KanbanSquare, Layers, Users2, BarChart3,
   PlusSquare, LayoutGrid, StampIcon, FileText, FormInput,
-  ListChecks, ChevronDown, User, Menu, X, UserPlus, Wallet, Inbox, BookOpen, Archive, CreditCard, PhoneCall,
+  ListChecks, ChevronDown, User, Menu, X, UserPlus, Wallet, Inbox, Archive, CreditCard, PhoneCall,
   ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import NotificationBell from "@/components/crm/NotificationBell";
 import CrmSearch from "@/components/crm/CrmSearch";
+import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
 import { cn } from "@/lib/utils";
 
 const ROUTE_LABELS = {
@@ -28,7 +29,6 @@ const ROUTE_LABELS = {
   "/document-master":"Document master",
   "/field-master":   "Field master",
   "/consultants":    "Consultants",
-  "/playbooks":      "Playbooks",
   "/case-number-settings": "Case number settings",
   "/profile":        "Profile",
 };
@@ -96,7 +96,9 @@ export default function CrmLayout() {
         ? "Payment reports"
         : pathParts.length === 2 && pathParts[0] === "cases"
           ? `Case #${pathParts[1].slice(0, 8)}`
-          : ROUTE_LABELS[`/${pathParts[0]}`] ?? pathParts[0];
+          : pathParts[0] === "tasks" && user?.role === "admin"
+            ? "Tasks"
+            : ROUTE_LABELS[`/${pathParts[0]}`] ?? pathParts[0];
 
   let hoverTimeout;
   const onSidebarMouseEnter = () => {
@@ -118,20 +120,13 @@ export default function CrmLayout() {
           showLabels ? "px-3 py-3.5 justify-between" : "px-2 py-3.5 justify-center"
         )}>
           <Link to="/" className={cn("flex items-center min-w-0", showLabels ? "gap-2.5" : "gap-0")} data-testid="crm-logo">
-            <span className={cn(
-              "inline-flex items-center justify-center rounded-md shrink-0",
-              "border border-double text-xs font-mono font-bold",
-              "border-[rgba(176,141,87,0.5)] text-[rgba(176,141,87,0.85)]",
-              "bg-[rgba(255,252,247,0.04)]",
-              showLabels ? "w-8 h-8" : "w-8 h-8"
-            )}>
-              PC
-            </span>
-            {showLabels && (
+            {showLabels ? (
               <div className="min-w-0 transition-opacity duration-200">
-                <div className="text-sm font-semibold leading-tight text-navy-sidebar-active truncate">Passage CRM</div>
-                <div className="text-[10px] font-mono uppercase tracking-widest text-[rgba(255,252,247,0.35)]">Ops desk</div>
+                <AmaraVisaLogo size="sm" invert className="opacity-95 max-w-[140px]" />
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[rgba(255,252,247,0.35)] mt-0.5">Ops desk</div>
               </div>
+            ) : (
+              <AmaraVisaLogo size="sm" invert className="opacity-95 max-w-[36px] overflow-hidden" />
             )}
           </Link>
           {/* Close button for mobile only */}
@@ -155,7 +150,7 @@ export default function CrmLayout() {
           <RailLink to="/" icon={<LayoutGrid className="w-4 h-4" />} label="Dashboard" testid="crm-nav-dashboard" end showLabel={showLabels} />
           <RailLink to="/pipeline" icon={<KanbanSquare className="w-4 h-4" />} label="Pipeline" testid="crm-nav-pipeline" showLabel={showLabels} />
           <RailLink to="/cases/closed" icon={<Archive className="w-4 h-4" />} label="Closed cases" testid="crm-nav-closed" showLabel={showLabels} />
-          <RailLink to="/tasks" icon={<ListChecks className="w-4 h-4" />} label="My tasks" testid="crm-nav-tasks" showLabel={showLabels} />
+          <RailLink to="/tasks" icon={<ListChecks className="w-4 h-4" />} label={user?.role === "admin" ? "Tasks" : "My tasks"} testid="crm-nav-tasks" showLabel={showLabels} />
           <RailLink to="/leads" icon={<UserPlus className="w-4 h-4" />} label="Leads" testid="crm-nav-leads" showLabel={showLabels} />
           <RailLink to="/follow-ups" icon={<PhoneCall className="w-4 h-4" />} label="Follow-ups" testid="crm-nav-follow-ups" showLabel={showLabels} />
           <RailLink to="/finance" icon={<Wallet className="w-4 h-4" />} label="Finance" testid="crm-nav-finance" showLabel={showLabels} />
@@ -179,7 +174,6 @@ export default function CrmLayout() {
               <RailLink to="/field-master" icon={<FormInput className="w-4 h-4" />} label="Field master" testid="crm-nav-field-master" showLabel={showLabels} />
               <RailLink to="/consultants" icon={<Users2 className="w-4 h-4" />} label="Consultants" testid="crm-nav-consultants" showLabel={showLabels} />
               <RailLink to="/case-number-settings" icon={<ListChecks className="w-4 h-4" />} label="Case numbers" testid="crm-nav-case-number-settings" showLabel={showLabels} />
-              <RailLink to="/playbooks" icon={<BookOpen className="w-4 h-4" />} label="Playbooks" testid="crm-nav-playbooks" showLabel={showLabels} />
             </>
           )}
         </nav>
@@ -325,7 +319,7 @@ export default function CrmLayout() {
               <Menu className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-1.5 text-xs text-ink-muted min-w-0">
-              <span className="text-ink-muted/50">Passage</span>
+              <span className="text-ink-muted/50">AmaraVisa</span>
               <span className="text-border-strong">/</span>
               <span className="text-ink font-medium truncate">{breadcrumb}</span>
             </div>

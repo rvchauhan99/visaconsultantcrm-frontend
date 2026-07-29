@@ -22,7 +22,6 @@ import Leads from "@/pages/crm/Leads";
 import LeadFollowUps from "@/pages/crm/LeadFollowUps";
 import Finance from "@/pages/crm/Finance";
 import Inbox from "@/pages/crm/Inbox";
-import Playbooks from "@/pages/crm/Playbooks";
 import CaseNumberSettings from "@/pages/crm/CaseNumberSettings";
 import ClosedCases from "@/pages/crm/ClosedCases";
 import PaymentsReport from "@/pages/crm/PaymentsReport";
@@ -62,7 +61,6 @@ export default function App() {
                     <Route path="/products/:productId" element={<RequireAdmin><ProductBuilder /></RequireAdmin>} />
                     <Route path="/document-master" element={<RequireAdmin><DocumentMaster /></RequireAdmin>} />
                     <Route path="/field-master" element={<RequireAdmin><FieldMaster /></RequireAdmin>} />
-                    <Route path="/playbooks" element={<RequireAdmin><Playbooks /></RequireAdmin>} />
                     <Route path="/consultants" element={<RequireAdmin><Consultants /></RequireAdmin>} />
                     <Route path="/case-number-settings" element={<RequireAdmin><CaseNumberSettings /></RequireAdmin>} />
                     <Route path="/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />

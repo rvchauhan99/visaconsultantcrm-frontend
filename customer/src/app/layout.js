@@ -3,7 +3,7 @@ import CustomerShell from "@/components/layout/customer-shell";
 import "./globals.css";
 
 export const metadata = {
-  title: "Passage — Visas without the guesswork",
+  title: "AmaraVisa — Visas without the guesswork",
   description: "Premium visa consultancy for Indian passport holders. Transparent fees, human consultants, on-time filing.",
 };
 
