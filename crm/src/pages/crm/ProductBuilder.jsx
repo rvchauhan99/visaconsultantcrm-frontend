@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api, { resolveFileUrl } from "@/lib/api";
@@ -14,10 +14,13 @@ export default function ProductBuilder() {
     const nav = useNavigate();
     const [schema, setSchema] = useState(null);
 
+    const load = useCallback(() => {
+        return api.get(`/admin/visa-products/${productId}`).then((r) => setSchema(r.data));
+    }, [productId]);
+
     useEffect(() => {
         load();
-    }, [productId]);
-    const load = () => api.get(`/admin/visa-products/${productId}`).then((r) => setSchema(r.data));
+    }, [load]);
 
     if (!schema) return <div className="p-6 text-ink-muted">Loading…</div>;
 
