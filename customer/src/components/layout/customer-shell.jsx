@@ -280,8 +280,8 @@ export default function CustomerShell({ children }) {
 
         {/* Bottom strip */}
         <div className="border-t border-surface-muted/10 px-5 md:px-10 py-4 max-w-7xl mx-auto flex items-center justify-between">
-          <p className="text-[11px] font-mono uppercase tracking-widest text-surface-muted/40">
-            © AmaraVisa · Indian passport holders
+          <p className="text-[11px] font-mono text-surface-muted/40">
+            Copyright © 2026 AmaraVisa India Private Limited - All Rights Reserved.
           </p>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-gold/60 animate-pulse" />
@@ -292,8 +292,8 @@ export default function CustomerShell({ children }) {
 
       {/* Mobile footer — minimal */}
       <div className="md:hidden border-t border-border/60 bg-navy-deep px-5 py-6 text-center mt-8 mb-16">
-        <p className="text-[11px] font-mono uppercase tracking-widest text-surface-muted/40">
-          © AmaraVisa · Indian passport holders
+        <p className="text-[11px] font-mono text-surface-muted/40">
+          Copyright © 2026 AmaraVisa India Private Limited - All Rights Reserved.
         </p>
       </div>
 

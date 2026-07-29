@@ -87,6 +87,9 @@ export default function CustomerLayout() {
                         </a>
                     </div>
                 </div>
+                <div className="max-w-7xl mx-auto px-6 md:px-10 py-4 border-t border-border text-[11px] text-ink-muted">
+                    Copyright © 2026 AmaraVisa India Private Limited - All Rights Reserved.
+                </div>
             </footer>
         </div>
     );

@@ -152,7 +152,7 @@ export default function CrmLogin() {
             </div>
           </div>
 
-          <div className="text-[11px] text-[rgba(255,252,247,0.2)] font-mono">© AmaraVisa · Staff access only</div>
+          <div className="text-[11px] text-[rgba(255,252,247,0.2)] font-mono">Copyright © 2026 AmaraVisa India Private Limited - All Rights Reserved.</div>
         </div>
       </div>
 

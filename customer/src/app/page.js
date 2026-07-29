@@ -463,7 +463,7 @@ export default function LandingPage() {
           </div>
 
           <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-            <p>© {new Date().getFullYear()} AmaraVisa. All rights reserved.</p>
+            <p>Copyright © 2026 AmaraVisa India Private Limited - All Rights Reserved.</p>
             <p>Made with care for Indian travelers.</p>
           </div>
         </div>
