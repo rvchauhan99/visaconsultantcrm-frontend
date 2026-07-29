@@ -30,6 +30,27 @@ api.interceptors.response.use(
 
 export default api;
 
+/** Resolve a backend-relative file URL to an absolute URL. */
+export const resolveFileUrl = (url) => {
+    if (!url) return url;
+    return url.startsWith("/") ? `${BACKEND_URL}${url}` : url;
+};
+
+/** Build a View (inline) URL for a private document token URL. */
+export const viewUrl = (fileUrl) => {
+    if (!fileUrl) return null;
+    const sep = fileUrl.includes("?") ? "&" : "?";
+    return `${resolveFileUrl(fileUrl)}${sep}disposition=inline`;
+};
+
+/** Build a Download (attachment) URL for a private document token URL. */
+export const downloadUrl = (fileUrl, filename) => {
+    if (!fileUrl) return null;
+    const sep = fileUrl.includes("?") ? "&" : "?";
+    const base = `${resolveFileUrl(fileUrl)}${sep}disposition=attachment`;
+    return filename ? `${base}&filename=${encodeURIComponent(filename)}` : base;
+};
+
 export const saveSession = (token, user) => {
     sessionStorage.setItem(TOKEN_KEY, token);
     sessionStorage.setItem(USER_KEY, JSON.stringify(user));

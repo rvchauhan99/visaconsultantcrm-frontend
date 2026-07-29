@@ -54,3 +54,18 @@ export const resolveFileUrl = (url) => {
     if (!url) return url;
     return url.startsWith("/") ? `${BACKEND_URL}${url}` : url;
 };
+
+/** Build a View (inline) URL — browser previews PDF/images in-tab. */
+export const viewUrl = (fileUrl) => {
+    if (!fileUrl) return null;
+    const sep = fileUrl.includes("?") ? "&" : "?";
+    return `${resolveFileUrl(fileUrl)}${sep}disposition=inline`;
+};
+
+/** Build a Download (attachment) URL — forces browser save-as. */
+export const downloadUrl = (fileUrl, filename) => {
+    if (!fileUrl) return null;
+    const sep = fileUrl.includes("?") ? "&" : "?";
+    const base = `${resolveFileUrl(fileUrl)}${sep}disposition=attachment`;
+    return filename ? `${base}&filename=${encodeURIComponent(filename)}` : base;
+};

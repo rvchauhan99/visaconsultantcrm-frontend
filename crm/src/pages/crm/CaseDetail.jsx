@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import api, { getUser, resolveFileUrl } from "@/lib/api";
+import api, { getUser, viewUrl, downloadUrl } from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X, ArrowRight, Pencil, AlertTriangle, PauseCircle, Plus, FileCheck, FileX, Clock, ChevronLeft } from "lucide-react";
+import { Check, X, ArrowRight, Pencil, AlertTriangle, PauseCircle, Plus, FileCheck, FileX, Clock, ChevronLeft, Eye, Download } from "lucide-react";
 import { ConsultantSelect } from "@/components/forms/selects";
 import { CrmCard, CrmTableCard, CrmCardHeader, CrmEmptyState } from "@/components/ui/crm-card";
 import { CrmButton } from "@/components/ui/crm-button";
@@ -312,17 +312,32 @@ export default function CaseDetail() {
                     <td>
                       <Stamp tone={DOC_STAMP[d.status] ?? "muted"} size="sm">{d.status}</Stamp>
                     </td>
-                    <td className="font-mono text-xs max-w-[160px] truncate">
+                    <td className="font-mono text-xs">
                       {d.file_url ? (
-                        <a
-                          href={resolveFileUrl(d.file_url)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-navy hover:underline"
-                          title={`Open ${d.filename || d.doc_name || d.doc_key}`}
-                        >
-                          {d.filename || "Open file"}
-                        </a>
+                        <span className="flex flex-col gap-1">
+                          <span className="truncate max-w-[140px] block text-ink-muted" title={d.filename}>{d.filename || d.doc_key}</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <a
+                              href={viewUrl(d.file_url)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-navy hover:underline"
+                              data-testid={`crm-doc-view-${d.doc_key}`}
+                              title={`View ${d.filename || "document"}`}
+                            >
+                              <Eye className="w-3 h-3" /> View
+                            </a>
+                            <span className="text-border">·</span>
+                            <a
+                              href={downloadUrl(d.file_url, d.filename)}
+                              className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-ink-muted hover:text-ink"
+                              data-testid={`crm-doc-download-${d.doc_key}`}
+                              title={`Download ${d.filename || "document"}`}
+                            >
+                              <Download className="w-3 h-3" /> Download
+                            </a>
+                          </span>
+                        </span>
                       ) : (
                         <span className="text-ink-muted italic">—</span>
                       )}

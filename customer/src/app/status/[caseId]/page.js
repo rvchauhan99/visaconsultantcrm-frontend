@@ -11,6 +11,7 @@ import Stamp from "@/components/ui/stamp";
 import { Card, ErrorState, Skeleton } from "@/components/ui/card";
 import { useCaseStatus } from "@/hooks/customer-api";
 import api, { openReceipt } from "@/lib/api";
+import DocumentActions from "@/components/ui/document-actions";
 import { formatCaseNumber, formatInDate } from "@/lib/utils";
 import { track } from "@/lib/telemetry";
 
@@ -152,9 +153,18 @@ function StatusTracker() {
         <h3 className="font-display text-lg text-navy mb-4">Your documents</h3>
         <ul className="space-y-2">
           {(data.documents || []).map((d) => (
-            <li key={d.id} className="flex items-center justify-between py-2 border-b border-border last:border-0" data-testid={`status-doc-${d.doc_key}`}>
+            <li key={d.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 gap-3" data-testid={`status-doc-${d.doc_key}`}>
               <span className="text-sm">{d.doc_name}</span>
-              <DocStatusStamp status={d.status} />
+              <span className="flex items-center gap-2 shrink-0">
+                {d.file_url && (
+                  <DocumentActions
+                    fileUrl={d.file_url}
+                    filename={d.filename}
+                    testIdPrefix={`status-doc-${d.doc_key}`}
+                  />
+                )}
+                <DocStatusStamp status={d.status} />
+              </span>
             </li>
           ))}
         </ul>
@@ -258,6 +268,15 @@ function ResubmitDoc({ doc, caseId, snapshot, onDone }) {
       <div className="flex-1">
         <div className="font-medium text-sm">{doc.doc_name}</div>
         <div className="text-sm text-ink-muted mt-1">Reason: {doc.rejection_reason || "Not specified"}</div>
+        {doc.file_url && (
+          <div className="mt-1">
+            <DocumentActions
+              fileUrl={doc.file_url}
+              filename={doc.filename}
+              testIdPrefix={`rejected-doc-${doc.doc_key}`}
+            />
+          </div>
+        )}
       </div>
       <label className="cursor-pointer inline-flex items-center gap-1.5 text-sm border border-danger text-danger rounded-full px-3 py-1.5 hover:bg-danger hover:text-white transition-colors">
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}

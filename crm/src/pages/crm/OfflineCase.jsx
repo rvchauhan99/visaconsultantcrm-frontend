@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import api from "@/lib/api";
-import { Upload, PlusSquare, Check } from "lucide-react";
+import api, { viewUrl, downloadUrl } from "@/lib/api";
+import { Upload, PlusSquare, Check, Eye, Download } from "lucide-react";
 import { ProductSelect } from "@/components/forms/selects";
 import { PageHeader, SectionLabel } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
@@ -288,7 +288,32 @@ export default function OfflineCase() {
                           </div>
                         ) : null}
                         {uploaded?.filename ? (
-                          <div className="text-[10px] font-mono text-teal mt-1 truncate">{uploaded.filename}</div>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-[10px] font-mono text-teal truncate">{uploaded.filename}</span>
+                            {uploaded.file_url && (
+                              <>
+                                <a
+                                  href={viewUrl(uploaded.file_url)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-navy hover:underline"
+                                  data-testid={`offline-doc-view-${d.doc_key}`}
+                                  title="View document"
+                                >
+                                  <Eye className="w-3 h-3" /> View
+                                </a>
+                                <span className="text-border select-none">·</span>
+                                <a
+                                  href={downloadUrl(uploaded.file_url, uploaded.filename)}
+                                  className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-ink-muted hover:text-ink"
+                                  data-testid={`offline-doc-download-${d.doc_key}`}
+                                  title="Download document"
+                                >
+                                  <Download className="w-3 h-3" /> Download
+                                </a>
+                              </>
+                            )}
+                          </div>
                         ) : null}
                       </div>
                       <div className="shrink-0 flex items-center gap-2">

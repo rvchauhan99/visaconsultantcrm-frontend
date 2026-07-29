@@ -17,6 +17,7 @@ import {
   User,
 } from "lucide-react";
 import api from "@/lib/api";
+import DocumentActions from "@/components/ui/document-actions";
 import { draftKey, getUser } from "@/lib/session";
 import { INR, humanizeKey, cn } from "@/lib/utils";
 import { track } from "@/lib/telemetry";
@@ -816,10 +817,17 @@ function DocUploader({ doc, value, onUpload }) {
             )}
           </div>
           {value && (
-            <p className="text-xs text-teal mt-2 truncate">
-              {value.filename}
-              {value.from_vault && <span className="text-ink-muted ml-1">(from vault)</span>}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-xs text-teal truncate">
+                {value.filename}
+                {value.from_vault && <span className="text-ink-muted ml-1">(from vault)</span>}
+              </p>
+              <DocumentActions
+                fileUrl={value.file_url}
+                filename={value.filename}
+                testIdPrefix={`apply-doc-${doc.doc_key}`}
+              />
+            </div>
           )}
         </div>
         <div className="shrink-0 flex flex-col gap-1.5">
@@ -854,8 +862,16 @@ function DocUploader({ doc, value, onUpload }) {
                 data-testid={`vault-item-${v.id.slice(0, 6)}`}
               >
                 <span className="truncate">{v.filename}</span>
-                <span className="text-[10px] font-mono uppercase text-ink-muted shrink-0">
-                  {new Date(v.created_at).toLocaleDateString("en-IN")}
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-mono uppercase text-ink-muted">
+                    {new Date(v.created_at).toLocaleDateString("en-IN")}
+                  </span>
+                  <DocumentActions
+                    fileUrl={v.file_url}
+                    filename={v.filename}
+                    testIdPrefix={`vault-item-view-${v.id.slice(0, 6)}`}
+                    showDownload={false}
+                  />
                 </span>
               </button>
             ))}
@@ -887,13 +903,26 @@ function ReviewStep({ schema, traveler, fields, uploads }) {
           </ReviewBlock>
         )}
         <ReviewBlock title="Documents">
-          {(schema.documents || []).map((d) => (
-            <ReviewRow
-              key={d.doc_key}
-              label={d.name}
-              value={uploads[d.doc_key]?.filename || (d.required ? "MISSING" : "not provided")}
-            />
-          ))}
+          {(schema.documents || []).map((d) => {
+            const up = uploads[d.doc_key];
+            return (
+              <div key={d.doc_key} className="flex items-center justify-between px-4 py-3 text-sm gap-3 hover:bg-surface-card/50 transition-colors">
+                <span className="text-ink-muted capitalize">{d.name}</span>
+                <span className="flex flex-col items-end gap-1 min-w-0">
+                  <span className="text-ink font-mono truncate max-w-[40ch] text-right font-medium">
+                    {up?.filename || (d.required ? "MISSING" : "not provided")}
+                  </span>
+                  {up?.file_url && (
+                    <DocumentActions
+                      fileUrl={up.file_url}
+                      filename={up.filename}
+                      testIdPrefix={`review-doc-${d.doc_key}`}
+                    />
+                  )}
+                </span>
+              </div>
+            );
+          })}
         </ReviewBlock>
       </div>
     </div>

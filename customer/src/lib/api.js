@@ -36,6 +36,27 @@ api.interceptors.response.use(
 
 export default api;
 
+/** Resolve a backend-relative file URL to an absolute URL usable in <a>/<img>. */
+export function resolveFileUrl(url) {
+  if (!url) return url;
+  return url.startsWith("/") ? `${BACKEND_URL}${url}` : url;
+}
+
+/** Build a View (inline) URL for a private document token URL. */
+export function viewUrl(fileUrl) {
+  if (!fileUrl) return null;
+  const sep = fileUrl.includes("?") ? "&" : "?";
+  return `${resolveFileUrl(fileUrl)}${sep}disposition=inline`;
+}
+
+/** Build a Download (attachment) URL for a private document token URL. */
+export function downloadUrl(fileUrl, filename) {
+  if (!fileUrl) return null;
+  const sep = fileUrl.includes("?") ? "&" : "?";
+  const base = `${resolveFileUrl(fileUrl)}${sep}disposition=attachment`;
+  return filename ? `${base}&filename=${encodeURIComponent(filename)}` : base;
+}
+
 /** Fetch HTML payment receipt and open for print/save. */
 export async function openReceipt(caseId) {
   const res = await api.get(`/cases/${caseId}/receipt`, { responseType: "text" });
