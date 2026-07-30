@@ -12,6 +12,7 @@ import { Card, Skeleton } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { PhoneField } from "@/components/ui/phone-field";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { isValidPhoneOptional, normalizePhoneValue } from "@/lib/phone";
 
@@ -146,16 +147,31 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
           />
         </Field>
         <Field label="Date of birth">
-          <Input type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} />
+          <DatePicker
+            value={form.dob || null}
+            onChange={(v) => setForm({ ...form, dob: v || "" })}
+            fromYear={1940}
+            toYear={new Date().getFullYear()}
+          />
         </Field>
         <Field label="Passport number" hint={profile ? "Leave blank to keep existing" : undefined}>
           <Input value={form.passport_number} onChange={(e) => setForm({ ...form, passport_number: e.target.value.toUpperCase() })} />
         </Field>
         <Field label="Passport issue">
-          <Input type="date" value={form.passport_issue_date} onChange={(e) => setForm({ ...form, passport_issue_date: e.target.value })} />
+          <DatePicker
+            value={form.passport_issue_date || null}
+            onChange={(v) => setForm({ ...form, passport_issue_date: v || "" })}
+            fromYear={1990}
+            toYear={new Date().getFullYear()}
+          />
         </Field>
         <Field label="Passport expiry">
-          <Input type="date" value={form.passport_expiry_date} onChange={(e) => setForm({ ...form, passport_expiry_date: e.target.value })} />
+          <DatePicker
+            value={form.passport_expiry_date || null}
+            onChange={(v) => setForm({ ...form, passport_expiry_date: v || "" })}
+            fromYear={new Date().getFullYear() - 1}
+            toYear={new Date().getFullYear() + 20}
+          />
         </Field>
         <Field label="Phone">
           <PhoneField

@@ -8,6 +8,7 @@ import { PageHeader, SectionLabel } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
 import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { CrmPhoneField } from "@/components/ui/crm-phone-field";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { isValidPhone } from "@/lib/phone";
@@ -32,15 +33,22 @@ function DynamicFieldInput({ field, value, onChange }) {
       />
     );
   }
+  if (field.type === "date") {
+    return (
+      <DatePicker
+        data-testid={testId}
+        value={value || null}
+        onChange={(v) => onChange(v || "")}
+        clearable={!field.required}
+      />
+    );
+  }
   const common = {
     required: !!field.required,
     value: value ?? "",
     onChange: (e) => onChange(e.target.value),
     "data-testid": testId,
   };
-  if (field.type === "date") {
-    return <CrmInput type="date" {...common} />;
-  }
   if (field.type === "number") {
     return <CrmInput type="number" {...common} />;
   }
@@ -228,13 +236,27 @@ export default function OfflineCase() {
                 <CrmInput required value={traveler.last_name || ""} onChange={(e) => setTraveler({ ...traveler, last_name: e.target.value })} data-testid="oc-t-last" />
               </CrmField>
               <CrmField label="DOB" required>
-                <CrmInput type="date" required value={traveler.date_of_birth || ""} onChange={(e) => setTraveler({ ...traveler, date_of_birth: e.target.value })} data-testid="oc-t-dob" />
+                <DatePicker
+                  value={traveler.date_of_birth || null}
+                  onChange={(v) => setTraveler({ ...traveler, date_of_birth: v || "" })}
+                  data-testid="oc-t-dob"
+                  fromYear={1940}
+                  toYear={new Date().getFullYear()}
+                  clearable={false}
+                />
               </CrmField>
               <CrmField label="Passport Number" required>
                 <CrmInput required value={traveler.passport_number || ""} onChange={(e) => setTraveler({ ...traveler, passport_number: e.target.value })} data-testid="oc-t-pass" />
               </CrmField>
               <CrmField label="Passport Expiry" required>
-                <CrmInput type="date" required value={traveler.passport_expiry_date || ""} onChange={(e) => setTraveler({ ...traveler, passport_expiry_date: e.target.value })} data-testid="oc-t-exp" />
+                <DatePicker
+                  value={traveler.passport_expiry_date || null}
+                  onChange={(v) => setTraveler({ ...traveler, passport_expiry_date: v || "" })}
+                  data-testid="oc-t-exp"
+                  fromYear={new Date().getFullYear() - 1}
+                  toYear={new Date().getFullYear() + 20}
+                  clearable={false}
+                />
               </CrmField>
               <CrmField label="Nationality" required>
                 <CrmInput required value={traveler.nationality || ""} onChange={(e) => setTraveler({ ...traveler, nationality: e.target.value })} data-testid="oc-t-nat" />

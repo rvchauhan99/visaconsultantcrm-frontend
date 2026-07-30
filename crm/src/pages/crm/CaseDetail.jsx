@@ -11,6 +11,7 @@ import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { CrmCard, CrmTableCard, CrmCardHeader, CrmEmptyState } from "@/components/ui/crm-card";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { cn, formatCaseNumber } from "@/lib/utils";
 
 const STAGES = ["new", "docs_pending", "ready_to_submit", "submitted", "decision", "closed"];
@@ -636,7 +637,11 @@ function TasksPanel({ tasks, onCreate, onComplete }) {
             <CrmInput value={desc} onChange={(e) => setDesc(e.target.value)} data-testid="task-desc-input" />
           </CrmField>
           <CrmField label="Due date">
-            <CrmInput type="date" value={due} onChange={(e) => setDue(e.target.value)} data-testid="task-due-input" />
+            <DatePicker
+              value={due || null}
+              onChange={(v) => setDue(v || "")}
+              data-testid="task-due-input"
+            />
           </CrmField>
           <CrmField label="Assigned to">
             <ConsultantSelect

@@ -29,6 +29,7 @@ export function SearchableSelect({
   searchPlaceholder = "Search…",
   emptyText = "No results",
   clearable = true,
+  searchable = true,
   disabled = false,
   className = "",
   contentClassName = "",
@@ -39,7 +40,7 @@ export function SearchableSelect({
   const [query, setQuery] = useState("");
 
   const values = useMemo(() => {
-    return value == null || value === "" ? [] : [value];
+    return value == null ? [] : [value];
   }, [value]);
 
   const selected = useMemo(() => {
@@ -110,12 +111,14 @@ export function SearchableSelect({
         )}
         align="start"
       >
-        <Command shouldFilter className="rounded-[14px]">
-          <CommandInput
-            placeholder={searchPlaceholder}
-            value={query}
-            onValueChange={setQuery}
-          />
+        <Command shouldFilter={searchable} className="rounded-[14px]">
+          {searchable && (
+            <CommandInput
+              placeholder={searchPlaceholder}
+              value={query}
+              onValueChange={setQuery}
+            />
+          )}
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
@@ -129,12 +132,13 @@ export function SearchableSelect({
                 ]
                   .filter(Boolean)
                   .join(" ");
+                const optKey = v === "" || v == null ? "__empty__" : String(v);
                 return (
                   <CommandItem
-                    key={String(v)}
-                    value={searchValue}
+                    key={optKey}
+                    value={searchValue || optKey}
                     onSelect={() => select(option)}
-                    data-testid={testId ? `${testId}-opt-${v}` : undefined}
+                    data-testid={testId ? `${testId}-opt-${v === "" ? "all" : v}` : undefined}
                   >
                     <Check
                       className={cn(

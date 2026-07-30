@@ -7,6 +7,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { FileText, Umbrella, Zap, Plane } from "lucide-react";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useVisaProducts } from "@/hooks/customer-api";
 import { useCatalogSearch } from "@/context/catalog-search";
 import {
@@ -20,6 +22,28 @@ import {
 import { track } from "@/lib/telemetry";
 
 const ease = [0.16, 1, 0.3, 1];
+
+const FILTER_TRIGGER =
+  "border-0 bg-transparent shadow-none px-0 py-1 rounded-none font-semibold hover:border-0 focus:border-transparent focus:shadow-none min-w-[7rem]";
+
+const DELIVERY_OPTIONS = [
+  { value: "any", label: "Any Time" },
+  { value: "fast", label: "Fast (≤7 days)" },
+];
+
+const VISA_TYPE_OPTIONS = [
+  { value: "", label: "All Visa Types" },
+  { value: "tourist", label: "Tourist" },
+  { value: "business", label: "Business" },
+  { value: "transit", label: "Transit" },
+];
+
+const COMPLEXITY_OPTIONS = [
+  { value: "", label: "Any Documents" },
+  { value: "simple", label: "Simple (≤3)" },
+  { value: "medium", label: "Medium (4–6)" },
+  { value: "complex", label: "Complex (7+)" },
+];
 
 export default function LandingPage() {
   const reduce = useReducedMotion();
@@ -67,16 +91,18 @@ export default function LandingPage() {
           <FilterSection
             icon={<Zap className="w-4 h-4 text-emerald-500" />}
             label="Visa delivery:"
-            testid="filter-delivery"
           >
-            <select
+            <SearchableSelect
+              data-testid="filter-delivery"
+              searchable={false}
+              clearable={false}
               value={delivery}
-              onChange={(e) => setDelivery(e.target.value)}
-              className="atlys-filter-select"
-            >
-              <option value="any">Any Time</option>
-              <option value="fast">Fast (≤7 days)</option>
-            </select>
+              onChange={(v) => setDelivery(v ?? "any")}
+              options={DELIVERY_OPTIONS}
+              className="w-auto min-w-0 flex-1"
+              triggerClassName={FILTER_TRIGGER}
+              contentClassName="min-w-[200px]"
+            />
           </FilterSection>
 
           <FilterDivider />
@@ -84,18 +110,18 @@ export default function LandingPage() {
           <FilterSection
             icon={<Plane className="w-4 h-4 text-sky-500" />}
             label="Type:"
-            testid="filter-type"
           >
-            <select
+            <SearchableSelect
+              data-testid="filter-type"
+              searchable={false}
+              clearable={false}
               value={visaType}
-              onChange={(e) => setVisaType(e.target.value)}
-              className="atlys-filter-select"
-            >
-              <option value="">All Visa Types</option>
-              <option value="tourist">Tourist</option>
-              <option value="business">Business</option>
-              <option value="transit">Transit</option>
-            </select>
+              onChange={(v) => setVisaType(v ?? "")}
+              options={VISA_TYPE_OPTIONS}
+              className="w-auto min-w-0 flex-1"
+              triggerClassName={FILTER_TRIGGER}
+              contentClassName="min-w-[200px]"
+            />
           </FilterSection>
 
           <FilterDivider />
@@ -103,18 +129,18 @@ export default function LandingPage() {
           <FilterSection
             icon={<FileText className="w-4 h-4 text-orange-500" />}
             label="Documents:"
-            testid="filter-complexity"
           >
-            <select
+            <SearchableSelect
+              data-testid="filter-complexity"
+              searchable={false}
+              clearable={false}
               value={complexity}
-              onChange={(e) => setComplexity(e.target.value)}
-              className="atlys-filter-select"
-            >
-              <option value="">Any Documents</option>
-              <option value="simple">Simple (≤3)</option>
-              <option value="medium">Medium (4–6)</option>
-              <option value="complex">Complex (7+)</option>
-            </select>
+              onChange={(v) => setComplexity(v ?? "")}
+              options={COMPLEXITY_OPTIONS}
+              className="w-auto min-w-0 flex-1"
+              triggerClassName={FILTER_TRIGGER}
+              contentClassName="min-w-[200px]"
+            />
           </FilterSection>
 
           <FilterDivider />
@@ -122,14 +148,16 @@ export default function LandingPage() {
           <FilterSection
             icon={<Umbrella className="w-4 h-4 text-pink-500" />}
             label="Holidays:"
-            testid="filter-travel-date"
           >
-            <input
-              type="date"
-              value={travelDate}
-              onChange={(e) => setTravelDate(e.target.value)}
+            <DatePicker
+              data-testid="filter-travel-date"
+              value={travelDate || null}
+              onChange={(v) => setTravelDate(v || "")}
               placeholder="Select Dates"
-              className="atlys-filter-date"
+              clearable
+              className="w-auto min-w-0 flex-1"
+              triggerClassName={FILTER_TRIGGER}
+              contentClassName="min-w-[280px]"
             />
           </FilterSection>
 
