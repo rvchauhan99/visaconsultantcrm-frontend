@@ -9,10 +9,10 @@ module.exports = {
     // Surfaces & text
     ink: "#1C1410",
     "ink-muted": "#6B5E52",
-    surface: "#F7F3EB",
-    "surface-card": "#FFFCF7",
+    surface: "#FFFFFF",
+    "surface-card": "#FFFFFF",
     "surface-elevated": "#FFFFFF",
-    "surface-muted": "#EFE8DC",
+    "surface-muted": "#F5F5F5",
 
     // Brand (mapped to legacy names for compatibility)
     navy: "#1F4A3A", // bottle green — primary UI
@@ -28,12 +28,12 @@ module.exports = {
     success: "#3D6B4F",
     warning: "#A67C2D",
     danger: "#9B3D32",
-    border: "#E4D9C8",
-    "border-strong": "#C9BBA5",
+    border: "#E8E8E8",
+    "border-strong": "#D4D4D4",
 
     // Aliases used by shadcn-style components
     primary: "#1F4A3A",
-    "primary-foreground": "#FFFCF7",
+    "primary-foreground": "#FFFFFF",
     accent: "#2F6B5A",
     ring: "#1F4A3A",
   },
