@@ -193,50 +193,80 @@
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    padding: 0.625rem 1rem;
+    padding: 0.625rem 1.125rem;
     border-radius: 999px;
-    border: 1px solid var(--border);
+    border: 1.5px solid rgba(0, 0, 0, 0.18);
     background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
   }
 
   .atlys-search:focus-within {
-    border-color: rgba(0, 0, 0, 0.15);
+    border-color: rgba(0, 0, 0, 0.35);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   }
 
-  /* Atlys unified filter bar */
+  /* Atlys unified filter bar — centered, ~3 of 5 card columns on md+ */
   .atlys-filter-bar {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: stretch;
     gap: 0.75rem 1rem;
-    padding: 0.875rem 1.25rem;
+    padding: 0.75rem 1.25rem;
     border-radius: 999px;
     border: 1px solid var(--border);
     background: #fff;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    /* ~ middle 3 of 5 cards; also works as a stable centered max */
+    .atlys-filter-bar {
+      width: min(100%, calc((100% - 5rem) * 0.6 + 2.5rem));
+      max-width: 56rem;
+    }
   }
 
   @media (max-width: 767px) {
     .atlys-filter-bar {
       border-radius: 24px;
       padding: 1rem;
+      width: 100%;
     }
   }
 
   .atlys-filter-section {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: 0.625rem;
+    flex: 1 1 0;
     min-width: 0;
   }
 
-  @media (min-width: 768px) {
-    .atlys-filter-section {
-      flex: 1 1 0;
-    }
+  .atlys-filter-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  .atlys-filter-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .atlys-filter-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+    line-height: 1.2;
+    white-space: nowrap;
   }
 
   .atlys-filter-select,
@@ -269,12 +299,18 @@
     overflow: hidden;
     background: #e8e8e8;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    transition:
+      box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, box-shadow;
   }
 
   .group:hover .atlys-destination-card {
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14);
-    transform: translateY(-2px);
+    box-shadow:
+      0 20px 50px rgba(0, 0, 0, 0.2),
+      0 8px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-10px) scale(1.03);
+    z-index: 2;
   }
 
   .atlys-destination-overlay {
@@ -287,6 +323,71 @@
       rgba(0, 0, 0, 0.72) 100%
     );
     pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .atlys-destination-cta {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(6px) saturate(1.1);
+    -webkit-backdrop-filter: blur(6px) saturate(1.1);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+      backdrop-filter 0.4s ease;
+  }
+
+  .atlys-destination-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    box-shadow:
+      0 12px 36px rgba(0, 0, 0, 0.35),
+      0 2px 8px rgba(0, 0, 0, 0.12);
+    transform: translateY(18px) scale(0.82);
+    opacity: 0;
+    transition:
+      transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.4s ease;
+  }
+
+  .group:hover .atlys-destination-cta {
+    opacity: 1;
+  }
+
+  .group:hover .atlys-destination-cta-btn {
+    transform: translateY(0) scale(1.06);
+    opacity: 1;
+    animation: atlys-cta-pop 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes atlys-cta-pop {
+    0% {
+      transform: translateY(18px) scale(0.82);
+      opacity: 0;
+    }
+    60% {
+      transform: translateY(-4px) scale(1.1);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0) scale(1.06);
+      opacity: 1;
+    }
   }
 
   .atlys-destination-content {
@@ -299,6 +400,39 @@
     align-items: center;
     gap: 0.375rem;
     padding: 1rem 0.875rem 1.125rem;
+    transition:
+      opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .group:hover .atlys-destination-content {
+    opacity: 0.55;
+    transform: translateY(6px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .atlys-destination-card,
+    .atlys-destination-cta,
+    .atlys-destination-cta-btn,
+    .atlys-destination-content,
+    .atlys-destination-overlay {
+      transition: none;
+      animation: none;
+    }
+
+    .group:hover .atlys-destination-card {
+      transform: none;
+    }
+
+    .atlys-destination-cta-btn,
+    .group:hover .atlys-destination-cta-btn {
+      transform: none;
+      animation: none;
+    }
+
+    .group:hover .atlys-destination-content {
+      transform: none;
+    }
   }
 
   /* Atlys floating bottom nav */

@@ -24,7 +24,10 @@ import { track } from "@/lib/telemetry";
 const ease = [0.16, 1, 0.3, 1];
 
 const FILTER_TRIGGER =
-  "border-0 bg-transparent shadow-none px-0 py-1 rounded-none font-semibold hover:border-0 focus:border-transparent focus:shadow-none min-w-[7rem]";
+  "border-0 bg-transparent shadow-none px-0 py-0 rounded-none font-semibold text-sm hover:border-0 focus:border-transparent focus:shadow-none min-w-0 w-full justify-between";
+
+const FILTER_DATE_TRIGGER =
+  `${FILTER_TRIGGER} [&_span:first-child>svg]:hidden`;
 
 const DELIVERY_OPTIONS = [
   { value: "any", label: "Any Time" },
@@ -86,96 +89,98 @@ export default function LandingPage() {
   return (
     <div className="bg-white min-h-[calc(100vh-4rem)]">
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-8 pb-24">
-        {/* Atlys-style unified filter pill */}
-        <div className="atlys-filter-bar mb-8" data-testid="filter-bar">
-          <FilterSection
-            icon={<Zap className="w-4 h-4 text-emerald-500" />}
-            label="Visa delivery:"
-          >
-            <SearchableSelect
-              data-testid="filter-delivery"
-              searchable={false}
-              clearable={false}
-              value={delivery}
-              onChange={(v) => setDelivery(v ?? "any")}
-              options={DELIVERY_OPTIONS}
-              className="w-auto min-w-0 flex-1"
-              triggerClassName={FILTER_TRIGGER}
-              contentClassName="min-w-[200px]"
-            />
-          </FilterSection>
-
-          <FilterDivider />
-
-          <FilterSection
-            icon={<Plane className="w-4 h-4 text-sky-500" />}
-            label="Type:"
-          >
-            <SearchableSelect
-              data-testid="filter-type"
-              searchable={false}
-              clearable={false}
-              value={visaType}
-              onChange={(v) => setVisaType(v ?? "")}
-              options={VISA_TYPE_OPTIONS}
-              className="w-auto min-w-0 flex-1"
-              triggerClassName={FILTER_TRIGGER}
-              contentClassName="min-w-[200px]"
-            />
-          </FilterSection>
-
-          <FilterDivider />
-
-          <FilterSection
-            icon={<FileText className="w-4 h-4 text-orange-500" />}
-            label="Documents:"
-          >
-            <SearchableSelect
-              data-testid="filter-complexity"
-              searchable={false}
-              clearable={false}
-              value={complexity}
-              onChange={(v) => setComplexity(v ?? "")}
-              options={COMPLEXITY_OPTIONS}
-              className="w-auto min-w-0 flex-1"
-              triggerClassName={FILTER_TRIGGER}
-              contentClassName="min-w-[200px]"
-            />
-          </FilterSection>
-
-          <FilterDivider />
-
-          <FilterSection
-            icon={<Umbrella className="w-4 h-4 text-pink-500" />}
-            label="Holidays:"
-          >
-            <DatePicker
-              data-testid="filter-travel-date"
-              value={travelDate || null}
-              onChange={(v) => setTravelDate(v || "")}
-              placeholder="Select Dates"
-              clearable
-              className="w-auto min-w-0 flex-1"
-              triggerClassName={FILTER_TRIGGER}
-              contentClassName="min-w-[280px]"
-            />
-          </FilterSection>
-
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="hidden lg:block ml-2 text-xs font-semibold text-teal hover:text-navy transition-colors whitespace-nowrap"
-              data-testid="clear-filters"
+        {/* Centered filter pill ≈ width of middle 3 cards in a 5-col grid */}
+        <div className="flex justify-center mb-8">
+          <div className="atlys-filter-bar" data-testid="filter-bar">
+            <FilterSection
+              icon={<Zap className="w-4 h-4 text-emerald-500" />}
+              label="Visa delivery"
             >
-              Clear
-            </button>
-          )}
+              <SearchableSelect
+                data-testid="filter-delivery"
+                searchable={false}
+                clearable={false}
+                value={delivery}
+                onChange={(v) => setDelivery(v ?? "any")}
+                options={DELIVERY_OPTIONS}
+                className="w-full min-w-0"
+                triggerClassName={FILTER_TRIGGER}
+                contentClassName="min-w-[200px]"
+              />
+            </FilterSection>
+
+            <FilterDivider />
+
+            <FilterSection
+              icon={<Plane className="w-4 h-4 text-sky-500" />}
+              label="Type"
+            >
+              <SearchableSelect
+                data-testid="filter-type"
+                searchable={false}
+                clearable={false}
+                value={visaType}
+                onChange={(v) => setVisaType(v ?? "")}
+                options={VISA_TYPE_OPTIONS}
+                className="w-full min-w-0"
+                triggerClassName={FILTER_TRIGGER}
+                contentClassName="min-w-[200px]"
+              />
+            </FilterSection>
+
+            <FilterDivider />
+
+            <FilterSection
+              icon={<FileText className="w-4 h-4 text-orange-500" />}
+              label="Documents"
+            >
+              <SearchableSelect
+                data-testid="filter-complexity"
+                searchable={false}
+                clearable={false}
+                value={complexity}
+                onChange={(v) => setComplexity(v ?? "")}
+                options={COMPLEXITY_OPTIONS}
+                className="w-full min-w-0"
+                triggerClassName={FILTER_TRIGGER}
+                contentClassName="min-w-[200px]"
+              />
+            </FilterSection>
+
+            <FilterDivider />
+
+            <FilterSection
+              icon={<Umbrella className="w-4 h-4 text-pink-500" />}
+              label="Holidays"
+            >
+              <DatePicker
+                data-testid="filter-travel-date"
+                value={travelDate || null}
+                onChange={(v) => setTravelDate(v || "")}
+                placeholder="Select Dates"
+                clearable
+                className="w-full min-w-0"
+                triggerClassName={FILTER_DATE_TRIGGER}
+                contentClassName="min-w-[280px]"
+              />
+            </FilterSection>
+
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="hidden lg:block ml-2 text-xs font-semibold text-teal hover:text-navy transition-colors whitespace-nowrap"
+                data-testid="clear-filters"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5">
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
               <div key={i}>
                 <Skeleton className="aspect-[3/4] rounded-[28px]" />
                 <Skeleton className="h-4 w-3/4 mt-3 rounded-lg" />
@@ -188,7 +193,7 @@ export default function LandingPage() {
           <EmptyCatalog hasFilters={hasFilters} onClear={clearFilters} />
         ) : (
           <div
-            className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5"
+            className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5"
             data-testid="catalog-grid"
           >
             {filtered.map((p, i) => (
@@ -204,17 +209,17 @@ export default function LandingPage() {
 function FilterSection({ icon, label, children, testid }) {
   return (
     <div className="atlys-filter-section" data-testid={testid}>
-      <div className="flex items-center gap-2 min-w-0">
-        {icon}
-        <span className="text-sm text-ink-muted whitespace-nowrap hidden sm:inline">{label}</span>
+      <div className="atlys-filter-icon">{icon}</div>
+      <div className="atlys-filter-fields">
+        <span className="atlys-filter-label">{label}</span>
+        {children}
       </div>
-      {children}
     </div>
   );
 }
 
 function FilterDivider() {
-  return <div className="hidden md:block w-px h-8 bg-border/70 shrink-0" />;
+  return <div className="hidden md:block w-px self-stretch min-h-[2.5rem] bg-border/70 shrink-0" />;
 }
 
 function VisaCard({ product, index, reduce }) {
@@ -239,10 +244,13 @@ function VisaCard({ product, index, reduce }) {
             src={cover}
             alt={product.country_name}
             fill
-            sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 20vw"
+            className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
           />
           <div className="atlys-destination-overlay" />
+          <div className="atlys-destination-cta" aria-hidden="true">
+            <span className="atlys-destination-cta-btn">More details</span>
+          </div>
           <div className="atlys-destination-content">
             <span className="text-2xl md:text-3xl leading-none drop-shadow-sm">{product.country_flag}</span>
             <h3 className="font-display text-lg md:text-xl tracking-[0.12em] text-white uppercase text-center leading-tight">
