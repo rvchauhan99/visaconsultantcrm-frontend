@@ -7,6 +7,7 @@ import Stamp from "@/components/Stamp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, X, ArrowRight, Pencil, AlertTriangle, PauseCircle, Plus, FileCheck, FileX, Clock, ChevronLeft, Eye, Download } from "lucide-react";
 import { ConsultantSelect } from "@/components/forms/selects";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { CrmCard, CrmTableCard, CrmCardHeader, CrmEmptyState } from "@/components/ui/crm-card";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
@@ -545,14 +546,20 @@ function CaseCommsPanel({ caseId }) {
       <form onSubmit={submit} className="space-y-3 mb-4 border-b border-border pb-4">
         <div className="grid md:grid-cols-[140px_1fr] gap-2">
           <CrmField label="Channel">
-            <select className="crm-input" value={channel} onChange={(e) => setChannel(e.target.value)} data-testid="comms-channel">
-              <option value="email">Email</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="sms">SMS</option>
-              <option value="call">Call</option>
-              <option value="portal">Portal</option>
-              <option value="other">Other</option>
-            </select>
+            <SearchableSelect
+              clearable={false}
+              value={channel}
+              onChange={(v) => setChannel(v || "email")}
+              data-testid="comms-channel"
+              options={[
+                { value: "email", label: "Email" },
+                { value: "whatsapp", label: "WhatsApp" },
+                { value: "sms", label: "SMS" },
+                { value: "call", label: "Call" },
+                { value: "portal", label: "Portal" },
+                { value: "other", label: "Other" },
+              ]}
+            />
           </CrmField>
           <CrmField label="Subject">
             <CrmInput value={subject} onChange={(e) => setSubject(e.target.value)} data-testid="comms-subject" />

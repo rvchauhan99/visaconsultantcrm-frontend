@@ -8,7 +8,8 @@ import { CrmButton } from "@/components/ui/crm-button";
 import { CrmTableCard } from "@/components/ui/crm-card";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { DataTable } from "@/components/ui/data-table";
-import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { useListQueryState } from "@/hooks/useListQueryState";
 import { previewMasterKey } from "@/lib/keys";
 
@@ -265,7 +266,15 @@ export default function DocumentMaster() {
               <CrmInput value={form.default_name.trim() ? previewKey : ""} disabled placeholder="from name…" data-testid="doc-key-input" className="font-mono text-xs" />
             </CrmField>
             <CrmField label="Description" className="md:col-span-2"><CrmInput value={form.default_description} onChange={(e) => setForm({ ...form, default_description: e.target.value })} data-testid="doc-desc-input" /></CrmField>
-            <CrmField label="Category"><CrmSelect value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} data-testid="doc-cat-input">{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</CrmSelect></CrmField>
+            <CrmField label="Category">
+              <SearchableSelect
+                clearable={false}
+                value={form.category}
+                onChange={(v) => setForm({ ...form, category: v || CATEGORIES[0] })}
+                data-testid="doc-cat-input"
+                options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+              />
+            </CrmField>
             <CrmField label="Formats" required>
               <FormatCheckboxes
                 value={form.default_formats_allowed}

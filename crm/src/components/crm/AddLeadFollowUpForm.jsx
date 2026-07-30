@@ -2,7 +2,8 @@ import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { CrmButton } from "@/components/ui/crm-button";
-import { CrmField, CrmInput, CrmSelect, CrmTextarea } from "@/components/ui/crm-field";
+import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 
 export const FOLLOW_UP_OUTCOMES = [
   { value: "follow_up", label: "Follow up" },
@@ -135,18 +136,22 @@ export default function AddLeadFollowUpForm({
           />
         </CrmField>
         <CrmField label="Channel" required>
-          <CrmSelect value={channel} onChange={(e) => setChannel(e.target.value)} data-testid="fu-channel">
-            {FOLLOW_UP_CHANNELS.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </CrmSelect>
+          <SearchableSelect
+            clearable={false}
+            value={channel}
+            onChange={(v) => setChannel(v || "phone")}
+            data-testid="fu-channel"
+            options={FOLLOW_UP_CHANNELS}
+          />
         </CrmField>
         <CrmField label="Result / outcome" required>
-          <CrmSelect value={outcome} onChange={(e) => setOutcome(e.target.value)} data-testid="fu-outcome">
-            {outcomeOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </CrmSelect>
+          <SearchableSelect
+            clearable={false}
+            value={outcome}
+            onChange={(v) => setOutcome(v || "follow_up")}
+            data-testid="fu-outcome"
+            options={outcomeOptions}
+          />
         </CrmField>
         <CrmField label="Next follow-up" required={outcome === "follow_up" || outcome === "callback"}>
           <CrmInput

@@ -12,17 +12,23 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Server-driven searchable select.
- * - Opens → fetches first `pageSize` rows
- * - Typing → debounced `q` refetch with AbortController
- * - cmdk client filter OFF (shouldFilter={false})
+ * SearchableSelect — theme-matched searchable combobox.
+ *
+ * Modes:
+ * - Static: pass `options` → client-side cmdk filter
+ * - Async: pass `fetcher` → debounced server search (shouldFilter=false)
+ *
+ * AsyncSelect is kept as an alias for backward compatibility.
  */
-export default function AsyncSelect({
+export function SearchableSelect({
+    options = null,
     fetcher,
     value = null,
     onChange,
     getOptionValue = (o) => o?.id ?? o?.code ?? o?.value,
     getOptionLabel = (o) => o?.label ?? o?.full_name ?? o?.name ?? o?.title ?? String(getOptionValue(o) ?? ""),
+    renderOption,
+    renderValue,
     multiple = false,
     placeholder = "Select…",
     searchPlaceholder = "Search…",
@@ -32,8 +38,13 @@ export default function AsyncSelect({
     clearable = true,
     disabled = false,
     className = "",
+    contentClassName = "",
     testId,
+    "data-testid": dataTestId,
 }) {
+    const resolvedTestId = testId || dataTestId;
+    const isStatic = Array.isArray(options);
+
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
     const [debouncedQ, setDebouncedQ] = useState("");
@@ -48,17 +59,18 @@ export default function AsyncSelect({
         return value == null || value === "" ? [] : [value];
     }, [value, multiple]);
 
-    // Debounce search text
     useEffect(() => {
+        if (isStatic) return undefined;
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => setDebouncedQ(query), debounceMs);
         return () => {
             if (debounceRef.current) clearTimeout(debounceRef.current);
         };
-    }, [query, debounceMs]);
+    }, [query, debounceMs, isStatic]);
 
     const load = useCallback(
         async (q) => {
+            if (!fetcher) return;
             if (abortRef.current) abortRef.current.abort();
             const ctrl = new AbortController();
             abortRef.current = ctrl;
@@ -90,18 +102,17 @@ export default function AsyncSelect({
     );
 
     useEffect(() => {
-        if (!open) return;
+        if (isStatic || !open) return undefined;
         load(debouncedQ);
         return () => {
             if (abortRef.current) abortRef.current.abort();
         };
-    }, [open, debouncedQ]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [open, debouncedQ, isStatic]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Hydrate labels for current value(s) when closed / on mount
     useEffect(() => {
-        if (!values.length) return;
+        if (isStatic || !fetcher || !values.length) return undefined;
         const missing = values.filter((v) => !selectedCache.has(String(v)));
-        if (!missing.length) return;
+        if (!missing.length) return undefined;
         let cancelled = false;
         (async () => {
             try {
@@ -120,14 +131,34 @@ export default function AsyncSelect({
             } catch (_) { /* ignore */ }
         })();
         return () => { cancelled = true; };
-    }, [values.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [values.join("|"), isStatic]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (!isStatic) return;
+        setSelectedCache((prev) => {
+            const next = new Map(prev);
+            options.forEach((o) => next.set(String(getOptionValue(o)), o));
+            return next;
+        });
+        setItems(options);
+    }, [isStatic, options, getOptionValue]);
 
     const selectedOptions = values
-        .map((v) => selectedCache.get(String(v)) || items.find((o) => String(getOptionValue(o)) === String(v)))
+        .map((v) => {
+            if (isStatic) {
+                return options.find((o) => String(getOptionValue(o)) === String(v))
+                    || selectedCache.get(String(v));
+            }
+            return selectedCache.get(String(v))
+                || items.find((o) => String(getOptionValue(o)) === String(v));
+        })
         .filter(Boolean);
 
     const triggerLabel = () => {
         if (!values.length) return placeholder;
+        if (renderValue && selectedOptions[0] && !multiple) {
+            return renderValue(selectedOptions[0]);
+        }
         if (multiple) {
             if (selectedOptions.length === 0) return `${values.length} selected`;
             if (selectedOptions.length === 1) return getOptionLabel(selectedOptions[0]);
@@ -149,7 +180,11 @@ export default function AsyncSelect({
             else set.add(String(v));
             const nextVals = Array.from(set);
             const opts = nextVals.map((x) =>
-                (String(getOptionValue(option)) === String(x) ? option : selectedCache.get(String(x)) || items.find((i) => String(getOptionValue(i)) === String(x)))
+                (String(getOptionValue(option)) === String(x)
+                    ? option
+                    : selectedCache.get(String(x))
+                        || items.find((i) => String(getOptionValue(i)) === String(x))
+                        || (isStatic ? options.find((i) => String(getOptionValue(i)) === String(x)) : null))
             ).filter(Boolean);
             onChange?.(nextVals, opts);
         } else {
@@ -166,8 +201,8 @@ export default function AsyncSelect({
 
     const isSelected = (option) => values.map(String).includes(String(getOptionValue(option)));
 
-    // Pin selected at top
     const displayItems = useMemo(() => {
+        const source = isStatic ? options : items;
         const seen = new Set();
         const out = [];
         selectedOptions.forEach((o) => {
@@ -177,7 +212,7 @@ export default function AsyncSelect({
                 out.push(o);
             }
         });
-        items.forEach((o) => {
+        source.forEach((o) => {
             const k = String(getOptionValue(o));
             if (!seen.has(k)) {
                 seen.add(k);
@@ -185,7 +220,7 @@ export default function AsyncSelect({
             }
         });
         return out;
-    }, [items, selectedOptions, getOptionValue]);
+    }, [isStatic, options, items, selectedOptions, getOptionValue]);
 
     return (
         <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(""); }}>
@@ -193,14 +228,16 @@ export default function AsyncSelect({
                 <button
                     type="button"
                     disabled={disabled}
-                    data-testid={testId}
+                    data-testid={resolvedTestId}
                     className={cn(
-                        "flex h-8 w-full items-center justify-between gap-1 rounded-sm border border-border bg-white px-2 text-left text-sm outline-none hover:border-navy focus:ring-1 focus:ring-navy disabled:opacity-50",
+                        "flex h-8 w-full items-center justify-between gap-1 rounded-md border border-border bg-surface-elevated px-2 text-left text-xs outline-none",
+                        "hover:border-border-strong focus:border-navy focus:shadow-[0_0_0_3px_var(--glow-navy)]",
+                        "transition-all duration-150 disabled:opacity-50",
                         !values.length && "text-ink-muted",
                         className,
                     )}
                 >
-                    <span className="truncate flex-1">{triggerLabel()}</span>
+                    <span className="truncate flex-1 min-w-0">{triggerLabel()}</span>
                     <span className="flex items-center gap-0.5 shrink-0">
                         {clearable && values.length > 0 && !disabled && (
                             <span
@@ -208,7 +245,7 @@ export default function AsyncSelect({
                                 tabIndex={-1}
                                 onClick={clear}
                                 className="p-0.5 text-ink-muted hover:text-ink"
-                                data-testid={testId ? `${testId}-clear` : undefined}
+                                data-testid={resolvedTestId ? `${resolvedTestId}-clear` : undefined}
                             >
                                 <X className="w-3 h-3" />
                             </span>
@@ -217,13 +254,19 @@ export default function AsyncSelect({
                     </span>
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[220px] p-0 rounded-sm" align="start">
-                <Command shouldFilter={false} className="rounded-sm">
+            <PopoverContent
+                className={cn(
+                    "w-[var(--radix-popover-trigger-width)] min-w-[220px] p-0 rounded-md border-border bg-surface-elevated shadow-md",
+                    contentClassName,
+                )}
+                align="start"
+            >
+                <Command shouldFilter={isStatic} className="rounded-md bg-surface-elevated">
                     <CommandInput
                         placeholder={searchPlaceholder}
                         value={query}
                         onValueChange={setQuery}
-                        className="h-9 text-sm"
+                        className="h-9 text-xs"
                     />
                     <CommandList className="max-h-56">
                         {loading && (
@@ -238,16 +281,23 @@ export default function AsyncSelect({
                             {displayItems.map((option) => {
                                 const v = getOptionValue(option);
                                 const selected = isSelected(option);
+                                const searchValue = [
+                                    getOptionLabel(option),
+                                    String(v),
+                                    option?.searchText,
+                                ].filter(Boolean).join(" ");
                                 return (
                                     <CommandItem
                                         key={String(v)}
-                                        value={String(v)}
+                                        value={searchValue}
                                         onSelect={() => toggle(option)}
-                                        className="text-sm cursor-pointer"
-                                        data-testid={testId ? `${testId}-opt-${v}` : undefined}
+                                        className="text-xs cursor-pointer data-[selected=true]:bg-navy/10 data-[selected=true]:text-ink"
+                                        data-testid={resolvedTestId ? `${resolvedTestId}-opt-${v}` : undefined}
                                     >
-                                        <Check className={cn("mr-2 h-3.5 w-3.5", selected ? "opacity-100 text-navy" : "opacity-0")} />
-                                        <span className="truncate">{getOptionLabel(option)}</span>
+                                        <Check className={cn("mr-2 h-3.5 w-3.5 shrink-0", selected ? "opacity-100 text-navy" : "opacity-0")} />
+                                        <span className="truncate flex-1 min-w-0">
+                                            {renderOption ? renderOption(option) : getOptionLabel(option)}
+                                        </span>
                                     </CommandItem>
                                 );
                             })}
@@ -272,4 +322,9 @@ export default function AsyncSelect({
             </PopoverContent>
         </Popover>
     );
+}
+
+/** @deprecated Prefer SearchableSelect — alias kept for existing imports */
+export default function AsyncSelect(props) {
+    return <SearchableSelect {...props} />;
 }

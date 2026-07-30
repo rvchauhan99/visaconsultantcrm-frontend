@@ -1,0 +1,60 @@
+/* AmaraVisa PhoneField — Editorial Luxe overrides for react-phone-number-input */
+
+.amara-phone.PhoneInput {
+  --PhoneInput-color--focus: transparent;
+  --PhoneInputCountrySelect-marginRight: 0;
+  --PhoneInputCountryFlag-height: 1rem;
+  --PhoneInputCountryFlag-borderColor: transparent;
+  --PhoneInputCountryFlag-borderColor--focus: transparent;
+}
+
+.amara-phone .PhoneInputCountry {
+  margin-left: 0.35rem;
+  margin-right: 0.15rem;
+  padding-right: 0.5rem;
+  border-right: 1px solid var(--border, #e5e0d8);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.amara-phone .PhoneInputCountryIcon {
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: none;
+  background: transparent;
+}
+
+.amara-phone .PhoneInputCountrySelectArrow {
+  display: none;
+}
+
+.amara-phone .amara-phone-country-trigger .PhoneInputCountryIcon,
+.amara-phone .PhoneInputCountryIcon--square {
+  width: 1.15rem;
+  height: 0.85rem;
+}
+
+.amara-phone .PhoneInputInput {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding-left: 0.75rem;
+  padding-right: 1rem;
+  min-width: 0;
+  height: auto;
+  text-align: left;
+}
+
+/* Float label pinned to start of national-number column (not centered in pane) */
+.amara-phone--float .amara-phone-float-label {
+  left: calc(var(--phone-country-width, 5.5rem) + 0.75rem);
+  right: auto;
+  text-align: left;
+  max-width: calc(100% - var(--phone-country-width, 5.5rem) - 1.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

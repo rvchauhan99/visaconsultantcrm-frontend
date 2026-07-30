@@ -8,7 +8,8 @@ import { Check, ListChecks, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
-import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { Segmented } from "@/components/ui/segmented";
@@ -282,11 +283,17 @@ export default function Tasks() {
                   <CrmInput type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} data-testid="task-due-input" />
                 </CrmField>
                 <CrmField label="Priority">
-                  <CrmSelect value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} data-testid="task-priority-input">
-                    <option value="low">Low</option>
-                    <option value="normal">Normal</option>
-                    <option value="high">High</option>
-                  </CrmSelect>
+                  <SearchableSelect
+                    clearable={false}
+                    value={form.priority}
+                    onChange={(v) => setForm({ ...form, priority: v || "normal" })}
+                    data-testid="task-priority-input"
+                    options={[
+                      { value: "low", label: "Low" },
+                      { value: "normal", label: "Normal" },
+                      { value: "high", label: "High" },
+                    ]}
+                  />
                 </CrmField>
                 <CrmField label="Category">
                   <CrmInput value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="optional" data-testid="task-category-input" />

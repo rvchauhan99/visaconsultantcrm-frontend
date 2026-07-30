@@ -7,7 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
-import { CrmField, CrmInput, CrmSelect, CrmTextarea } from "@/components/ui/crm-field";
+import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
+import { CrmPhoneField } from "@/components/ui/crm-phone-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
+import { isValidPhoneOptional } from "@/lib/phone";
 import { CountrySelect, ConsultantSelect, ProductSelect } from "@/components/forms/selects";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
@@ -121,6 +124,10 @@ export default function Leads() {
 
   const createLead = async (e) => {
     e.preventDefault();
+    if (!isValidPhoneOptional(form.phone)) {
+      toast.error("Enter a valid phone number for the selected country");
+      return;
+    }
     setSaving(true);
     try {
       await api.post("/crm/leads", {
@@ -531,18 +538,24 @@ export default function Leads() {
                     <CrmField label="Email" required>
                       <CrmInput type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="lead-email" />
                     </CrmField>
-                    <CrmField label="Phone">
-                      <CrmInput value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} data-testid="lead-phone" />
+                    <CrmField label="Phone" error={(form.phone || "").trim() && !isValidPhoneOptional(form.phone) ? "Invalid for selected country" : undefined}>
+                      <CrmPhoneField value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} data-testid="lead-phone" />
                     </CrmField>
                     <CrmField label="Source">
-                      <CrmSelect value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} data-testid="lead-source">
-                        <option value="website">Website</option>
-                        <option value="referral">Referral</option>
-                        <option value="walk_in">Walk-in</option>
-                        <option value="phone">Phone</option>
-                        <option value="partner">Partner</option>
-                        <option value="other">Other</option>
-                      </CrmSelect>
+                      <SearchableSelect
+                        clearable={false}
+                        value={form.source}
+                        onChange={(v) => setForm({ ...form, source: v || "website" })}
+                        data-testid="lead-source"
+                        options={[
+                          { value: "website", label: "Website" },
+                          { value: "referral", label: "Referral" },
+                          { value: "walk_in", label: "Walk-in" },
+                          { value: "phone", label: "Phone" },
+                          { value: "partner", label: "Partner" },
+                          { value: "other", label: "Other" },
+                        ]}
+                      />
                     </CrmField>
                     <CrmField label="Country interest">
                       <CountrySelect
@@ -553,13 +566,19 @@ export default function Leads() {
                       />
                     </CrmField>
                     <CrmField label="Visa type">
-                      <CrmSelect value={form.visa_type} onChange={(e) => setForm({ ...form, visa_type: e.target.value })} data-testid="lead-visa-type">
-                        <option value="">Any</option>
-                        <option value="tourist">Tourist</option>
-                        <option value="business">Business</option>
-                        <option value="transit">Transit</option>
-                        <option value="medical">Medical</option>
-                      </CrmSelect>
+                      <SearchableSelect
+                        clearable
+                        value={form.visa_type || null}
+                        onChange={(v) => setForm({ ...form, visa_type: v || "" })}
+                        data-testid="lead-visa-type"
+                        placeholder="Any"
+                        options={[
+                          { value: "tourist", label: "Tourist" },
+                          { value: "business", label: "Business" },
+                          { value: "transit", label: "Transit" },
+                          { value: "medical", label: "Medical" },
+                        ]}
+                      />
                     </CrmField>
                   </div>
                   <CrmField label="Notes">

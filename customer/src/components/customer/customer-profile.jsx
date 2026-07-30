@@ -6,8 +6,10 @@ import { Cake, Heart, Pencil, Save, X } from "lucide-react";
 import { useCustomerMe, useUpdateCustomerMe } from "@/hooks/customer-api";
 import { Card, Skeleton } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
+import { PhoneField } from "@/components/ui/phone-field";
 import { Button } from "@/components/ui/button";
 import { formatInDate } from "@/lib/utils";
+import { isValidPhoneOptional, normalizePhoneValue } from "@/lib/phone";
 
 export default function CustomerProfile() {
   const { data: me, isLoading } = useCustomerMe(true);
@@ -19,15 +21,19 @@ export default function CustomerProfile() {
   if (!me) return null;
 
   const startEdit = () => {
-    setForm(me);
+    setForm({ ...me, phone: normalizePhoneValue(me.phone || "") });
     setEditing(true);
   };
 
   const save = async () => {
+    if (!isValidPhoneOptional(form.phone)) {
+      toast.error("Enter a valid phone number for the selected country");
+      return;
+    }
     try {
       await updateMe.mutateAsync({
         full_name: form.full_name,
-        phone: form.phone,
+        phone: form.phone || null,
         dob: form.dob || null,
         anniversary_date: form.anniversary_date || null,
       });
@@ -72,7 +78,13 @@ export default function CustomerProfile() {
             <Input value={form.full_name || ""} onChange={(e) => setForm({ ...form, full_name: e.target.value })} data-testid="profile-name-input" />
           </Field>
           <Field label="Phone">
-            <Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} data-testid="profile-phone-input" />
+            <PhoneField
+              variant="static"
+              value={form.phone || ""}
+              onChange={(v) => setForm({ ...form, phone: v })}
+              data-testid="profile-phone-input"
+              error={(form.phone || "").trim() && !isValidPhoneOptional(form.phone) ? "Invalid for selected country" : undefined}
+            />
           </Field>
           <Field label="Birthday">
             <Input type="date" value={form.dob || ""} onChange={(e) => setForm({ ...form, dob: e.target.value })} data-testid="profile-dob-input" />

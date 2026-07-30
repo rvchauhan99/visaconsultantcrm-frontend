@@ -8,7 +8,8 @@ import { CrmButton } from "@/components/ui/crm-button";
 import { CrmTableCard } from "@/components/ui/crm-card";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { DataTable } from "@/components/ui/data-table";
-import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { useListQueryState } from "@/hooks/useListQueryState";
 import { previewMasterKey } from "@/lib/keys";
 
@@ -115,9 +116,13 @@ export default function FieldMaster() {
       sortable: false,
       render: (row) => editing?.id === row.id ? (
         <div className="space-y-1 w-36">
-          <CrmSelect value={editing.default_field_type} onChange={(e) => setEditing({ ...editing, default_field_type: e.target.value })} data-testid="edit-type">
-            {TYPES.map((t) => <option key={t}>{t}</option>)}
-          </CrmSelect>
+          <SearchableSelect
+            clearable={false}
+            value={editing.default_field_type}
+            onChange={(v) => setEditing({ ...editing, default_field_type: v || TYPES[0] })}
+            data-testid="edit-type"
+            options={TYPES.map((t) => ({ value: t, label: t }))}
+          />
           {editing.default_field_type === "dropdown" && (
             <CrmInput value={editing.default_options} onChange={(e) => setEditing({ ...editing, default_options: e.target.value })} placeholder="opt1,opt2" data-testid="edit-opts" />
           )}
@@ -209,7 +214,15 @@ export default function FieldMaster() {
             <CrmField label="Key (auto-generated)">
               <CrmInput value={form.default_label.trim() ? previewKey : ""} disabled placeholder="from label…" data-testid="field-key-input" className="font-mono text-xs" />
             </CrmField>
-            <CrmField label="Type"><CrmSelect value={form.default_field_type} onChange={(e) => setForm({ ...form, default_field_type: e.target.value })} data-testid="field-type-input">{TYPES.map((t) => <option key={t}>{t}</option>)}</CrmSelect></CrmField>
+            <CrmField label="Type">
+              <SearchableSelect
+                clearable={false}
+                value={form.default_field_type}
+                onChange={(v) => setForm({ ...form, default_field_type: v || TYPES[0] })}
+                data-testid="field-type-input"
+                options={TYPES.map((t) => ({ value: t, label: t }))}
+              />
+            </CrmField>
             <CrmField label="Options (csv)">
               <CrmInput value={form.default_options} onChange={(e) => setForm({ ...form, default_options: e.target.value })} disabled={form.default_field_type !== "dropdown"} placeholder="opt1,opt2" data-testid="field-opts-input" />
             </CrmField>

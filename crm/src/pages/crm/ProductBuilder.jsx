@@ -5,7 +5,7 @@ import api, { resolveFileUrl } from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash2, ArrowUp, ArrowDown, Check, X, Pencil, Upload, Loader2 } from "lucide-react";
-import { CountrySelect, MasterSelect } from "@/components/forms/selects";
+import { CountrySelect, MasterSelect, SearchableSelect } from "@/components/forms/selects";
 
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
@@ -141,7 +141,14 @@ function BasicTab({ schema, reload }) {
                         testId="basic-country"
                     />
                 </F>
-                <F label="Visa type"><select className={inp} value={form.visa_type} onChange={(e) => setForm({ ...form, visa_type: e.target.value })}>{["tourist", "business", "transit", "other_general"].map((v) => <option key={v}>{v}</option>)}</select></F>
+                <F label="Visa type">
+                    <SearchableSelect
+                        clearable={false}
+                        value={form.visa_type}
+                        onChange={(v) => setForm({ ...form, visa_type: v || "tourist" })}
+                        options={["tourist", "business", "transit", "other_general"].map((v) => ({ value: v, label: v }))}
+                    />
+                </F>
                 <F label="Validity (days)"><input type="number" className={inp} value={form.validity_days} onChange={(e) => setForm({ ...form, validity_days: Number(e.target.value) })} /></F>
                 <F label="Processing (days)"><input type="number" className={inp} value={form.processing_time_days} onChange={(e) => setForm({ ...form, processing_time_days: Number(e.target.value) })} /></F>
                 <F label="Passport min. validity (months)"><input type="number" className={inp} value={form.passport_min_validity_months} onChange={(e) => setForm({ ...form, passport_min_validity_months: Number(e.target.value) })} data-testid="basic-passport-validity" /></F>
@@ -470,9 +477,14 @@ function FieldsTab({ schema, reload }) {
                         testId="new-field-key"
                     />
                     <input className={inp} placeholder="Label" value={n.label} onChange={(e) => setN({ ...n, label: e.target.value })} data-testid="new-field-label" disabled={!n.field_key} />
-                    <select className={inp} value={n.field_type} onChange={(e) => setN({ ...n, field_type: e.target.value })} data-testid="new-field-type" disabled={!n.field_key}>
-                        {["text", "date", "dropdown", "number"].map((t) => <option key={t}>{t}</option>)}
-                    </select>
+                    <SearchableSelect
+                        clearable={false}
+                        value={n.field_type}
+                        onChange={(v) => setN({ ...n, field_type: v || "text" })}
+                        data-testid="new-field-type"
+                        disabled={!n.field_key}
+                        options={["text", "date", "dropdown", "number"].map((t) => ({ value: t, label: t }))}
+                    />
                     <label className="text-xs flex items-center gap-1.5"><input type="checkbox" checked={n.required} onChange={(e) => setN({ ...n, required: e.target.checked })} disabled={!n.field_key} /> Required</label>
                     {n.field_type === "dropdown" && <input className={inp + " col-span-2"} placeholder="Options (comma separated)" value={n.options} onChange={(e) => setN({ ...n, options: e.target.value })} data-testid="new-field-options" disabled={!n.field_key} />}
                 </div>

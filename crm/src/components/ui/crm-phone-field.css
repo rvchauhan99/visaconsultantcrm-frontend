@@ -1,0 +1,61 @@
+/* Compact CRM overrides for react-phone-number-input */
+
+.crm-phone.PhoneInput {
+  --PhoneInput-color--focus: transparent;
+  --PhoneInputCountrySelect-marginRight: 0;
+  --PhoneInputCountryFlag-height: 0.875rem;
+  --PhoneInputCountryFlag-borderColor: transparent;
+  --PhoneInputCountryFlag-borderColor--focus: transparent;
+  width: 100%;
+  height: 2rem;
+  padding: 0 0.35rem 0 0.15rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-elevated);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.crm-phone.PhoneInput:hover {
+  border-color: var(--border-strong);
+}
+
+.crm-phone--focused.PhoneInput,
+.crm-phone.PhoneInput:focus-within {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px var(--glow-navy);
+}
+
+.crm-phone .PhoneInputCountry {
+  margin-right: 0.15rem;
+  padding-right: 0.35rem;
+  border-right: 1px solid var(--border);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.crm-phone .PhoneInputCountryIcon {
+  border-radius: 1px;
+  box-shadow: none;
+  background: transparent;
+}
+
+.crm-phone .PhoneInputCountrySelectArrow {
+  display: none;
+}
+
+.crm-phone .PhoneInputInput,
+.crm-phone .crm-phone-national {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  height: 100%;
+  padding: 0 0.35rem;
+  min-width: 0;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--ink);
+  outline: none;
+}

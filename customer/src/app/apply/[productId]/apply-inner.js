@@ -25,7 +25,10 @@ import { useTravelerProfiles, useVaultByKey, useVisaProduct } from "@/hooks/cust
 import Stamp from "@/components/ui/stamp";
 import { Button } from "@/components/ui/button";
 import { Card, ErrorState, Skeleton } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/field";
+import { Field, Input } from "@/components/ui/field";
+import { PhoneField } from "@/components/ui/phone-field";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { isValidPhone, normalizePhoneValue } from "@/lib/phone";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 
 const STEPS = ["Traveler", "Details", "Documents", "Review", "Payment"];
@@ -76,7 +79,8 @@ export default function ApplyPageInner() {
       .then((r) => {
         if (cancelled) return;
         const d = r.data;
-        setTraveler(d.traveler || {});
+        const t = d.traveler || {};
+        setTraveler({ ...t, phone: normalizePhoneValue(t.phone || "") });
         setFields(d.field_values || {});
         const um = {};
         (d.document_uploads || []).forEach((u) => {
@@ -218,7 +222,7 @@ export default function ApplyPageInner() {
         passport_issue_date: p.passport_issue_date || "",
         passport_expiry_date: p.passport_expiry_date || "",
         gender: p.gender || "",
-        phone: p.phone || "",
+        phone: normalizePhoneValue(p.phone || ""),
         email: p.email || "",
       });
       track("apply_traveler_prefill", { product_id: productId, profile_id: id });
@@ -271,7 +275,9 @@ export default function ApplyPageInner() {
   const passportMinDate = new Date();
   passportMinDate.setMonth(passportMinDate.getMonth() + passportMinMonths);
   const passportValid = traveler.passport_expiry_date ? new Date(traveler.passport_expiry_date) >= passportMinDate : false;
-  const travelerReady = requiredTravelerFields.every((k) => (traveler[k] || "").trim() !== "") && passportValid;
+  const phoneValid = isValidPhone(traveler.phone);
+  const travelerReady =
+    requiredTravelerFields.every((k) => (traveler[k] || "").trim() !== "") && passportValid && phoneValid;
 
   const continueBlocked =
     (step === 0 && !travelerReady) || (step === 1 && !allFieldsFilled) || (step === 2 && !allRequiredUploaded);
@@ -281,6 +287,9 @@ export default function ApplyPageInner() {
     if (step === 0) {
       if (traveler.passport_expiry_date && !passportValid) {
         return `Passport must be valid at least ${passportMinMonths} more month${passportMinMonths === 1 ? "" : "s"}`;
+      }
+      if ((traveler.phone || "").trim() && !phoneValid) {
+        return "Enter a valid phone number for the selected country";
       }
       return "Fill all required traveler fields to continue";
     }
@@ -582,14 +591,19 @@ function TravelerStep({
         <div className="bg-surface border border-border rounded-xl p-3 mb-4 flex flex-wrap items-center gap-3" data-testid="prefill-panel">
           <User className="w-4 h-4 text-navy" />
           <span className="text-sm text-ink-muted">Prefill from a saved traveler:</span>
-          <Select onChange={(e) => onPrefill(e.target.value)} defaultValue="" data-testid="prefill-select" className="w-auto min-w-[12rem]">
-            <option value="">— Choose someone —</option>
-            {profiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name} ({p.relationship}) · {p.passport_number_masked || "no passport"}
-              </option>
-            ))}
-          </Select>
+          <SearchableSelect
+            data-testid="prefill-select"
+            className="w-auto min-w-[12rem]"
+            clearable={false}
+            placeholder="— Choose someone —"
+            searchPlaceholder="Search travelers…"
+            value=""
+            onChange={(v) => { if (v) onPrefill(v); }}
+            options={profiles.map((p) => ({
+              value: p.id,
+              label: `${p.full_name} (${p.relationship}) · ${p.passport_number_masked || "no passport"}`,
+            }))}
+          />
         </div>
       )}
 
@@ -633,15 +647,28 @@ function TravelerStep({
           />
         </Field>
         <Field label="Gender">
-          <Select data-testid="traveler-gender" value={traveler.gender || ""} onChange={(e) => upd("gender", e.target.value)}>
-            <option value="">Select…</option>
-            <option>Male</option>
-            <option>Female</option>
-            <option>Other</option>
-          </Select>
+          <SearchableSelect
+            data-testid="traveler-gender"
+            clearable
+            placeholder="Select…"
+            searchPlaceholder="Search…"
+            value={traveler.gender || null}
+            onChange={(v) => upd("gender", v || "")}
+            options={[
+              { value: "Male", label: "Male" },
+              { value: "Female", label: "Female" },
+              { value: "Other", label: "Other" },
+            ]}
+          />
         </Field>
         <Field label="Phone" required>
-          <Input type="tel" data-testid="traveler-phone" value={traveler.phone || ""} onChange={(e) => upd("phone", e.target.value)} />
+          <PhoneField
+            variant="static"
+            data-testid="traveler-phone"
+            value={traveler.phone || ""}
+            onChange={(v) => upd("phone", v)}
+            error={(traveler.phone || "").trim() && !isValidPhone(traveler.phone) ? "Invalid for selected country" : undefined}
+          />
         </Field>
         <Field label="Email" required>
           <Input type="email" data-testid="traveler-email" value={traveler.email || ""} onChange={(e) => upd("email", e.target.value)} />
@@ -672,18 +699,15 @@ function FieldsStep({ schema, fields, setFields }) {
         {schema.fields.map((f) => (
           <Field key={f.field_key} label={f.label} required={f.required}>
             {f.type === "dropdown" ? (
-              <Select
+              <SearchableSelect
                 data-testid={`field-${f.field_key}`}
-                value={fields[f.field_key] || ""}
-                onChange={(e) => upd(f.field_key, e.target.value)}
-              >
-                <option value="">Select…</option>
-                {(f.options || []).map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </Select>
+                clearable={!f.required}
+                placeholder="Select…"
+                searchPlaceholder="Search options…"
+                value={fields[f.field_key] || null}
+                onChange={(v) => upd(f.field_key, v || "")}
+                options={(f.options || []).map((o) => ({ value: o, label: o }))}
+              />
             ) : f.type === "date" ? (
               <Input
                 type="date"

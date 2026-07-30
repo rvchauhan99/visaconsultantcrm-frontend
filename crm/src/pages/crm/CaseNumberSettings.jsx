@@ -5,7 +5,8 @@ import api from "@/lib/api";
 import { PageHeader, SectionLabel } from "@/components/ui/page-header";
 import { CrmCard } from "@/components/ui/crm-card";
 import { CrmButton } from "@/components/ui/crm-button";
-import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 
 const DEFAULT_SEGMENTS = [
   { type: "FIXED", fixed_text: "PSG-" },
@@ -72,8 +73,51 @@ export default function CaseNumberSettings() {
           {segments.map((segment, index) => (
             <div key={index} className="grid grid-cols-[1.2rem_8rem_minmax(0,1fr)_auto] gap-2 items-end border border-border rounded-md p-2">
               <span className="text-xs font-mono text-ink-muted pb-2">{index + 1}</span>
-              <CrmField label="Type"><CrmSelect value={segment.type} onChange={(e) => setType(index, e.target.value)}><option value="FIXED">Fixed text</option><option value="DATE">Date</option><option value="SERIAL">Serial</option></CrmSelect></CrmField>
-              {segment.type === "FIXED" ? <CrmField label="Text"><CrmInput value={segment.fixed_text || ""} onChange={(e) => update(index, { fixed_text: e.target.value })} placeholder="PSG-" /></CrmField> : segment.type === "DATE" ? <CrmField label="Date format"><CrmSelect value={segment.date_format || "YYYY"} onChange={(e) => update(index, { date_format: e.target.value })}>{["DD", "MM", "YY", "YYYY", "Mmm", "MMM"].map((value) => <option key={value} value={value}>{value}</option>)}</CrmSelect></CrmField> : <div className="grid grid-cols-2 gap-2"><CrmField label="Width"><CrmInput type="number" min="1" max="12" value={segment.width || 6} onChange={(e) => update(index, { width: Number(e.target.value) })} /></CrmField><CrmField label="Reset"><CrmSelect value={segment.reset_interval || ""} onChange={(e) => update(index, { reset_interval: e.target.value })}><option value="">Never</option><option value="DAILY">Daily</option><option value="MONTHLY">Monthly</option><option value="YEARLY">Yearly</option></CrmSelect></CrmField></div>}
+              <CrmField label="Type">
+                <SearchableSelect
+                  clearable={false}
+                  value={segment.type}
+                  onChange={(v) => setType(index, v || "FIXED")}
+                  options={[
+                    { value: "FIXED", label: "Fixed text" },
+                    { value: "DATE", label: "Date" },
+                    { value: "SERIAL", label: "Serial" },
+                  ]}
+                />
+              </CrmField>
+              {segment.type === "FIXED" ? (
+                <CrmField label="Text">
+                  <CrmInput value={segment.fixed_text || ""} onChange={(e) => update(index, { fixed_text: e.target.value })} placeholder="PSG-" />
+                </CrmField>
+              ) : segment.type === "DATE" ? (
+                <CrmField label="Date format">
+                  <SearchableSelect
+                    clearable={false}
+                    value={segment.date_format || "YYYY"}
+                    onChange={(v) => update(index, { date_format: v || "YYYY" })}
+                    options={["DD", "MM", "YY", "YYYY", "Mmm", "MMM"].map((value) => ({ value, label: value }))}
+                  />
+                </CrmField>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <CrmField label="Width">
+                    <CrmInput type="number" min="1" max="12" value={segment.width || 6} onChange={(e) => update(index, { width: Number(e.target.value) })} />
+                  </CrmField>
+                  <CrmField label="Reset">
+                    <SearchableSelect
+                      clearable
+                      value={segment.reset_interval || null}
+                      onChange={(v) => update(index, { reset_interval: v || "" })}
+                      placeholder="Never"
+                      options={[
+                        { value: "DAILY", label: "Daily" },
+                        { value: "MONTHLY", label: "Monthly" },
+                        { value: "YEARLY", label: "Yearly" },
+                      ]}
+                    />
+                  </CrmField>
+                </div>
+              )}
               <div className="flex gap-1"><CrmButton type="button" variant="ghost" size="icon-sm" onClick={() => move(index, -1)} disabled={index === 0} title="Move up"><ArrowUp className="w-3.5 h-3.5" /></CrmButton><CrmButton type="button" variant="ghost" size="icon-sm" onClick={() => move(index, 1)} disabled={index === segments.length - 1} title="Move down"><ArrowDown className="w-3.5 h-3.5" /></CrmButton><CrmButton type="button" variant="danger" size="icon-sm" onClick={() => setSegments((items) => items.filter((_, i) => i !== index))} title="Remove"><Trash2 className="w-3.5 h-3.5" /></CrmButton></div>
             </div>
           ))}

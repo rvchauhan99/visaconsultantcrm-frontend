@@ -7,7 +7,10 @@ import { ProductSelect } from "@/components/forms/selects";
 import { PageHeader, SectionLabel } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
-import { CrmField, CrmInput, CrmSelect, CrmTextarea } from "@/components/ui/crm-field";
+import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
+import { CrmPhoneField } from "@/components/ui/crm-phone-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
+import { isValidPhone } from "@/lib/phone";
 import Stamp from "@/components/Stamp";
 
 function sortByOrder(items) {
@@ -16,23 +19,25 @@ function sortByOrder(items) {
 
 function DynamicFieldInput({ field, value, onChange }) {
   const testId = `oc-field-${field.field_key}`;
+
+  if (field.type === "dropdown" || field.type === "select") {
+    return (
+      <SearchableSelect
+        data-testid={testId}
+        clearable={!field.required}
+        placeholder="Select…"
+        value={value || null}
+        onChange={(v) => onChange(v || "")}
+        options={(field.options || []).map((o) => ({ value: o, label: o }))}
+      />
+    );
+  }
   const common = {
     required: !!field.required,
     value: value ?? "",
     onChange: (e) => onChange(e.target.value),
     "data-testid": testId,
   };
-
-  if (field.type === "dropdown" || field.type === "select") {
-    return (
-      <CrmSelect {...common}>
-        <option value="">Select…</option>
-        {(field.options || []).map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-      </CrmSelect>
-    );
-  }
   if (field.type === "date") {
     return <CrmInput type="date" {...common} />;
   }
@@ -106,6 +111,9 @@ export default function OfflineCase() {
     if (!productId || !schema) return "Select a visa product";
     if (!customer.full_name?.trim() || !customer.email?.trim() || !customer.phone?.trim()) {
       return "Customer name, email, and phone are required";
+    }
+    if (!isValidPhone(customer.phone)) {
+      return "Enter a valid phone number for the selected country";
     }
     const requiredTraveler = [
       "first_name", "last_name", "date_of_birth",
@@ -204,8 +212,8 @@ export default function OfflineCase() {
               <CrmField label="Email" required>
                 <CrmInput type="email" required value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} data-testid="oc-email" />
               </CrmField>
-              <CrmField label="Phone" required>
-                <CrmInput required value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} data-testid="oc-phone" />
+              <CrmField label="Phone" required error={customer.phone?.trim() && !isValidPhone(customer.phone) ? "Invalid for selected country" : undefined}>
+                <CrmPhoneField value={customer.phone} onChange={(v) => setCustomer({ ...customer, phone: v })} data-testid="oc-phone" />
               </CrmField>
             </div>
           </CrmCard>
@@ -356,10 +364,16 @@ export default function OfflineCase() {
             <SectionLabel>Payment (Bypass)</SectionLabel>
             <div className="grid md:grid-cols-3 gap-4">
               <CrmField label="Status">
-                <CrmSelect value={payment.status} onChange={(e) => setPayment({ ...payment, status: e.target.value })} data-testid="oc-pay-status">
-                  <option value="pending">Pending</option>
-                  <option value="paid">Paid</option>
-                </CrmSelect>
+                <SearchableSelect
+                  clearable={false}
+                  value={payment.status}
+                  onChange={(v) => setPayment({ ...payment, status: v || "pending" })}
+                  data-testid="oc-pay-status"
+                  options={[
+                    { value: "pending", label: "Pending" },
+                    { value: "paid", label: "Paid" },
+                  ]}
+                />
               </CrmField>
               <CrmField label="Method">
                 <CrmInput value={payment.method} onChange={(e) => setPayment({ ...payment, method: e.target.value })} placeholder="e.g. Bank transfer" data-testid="oc-pay-method" />

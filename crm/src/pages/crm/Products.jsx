@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmTableCard } from "@/components/ui/crm-card";
 import { FilterPanel } from "@/components/ui/filter-panel";
-import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { DataTable } from "@/components/ui/data-table";
 import { useListQueryState } from "@/hooks/useListQueryState";
 
@@ -169,9 +170,13 @@ function NewProductForm({ onCancel, onCreate }) {
           />
         </CrmField>
         <CrmField label="Visa type">
-          <CrmSelect value={visaType} onChange={(e) => setVisaType(e.target.value)} data-testid="np-type">
-            {VISA_TYPES.map((v) => <option key={v}>{v}</option>)}
-          </CrmSelect>
+          <SearchableSelect
+            clearable={false}
+            value={visaType}
+            onChange={(v) => setVisaType(v || VISA_TYPES[0])}
+            data-testid="np-type"
+            options={VISA_TYPES.map((v) => ({ value: v, label: v }))}
+          />
           <span className="text-[10px] text-ink-muted mt-0.5 block">Student visas excluded platform-wide.</span>
         </CrmField>
         <CrmField label="Title" required>

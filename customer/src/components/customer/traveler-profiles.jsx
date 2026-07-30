@@ -9,8 +9,11 @@ import { queryKeys } from "@/lib/query-keys";
 import { useTravelerProfiles } from "@/hooks/customer-api";
 import Stamp from "@/components/ui/stamp";
 import { Card, Skeleton } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/field";
+import { Field, Input } from "@/components/ui/field";
+import { PhoneField } from "@/components/ui/phone-field";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
+import { isValidPhoneOptional, normalizePhoneValue } from "@/lib/phone";
 
 const RELATIONSHIPS = ["self", "spouse", "child", "parent", "other"];
 
@@ -23,10 +26,15 @@ export default function TravelerProfiles() {
   const reload = () => qc.invalidateQueries({ queryKey: queryKeys.travelers });
 
   const save = async (form, id) => {
+    if (!isValidPhoneOptional(form.phone)) {
+      toast.error("Enter a valid phone number for the selected country");
+      return;
+    }
     setBusy(true);
     try {
-      if (id === "new") await api.post("/customers/me/traveler-profiles", form);
-      else await api.patch(`/customers/me/traveler-profiles/${id}`, form);
+      const payload = { ...form, phone: form.phone || null };
+      if (id === "new") await api.post("/customers/me/traveler-profiles", payload);
+      else await api.patch(`/customers/me/traveler-profiles/${id}`, payload);
       toast.success("Saved");
       setEditing(null);
       reload();
@@ -112,7 +120,7 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
     passport_issue_date: profile?.passport_issue_date || "",
     passport_expiry_date: profile?.passport_expiry_date || "",
     gender: profile?.gender || "",
-    phone: profile?.phone || "",
+    phone: normalizePhoneValue(profile?.phone || ""),
     email: profile?.email || "",
   });
 
@@ -129,13 +137,13 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
           <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
         </Field>
         <Field label="Relationship">
-          <Select value={form.relationship} onChange={(e) => setForm({ ...form, relationship: e.target.value })}>
-            {RELATIONSHIPS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </Select>
+          <SearchableSelect
+            clearable={false}
+            value={form.relationship}
+            onChange={(v) => setForm({ ...form, relationship: v || "self" })}
+            options={RELATIONSHIPS.map((r) => ({ value: r, label: r }))}
+            searchPlaceholder="Search…"
+          />
         </Field>
         <Field label="Date of birth">
           <Input type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} />
@@ -150,7 +158,12 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
           <Input type="date" value={form.passport_expiry_date} onChange={(e) => setForm({ ...form, passport_expiry_date: e.target.value })} />
         </Field>
         <Field label="Phone">
-          <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <PhoneField
+            variant="static"
+            value={form.phone}
+            onChange={(v) => setForm({ ...form, phone: v })}
+            error={(form.phone || "").trim() && !isValidPhoneOptional(form.phone) ? "Invalid for selected country" : undefined}
+          />
         </Field>
         <Field label="Email">
           <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />

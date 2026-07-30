@@ -5,7 +5,8 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
-import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -360,13 +361,19 @@ export default function Finance() {
                       <CrmInput type="number" min="0" step="1" required value={pForm.amount} onChange={(e) => setPForm({ ...pForm, amount: e.target.value })} data-testid="p-amount" />
                     </CrmField>
                     <CrmField label="Method">
-                      <CrmSelect value={pForm.method} onChange={(e) => setPForm({ ...pForm, method: e.target.value })} data-testid="p-method">
-                        <option value="upi">UPI</option>
-                        <option value="bank_transfer">Bank transfer</option>
-                        <option value="card">Card</option>
-                        <option value="cash">Cash</option>
-                        <option value="other">Other</option>
-                      </CrmSelect>
+                      <SearchableSelect
+                        clearable={false}
+                        value={pForm.method}
+                        onChange={(v) => setPForm({ ...pForm, method: v || "upi" })}
+                        data-testid="p-method"
+                        options={[
+                          { value: "upi", label: "UPI" },
+                          { value: "bank_transfer", label: "Bank transfer" },
+                          { value: "card", label: "Card" },
+                          { value: "cash", label: "Cash" },
+                          { value: "other", label: "Other" },
+                        ]}
+                      />
                     </CrmField>
                   </div>
                   <CrmField label="Reference">

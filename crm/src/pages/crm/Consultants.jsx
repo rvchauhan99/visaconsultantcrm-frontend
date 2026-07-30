@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmTableCard } from "@/components/ui/crm-card";
 import { FilterPanel } from "@/components/ui/filter-panel";
-import { CrmField, CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { DataTable } from "@/components/ui/data-table";
 import { useListQueryState } from "@/hooks/useListQueryState";
 
@@ -268,18 +269,19 @@ function NewConsultantForm({ onCancel, onCreate }) {
           <CrmInput type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} data-testid="nc-password" placeholder="••••••••" autoComplete="new-password" />
         </CrmField>
         <CrmField label="Role">
-          <CrmSelect
+          <SearchableSelect
+            clearable={false}
             value={role}
-            onChange={(e) => {
-              const next = e.target.value;
-              setRole(next);
+            onChange={(next) => {
+              setRole(next || "consultant");
               if (next === "admin") setCountryCodes([]);
             }}
             data-testid="nc-role"
-          >
-            <option value="consultant">Consultant</option>
-            <option value="admin">Admin</option>
-          </CrmSelect>
+            options={[
+              { value: "consultant", label: "Consultant" },
+              { value: "admin", label: "Admin" },
+            ]}
+          />
         </CrmField>
         {role === "consultant" && (
           <CrmField label="Countries managed" required className="md:col-span-2" hint="Consultants only see cases for these destinations">

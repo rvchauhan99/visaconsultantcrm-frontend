@@ -1,7 +1,8 @@
 import React from "react";
 import api from "@/lib/api";
-import AsyncSelect from "./AsyncSelect";
+import AsyncSelect, { SearchableSelect } from "./AsyncSelect";
 
+export { SearchableSelect, AsyncSelect };
 function normalizePage(data) {
     if (Array.isArray(data)) return { items: data, has_more: false };
     return data || { items: [], has_more: false };
