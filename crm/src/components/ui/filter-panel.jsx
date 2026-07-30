@@ -3,6 +3,7 @@ import { ChevronDown, Filter, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmInput, CrmSelect } from "@/components/ui/crm-field";
+import { DatePicker } from "@/components/ui/date-picker";
 
 /**
  * Declarative collapsible filter panel.
@@ -229,10 +230,9 @@ function FilterField({ field, draft, setField }) {
 
   if (field.type === "date") {
     return (
-      <CrmInput
-        type="date"
-        value={draft[field.key] || ""}
-        onChange={(e) => setField(field.key, e.target.value)}
+      <DatePicker
+        value={draft[field.key] || null}
+        onChange={(v) => setField(field.key, v || "")}
       />
     );
   }
@@ -242,9 +242,17 @@ function FilterField({ field, draft, setField }) {
     const toKey = field.toKey || `${field.key}_to`;
     return (
       <div className="flex items-center gap-1">
-        <CrmInput type="date" value={draft[fromKey] || ""} onChange={(e) => setField(fromKey, e.target.value)} />
+        <DatePicker
+          value={draft[fromKey] || null}
+          onChange={(v) => setField(fromKey, v || "")}
+          placeholder="From"
+        />
         <span className="text-[10px] text-ink-muted">–</span>
-        <CrmInput type="date" value={draft[toKey] || ""} onChange={(e) => setField(toKey, e.target.value)} />
+        <DatePicker
+          value={draft[toKey] || null}
+          onChange={(v) => setField(toKey, v || "")}
+          placeholder="To"
+        />
       </div>
     );
   }

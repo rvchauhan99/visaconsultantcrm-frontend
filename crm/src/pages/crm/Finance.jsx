@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
 import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
@@ -279,7 +280,11 @@ export default function Finance() {
                     <CrmInput type="number" min="0" step="1" required value={iForm.amount} onChange={(e) => setIForm({ ...iForm, amount: e.target.value })} data-testid="i-amount" />
                   </CrmField>
                   <CrmField label="Due date">
-                    <CrmInput type="date" value={iForm.due_date} onChange={(e) => setIForm({ ...iForm, due_date: e.target.value })} data-testid="i-due" />
+                    <DatePicker
+                      value={iForm.due_date || null}
+                      onChange={(v) => setIForm({ ...iForm, due_date: v || "" })}
+                      data-testid="i-due"
+                    />
                   </CrmField>
                   <CrmButton type="submit" variant="solid" size="sm" loading={saving === "i"} data-testid="i-submit">Create invoice</CrmButton>
                 </form>

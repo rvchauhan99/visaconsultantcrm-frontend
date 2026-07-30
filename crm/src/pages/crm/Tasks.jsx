@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
 import { CrmField, CrmInput } from "@/components/ui/crm-field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
@@ -280,7 +281,11 @@ export default function Tasks() {
                   <CrmInput required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} data-testid="task-desc-input" />
                 </CrmField>
                 <CrmField label="Due date">
-                  <CrmInput type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} data-testid="task-due-input" />
+                  <DatePicker
+                    value={form.due_date || null}
+                    onChange={(v) => setForm({ ...form, due_date: v || "" })}
+                    data-testid="task-due-input"
+                  />
                 </CrmField>
                 <CrmField label="Priority">
                   <SearchableSelect

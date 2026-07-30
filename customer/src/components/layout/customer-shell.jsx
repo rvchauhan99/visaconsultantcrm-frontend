@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, Home, LogOut, UserRound, X, Menu, ChevronRight,
-  Search, ShieldCheck, Compass,
+  Search, ShieldCheck,
 } from "lucide-react";
 import { clearSession, getUser } from "@/lib/session";
 import { SUPPORT, cn } from "@/lib/utils";
@@ -62,87 +63,99 @@ export default function CustomerShell({ children }) {
 
       <header
         className={cn(
-          "sticky top-0 z-40 bg-white transition-shadow duration-300",
-          scrolled && "shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_20px_rgba(0,0,0,0.04)]",
+          "sticky top-0 z-40 bg-white border-b border-transparent transition-[box-shadow,border-color] duration-300",
+          scrolled && "border-border/60 shadow-[0_4px_20px_rgba(0,0,0,0.04)]",
         )}
       >
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-3.5 flex items-center gap-3 md:gap-6">
-          {/* Logo + guarantee badge */}
-          <div className="flex items-center gap-3 shrink-0">
-            <Link href="/" data-testid="brand-logo" className="flex items-center group">
-              <AmaraVisaLogo size="md" priority className="transition-opacity group-hover:opacity-90" />
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:gap-4">
+          {/* Left: logo + guarantee */}
+          <div className="flex items-center gap-3 md:gap-4 min-w-0 justify-self-start">
+            <Link href="/" data-testid="brand-logo" className="flex items-center group shrink-0">
+              <AmaraVisaLogo size="xl" priority className="transition-opacity group-hover:opacity-90" />
             </Link>
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border/80 bg-surface-muted/40">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal" />
-              <span className="text-[11px] font-medium text-ink-muted whitespace-nowrap">
-                Visas On Time Guaranteed
+            <div className="hidden md:block w-px h-8 bg-border shrink-0" aria-hidden />
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white">
+                <ShieldCheck className="w-4 h-4 text-ink" strokeWidth={2} />
               </span>
+              <div className="leading-tight">
+                <div className="text-[12px] font-semibold text-ink underline underline-offset-2 decoration-ink/80 whitespace-nowrap">
+                  Visas On Time
+                </div>
+                <div className="text-[12px] font-medium text-ink whitespace-nowrap">Guaranteed</div>
+              </div>
             </div>
           </div>
 
-          {/* Nav */}
-          <nav className="hidden md:flex items-center gap-1 shrink-0">
-            <HeaderTab
+          {/* Center: Explore only (no Events) */}
+          <nav className="hidden md:flex items-center justify-center justify-self-center">
+            <Link
               href="/"
-              active={isActive("/", true)}
-              label="Explore"
-              icon={<Compass className="w-4 h-4" />}
-              testid="nav-catalog"
-            />
-            {customer && (
-              <HeaderTab
-                href="/account"
-                active={isActive("/account")}
-                label="My Applications"
-                icon={<Briefcase className="w-4 h-4" />}
-                testid="nav-account"
+              data-testid="nav-catalog"
+              aria-label="Explore visas"
+              aria-current={isActive("/", true) ? "page" : undefined}
+              className={cn(
+                "relative flex h-11 w-11 items-center justify-center rounded-full transition-colors",
+                "bg-[#f3f3f3] hover:bg-[#ebebeb]",
+                isActive("/", true) && "ring-1 ring-black/10",
+              )}
+            >
+              <Image
+                src="/brand/explore-icon.png"
+                alt=""
+                width={30}
+                height={30}
+                className="w-[30px] h-[30px] object-contain drop-shadow-sm"
+                aria-hidden
               />
-            )}
+              {isActive("/", true) && (
+                <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-ink" />
+              )}
+            </Link>
           </nav>
 
-          {/* Header search — home only */}
-          {isHome && catalogSearch && (
-            <div className="flex-1 hidden sm:flex max-w-md mx-auto">
-              <div className="atlys-search w-full">
-                <Search className="w-4 h-4 text-ink-muted shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Search Country"
-                  value={catalogSearch.q}
-                  onChange={(e) => catalogSearch.setQ(e.target.value)}
-                  data-testid="hero-search"
-                  className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70"
-                />
+          {/* Right: search + India flag + profile */}
+          <div className="flex items-center gap-2 sm:gap-3 justify-self-end min-w-0">
+            {isHome && catalogSearch && (
+              <div className="hidden sm:block w-[min(100%,18rem)] md:w-[min(100%,20rem)] lg:w-[22rem]">
+                <div className="atlys-search w-full">
+                  <Search className="w-4 h-4 text-ink-muted shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search Country"
+                    value={catalogSearch.q}
+                    onChange={(e) => catalogSearch.setQ(e.target.value)}
+                    data-testid="hero-search"
+                    className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70"
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Right actions */}
-          <div className="flex items-center gap-2 sm:gap-3 ml-auto shrink-0">
+            <div
+              className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-base leading-none select-none"
+              title="India"
+              aria-label="Indian passport"
+              role="img"
+            >
+              🇮🇳
+            </div>
+
+            {customer && <NotificationBell />}
+
             {customer ? (
-              <>
-                <NotificationBell />
-                <Link
-                  href="/account"
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-surface-muted text-navy hover:bg-navy/10 transition-colors"
-                  data-testid="nav-user"
-                  aria-label="Account"
-                >
-                  {user?.full_name?.[0]?.toUpperCase() || <UserRound className="w-4 h-4" />}
-                </Link>
-                <button
-                  onClick={logout}
-                  className="hidden sm:flex p-2 text-ink-muted hover:text-danger rounded-full transition-all"
-                  data-testid="nav-logout"
-                  aria-label="Sign out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </>
+              <Link
+                href="/account"
+                className="h-9 w-9 rounded-full border border-border bg-white flex items-center justify-center text-xs font-bold text-ink hover:bg-[#f7f7f7] transition-colors"
+                data-testid="nav-user"
+                aria-label="Account"
+              >
+                {user?.full_name?.[0]?.toUpperCase() || <UserRound className="w-4 h-4 text-ink-muted" />}
+              </Link>
             ) : (
               <Link
                 href="/auth"
-                className="w-9 h-9 rounded-full flex items-center justify-center bg-surface-muted text-ink-muted hover:text-navy hover:bg-navy/8 transition-colors"
+                className="h-9 w-9 rounded-full border border-border bg-white flex items-center justify-center text-ink-muted hover:text-ink hover:bg-[#f7f7f7] transition-colors"
                 data-testid="nav-signin"
                 aria-label="Sign in"
               >
@@ -151,7 +164,7 @@ export default function CustomerShell({ children }) {
             )}
 
             <button
-              className="md:hidden p-2 rounded-full hover:bg-surface-muted transition-colors text-ink-muted"
+              className="md:hidden p-2 rounded-full hover:bg-[#f3f3f3] transition-colors text-ink-muted"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -194,6 +207,7 @@ export default function CustomerShell({ children }) {
                   <button
                     onClick={logout}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm text-danger hover:bg-danger/6 transition-colors"
+                    data-testid="nav-logout"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign out
@@ -237,7 +251,16 @@ export default function CustomerShell({ children }) {
         <div className="atlys-fab">
           <MobileBottomLink
             href="/"
-            icon={<Compass className="w-4 h-4" />}
+            icon={
+              <Image
+                src="/brand/explore-icon.png"
+                alt=""
+                width={20}
+                height={20}
+                className="w-5 h-5 object-contain"
+                aria-hidden
+              />
+            }
             active={pathname === "/"}
             testid="mobile-nav-visas"
           />
@@ -254,87 +277,68 @@ export default function CustomerShell({ children }) {
   );
 }
 
-function HeaderTab({ href, active, label, icon, testid }) {
-  return (
-    <Link
-      href={href}
-      data-testid={testid}
-      className={cn(
-        "relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors",
-        active ? "text-ink" : "text-ink-muted hover:text-ink",
-      )}
-    >
-      {icon}
-      {label}
-      {active && (
-        <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-ink" />
-      )}
-    </Link>
-  );
-}
-
 function FooterContent() {
   return (
     <div className="max-w-7xl mx-auto px-5 md:px-10 pt-12 pb-8">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-10 mb-10">
         <div className="col-span-2 md:col-span-1">
           <div className="mb-4">
-            <AmaraVisaLogo size="md" invert className="opacity-95" />
+            <AmaraVisaLogo size="md" invert />
           </div>
-          <p className="text-sm text-surface-muted/70 leading-relaxed max-w-[220px]">
+          <p className="text-sm text-white leading-relaxed max-w-[220px]">
             Premium visa consultancy for Indian passport holders. Transparent fees, expert review, on-time guarantee.
           </p>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-[0.22em] text-surface-muted/50 font-mono mb-4">Popular</div>
+          <div className="text-[10px] uppercase tracking-[0.22em] text-white font-mono mb-4">Popular</div>
           <ul className="space-y-2.5 text-sm">
             {["Singapore", "United Arab Emirates", "United Kingdom", "Australia", "Thailand"].map((c) => (
               <li key={c}>
-                <Link href="/" className="text-surface-muted/70 hover:text-gold transition-colors">{c}</Link>
+                <Link href="/" className="text-white hover:text-white/80 transition-colors">{c}</Link>
               </li>
             ))}
           </ul>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-[0.22em] text-surface-muted/50 font-mono mb-4">Support</div>
+          <div className="text-[10px] uppercase tracking-[0.22em] text-white font-mono mb-4">Support</div>
           <ul className="space-y-2.5">
             <li>
-              <a href={`mailto:${SUPPORT.email}`} className="text-sm text-surface-muted/70 hover:text-gold transition-colors">
+              <a href={`mailto:${SUPPORT.email}`} className="text-sm text-white hover:text-white/80 transition-colors">
                 {SUPPORT.email}
               </a>
             </li>
             <li>
-              <a href={`tel:${SUPPORT.phone}`} className="text-sm text-surface-muted/70 hover:text-gold transition-colors">
+              <a href={`tel:${SUPPORT.phone}`} className="text-sm text-white hover:text-white/80 transition-colors">
                 {SUPPORT.phone}
               </a>
             </li>
             <li>
-              <a href={SUPPORT.whatsapp} target="_blank" rel="noreferrer" className="text-sm text-surface-muted/70 hover:text-gold transition-colors">
+              <a href={SUPPORT.whatsapp} target="_blank" rel="noreferrer" className="text-sm text-white hover:text-white/80 transition-colors">
                 WhatsApp support
               </a>
             </li>
           </ul>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-[0.22em] text-surface-muted/50 font-mono mb-4">Company</div>
+          <div className="text-[10px] uppercase tracking-[0.22em] text-white font-mono mb-4">Company</div>
           <ul className="space-y-2.5 text-sm">
-            <li><Link href="/" className="text-surface-muted/70 hover:text-gold transition-colors">All destinations</Link></li>
-            <li><Link href="/auth" className="text-surface-muted/70 hover:text-gold transition-colors">Sign in</Link></li>
+            <li><Link href="/" className="text-white hover:text-white/80 transition-colors">All destinations</Link></li>
+            <li><Link href="/auth" className="text-white hover:text-white/80 transition-colors">Sign in</Link></li>
             <li>
-              <a href={SUPPORT.crmUrl} className="text-surface-muted/70 hover:text-gold transition-colors" data-testid="footer-crm-link">
+              <a href={SUPPORT.crmUrl} className="text-white hover:text-white/80 transition-colors" data-testid="footer-crm-link">
                 Consultant login
               </a>
             </li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-surface-muted/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p className="text-[11px] font-mono text-surface-muted/40 text-center sm:text-left">
+      <div className="border-t border-white/20 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p className="text-[11px] font-mono text-white text-center sm:text-left">
           © 2026 AmaraVisa India Private Limited
         </p>
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-gold/60" />
-          <span className="text-[10px] font-mono text-surface-muted/35 uppercase tracking-widest">On-time guarantee</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+          <span className="text-[10px] font-mono text-white uppercase tracking-widest">On-time guarantee</span>
         </div>
       </div>
     </div>

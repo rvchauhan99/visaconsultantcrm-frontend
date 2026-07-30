@@ -28,6 +28,7 @@ import { Card, ErrorState, Skeleton } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { PhoneField } from "@/components/ui/phone-field";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { isValidPhone, normalizePhoneValue } from "@/lib/phone";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 
@@ -612,7 +613,14 @@ function TravelerStep({
           <Input data-testid="traveler-name" value={traveler.full_name || ""} onChange={(e) => upd("full_name", e.target.value)} />
         </Field>
         <Field label="Date of birth" required>
-          <Input type="date" data-testid="traveler-dob" value={traveler.dob || ""} onChange={(e) => upd("dob", e.target.value)} />
+          <DatePicker
+            data-testid="traveler-dob"
+            value={traveler.dob || null}
+            onChange={(v) => upd("dob", v || "")}
+            fromYear={1940}
+            toYear={new Date().getFullYear()}
+            clearable={false}
+          />
         </Field>
         <Field label="Passport number" required>
           <Input
@@ -622,11 +630,13 @@ function TravelerStep({
           />
         </Field>
         <Field label="Passport expiry" required>
-          <Input
-            type="date"
+          <DatePicker
             data-testid="traveler-passport-expiry"
-            value={traveler.passport_expiry_date || ""}
-            onChange={(e) => upd("passport_expiry_date", e.target.value)}
+            value={traveler.passport_expiry_date || null}
+            onChange={(v) => upd("passport_expiry_date", v || "")}
+            fromYear={new Date().getFullYear() - 1}
+            toYear={new Date().getFullYear() + 20}
+            clearable={false}
           />
           {traveler.passport_expiry_date && !passportValid ? (
             <p className="text-xs text-danger mt-1" data-testid="passport-validity-error">
@@ -639,11 +649,12 @@ function TravelerStep({
           )}
         </Field>
         <Field label="Passport issue date">
-          <Input
-            type="date"
+          <DatePicker
             data-testid="traveler-issue"
-            value={traveler.passport_issue_date || ""}
-            onChange={(e) => upd("passport_issue_date", e.target.value)}
+            value={traveler.passport_issue_date || null}
+            onChange={(v) => upd("passport_issue_date", v || "")}
+            fromYear={1990}
+            toYear={new Date().getFullYear()}
           />
         </Field>
         <Field label="Gender">
@@ -709,11 +720,11 @@ function FieldsStep({ schema, fields, setFields }) {
                 options={(f.options || []).map((o) => ({ value: o, label: o }))}
               />
             ) : f.type === "date" ? (
-              <Input
-                type="date"
+              <DatePicker
                 data-testid={`field-${f.field_key}`}
-                value={fields[f.field_key] || ""}
-                onChange={(e) => upd(f.field_key, e.target.value)}
+                value={fields[f.field_key] || null}
+                onChange={(v) => upd(f.field_key, v || "")}
+                clearable={!f.required}
               />
             ) : f.type === "number" ? (
               <Input

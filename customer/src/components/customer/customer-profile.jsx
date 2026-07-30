@@ -7,6 +7,7 @@ import { useCustomerMe, useUpdateCustomerMe } from "@/hooks/customer-api";
 import { Card, Skeleton } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { PhoneField } from "@/components/ui/phone-field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { formatInDate } from "@/lib/utils";
 import { isValidPhoneOptional, normalizePhoneValue } from "@/lib/phone";
@@ -87,10 +88,20 @@ export default function CustomerProfile() {
             />
           </Field>
           <Field label="Birthday">
-            <Input type="date" value={form.dob || ""} onChange={(e) => setForm({ ...form, dob: e.target.value })} data-testid="profile-dob-input" />
+            <DatePicker
+              value={form.dob || null}
+              onChange={(v) => setForm({ ...form, dob: v || "" })}
+              data-testid="profile-dob-input"
+              fromYear={1940}
+              toYear={new Date().getFullYear()}
+            />
           </Field>
           <Field label="Anniversary">
-            <Input type="date" value={form.anniversary_date || ""} onChange={(e) => setForm({ ...form, anniversary_date: e.target.value })} data-testid="profile-anniversary-input" />
+            <DatePicker
+              value={form.anniversary_date || null}
+              onChange={(v) => setForm({ ...form, anniversary_date: v || "" })}
+              data-testid="profile-anniversary-input"
+            />
           </Field>
           <div className="md:col-span-2 flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setEditing(false)} type="button">
