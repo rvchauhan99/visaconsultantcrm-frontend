@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { Toaster } from "sonner";
+import { CatalogSearchProvider } from "@/context/catalog-search";
 
 export default function Providers({ children }) {
   const [client] = useState(
@@ -20,8 +21,10 @@ export default function Providers({ children }) {
 
   return (
     <QueryClientProvider client={client}>
-      {children}
-      <Toaster position="top-right" richColors closeButton />
+      <CatalogSearchProvider>
+        {children}
+        <Toaster position="top-right" richColors closeButton />
+      </CatalogSearchProvider>
     </QueryClientProvider>
   );
 }
