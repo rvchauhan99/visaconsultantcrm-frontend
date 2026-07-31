@@ -16,11 +16,13 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { consumeNextPath, isCustomer, saveSession } from "@/lib/session";
+import { isFirebaseAuthConfigured, signInWithGoogle } from "@/lib/firebase";
 import Stamp from "@/components/ui/stamp";
 import { FloatField } from "@/components/ui/field";
 import { PhoneField } from "@/components/ui/phone-field";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import GoogleSignInButton from "@/components/auth/google-sign-in-button";
 import { SUPPORT, cn } from "@/lib/utils";
 import { isValidPhoneOptional } from "@/lib/phone";
 import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
@@ -72,7 +74,9 @@ export default function AuthPage() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
   const [pendingToken, setPendingToken] = useState("");
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const googleEnabled = isFirebaseAuthConfigured();
 
   useEffect(() => {
     if (isCustomer()) router.replace("/account");
@@ -103,6 +107,30 @@ export default function AuthPage() {
     saveSession(token, user);
     toast.success(successMessage);
     router.replace(consumeNextPath("/account"));
+  };
+
+  const submitGoogle = async () => {
+    if (!googleEnabled || googleBusy || busy) return;
+    setGoogleBusy(true);
+    try {
+      const idToken = await signInWithGoogle();
+      const r = await api.post("/auth/customer/google", { id_token: idToken });
+      finishAuth(
+        r.data.access_token,
+        r.data.user,
+        mode === "signup" ? "Account ready" : "Welcome back",
+      );
+      track("google_auth_success");
+    } catch (err) {
+      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
+        return;
+      }
+      console.error(err);
+      toast.error(authErrorMessage(err, err?.message || "Google sign-in failed"));
+      track("google_auth_failed");
+    } finally {
+      setGoogleBusy(false);
+    }
   };
 
   const submit = async () => {
@@ -384,6 +412,23 @@ export default function AuthPage() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3, ease }}
               >
+                {googleEnabled && (
+                  <div className="mb-6 space-y-4">
+                    <GoogleSignInButton
+                      onClick={() => { void submitGoogle(); }}
+                      loading={googleBusy}
+                      disabled={busy}
+                    />
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-xs uppercase tracking-wider text-ink-muted">
+                        or continue with email
+                      </span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={bindSubmit(submit)} className="space-y-4">
                 {mode === "signup" && (
                   <>

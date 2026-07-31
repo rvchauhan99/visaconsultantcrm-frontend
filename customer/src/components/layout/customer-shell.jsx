@@ -10,6 +10,7 @@ import {
   Search, ShieldCheck,
 } from "lucide-react";
 import { clearSession, getUser } from "@/lib/session";
+import { signOutCustomer } from "@/lib/firebase";
 import { SUPPORT, cn } from "@/lib/utils";
 import NotificationBell from "@/components/customer/notification-bell";
 import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
@@ -42,7 +43,8 @@ export default function CustomerShell({ children }) {
 
   const customer = Boolean(user?.role === "customer");
 
-  const logout = () => {
+  const logout = async () => {
+    await signOutCustomer();
     clearSession();
     track("logout");
     setUser(null);

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "framer-motion";
-import { FileEdit, Plus, Receipt, Briefcase, CheckCircle2, Clock, ArrowRight } from "lucide-react";
+import { FileEdit, Plus, Receipt, Briefcase, CheckCircle2, Clock, ArrowRight, LogOut } from "lucide-react";
 import RequireCustomer from "@/components/auth/require-customer";
 import CustomerProfile from "@/components/customer/customer-profile";
 import TravelerProfiles from "@/components/customer/traveler-profiles";
@@ -13,7 +14,9 @@ import { Card, EmptyState, ErrorState, Skeleton } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDrafts, useMyCases } from "@/hooks/customer-api";
 import { openReceipt } from "@/lib/api";
-import { getUser } from "@/lib/session";
+import { clearSession, getUser } from "@/lib/session";
+import { signOutCustomer } from "@/lib/firebase";
+import { track } from "@/lib/telemetry";
 import { STAGE_LABELS, formatCaseNumber, formatInDate, cn } from "@/lib/utils";
 
 const ease = [0.16, 1, 0.3, 1];
@@ -27,6 +30,7 @@ export default function AccountPage() {
 }
 
 function AccountHub() {
+  const router = useRouter();
   const reduce = useReducedMotion();
   const user = getUser();
   const { data: cases = [], isLoading, isError, refetch } = useMyCases(true);
@@ -38,6 +42,13 @@ function AccountHub() {
   const initials = user?.full_name
     ? user.full_name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
     : "?";
+
+  const logout = async () => {
+    await signOutCustomer();
+    clearSession();
+    track("logout");
+    router.push("/");
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-5 md:px-8 py-6 md:py-8">
@@ -72,6 +83,15 @@ function AccountHub() {
                   </Stamp>
                 </div>
                 <p className="text-sm text-ink-muted">{user?.email}</p>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted hover:text-danger transition-colors"
+                  data-testid="account-logout-header"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign out
+                </button>
               </div>
             </div>
 
@@ -198,6 +218,16 @@ function AccountHub() {
             <CustomerProfile />
             <TravelerProfiles />
             <SupportCard source="account" />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-danger/30 text-danger hover:bg-danger hover:text-white hover:border-danger"
+              onClick={logout}
+              data-testid="account-logout"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign out
+            </Button>
           </motion.div>
         </div>
 
