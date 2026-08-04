@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useCallback } from "react";
 import api from "@/lib/api";
 import AsyncSelect, { SearchableSelect } from "./AsyncSelect";
+import { formatFeeHint } from "@/lib/productPricing";
 
 export { SearchableSelect, AsyncSelect };
+
 function normalizePage(data) {
     if (Array.isArray(data)) return { items: data, has_more: false };
     return data || { items: [], has_more: false };
@@ -21,12 +23,10 @@ export function CountrySelect({
         const params = { limit: limit || 10 };
         if (q) params.q = q;
         if (!multiple && id) params.id = id;
-        // multi hydrate: fetch each missing code (small N) or first page + selected
         if (multiple && ids?.length === 1) params.id = ids[0];
         const r = await api.get("/visa-products/countries", { params, signal });
         const page = normalizePage(r.data);
         if (multiple && ids?.length > 1) {
-            // ensure all selected codes appear
             const have = new Set(page.items.map((c) => c.code));
             const missing = ids.filter((code) => !have.has(code));
             for (const code of missing) {
@@ -99,10 +99,50 @@ export function ConsultantSelect({
     );
 }
 
+/** Published passport product select (CRM) */
+export function PassportProductSelect({
+    value,
+    onChange,
+    onProductChange,
+    placeholder = "Select passport product…",
+    testId = "passport-product-select",
+    admin = false,
+    ...rest
+}) {
+    const path = admin ? "/admin/passport-products" : "/passport-products";
+    const fetcher = async ({ q, limit, signal, id }) => {
+        const params = { limit: limit || 10 };
+        if (q) params.q = q;
+        if (id) params.id = id;
+        const r = await api.get(path, { params, signal });
+        return normalizePage(r.data);
+    };
+
+    const handleChange = useCallback((v, option) => {
+        onChange?.(v);
+        onProductChange?.(option || null);
+    }, [onChange, onProductChange]);
+
+    return (
+        <AsyncSelect
+            fetcher={fetcher}
+            value={value}
+            onChange={handleChange}
+            getOptionValue={(o) => o.id}
+            getOptionLabel={(o) => `${o.title} · ${o.passport_service_type || ""}${formatFeeHint(o)}`.trim()}
+            placeholder={placeholder}
+            searchPlaceholder="Search passport products…"
+            testId={testId}
+            {...rest}
+        />
+    );
+}
+
 /** Published visa product select */
 export function ProductSelect({
     value,
     onChange,
+    onProductChange,
     placeholder = "Select visa product…",
     testId = "product-select",
     admin = false,
@@ -117,13 +157,20 @@ export function ProductSelect({
         return normalizePage(r.data);
     };
 
+    const handleChange = useCallback((v, option) => {
+        onChange?.(v);
+        onProductChange?.(option || null);
+    }, [onChange, onProductChange]);
+
     return (
         <AsyncSelect
             fetcher={fetcher}
             value={value}
-            onChange={onChange}
+            onChange={handleChange}
             getOptionValue={(o) => o.id}
-            getOptionLabel={(o) => `${o.country_flag || ""} ${o.title || o.country_name} · ${o.visa_type}`.trim()}
+            getOptionLabel={(o) =>
+                `${o.country_flag || ""} ${o.title || o.country_name} · ${o.visa_type}${formatFeeHint(o)}`.trim()
+            }
             placeholder={placeholder}
             searchPlaceholder="Search products…"
             testId={testId}
@@ -134,7 +181,7 @@ export function ProductSelect({
 
 /** Document or field master key select */
 export function MasterSelect({
-    kind = "document", // document | field
+    kind = "document",
     value,
     onChange,
     placeholder,

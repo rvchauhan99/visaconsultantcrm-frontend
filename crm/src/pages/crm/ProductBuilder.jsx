@@ -6,6 +6,7 @@ import Stamp from "@/components/Stamp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash2, ArrowUp, ArrowDown, Check, X, Pencil, Upload, Loader2 } from "lucide-react";
 import { CountrySelect, MasterSelect, SearchableSelect } from "@/components/forms/selects";
+import { DEFAULT_GST_PERCENT, FEE_LABELS, computeLineTotal } from "@/lib/productPricing";
 
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
@@ -504,15 +505,25 @@ function PricingTab({ schema, reload }) {
             reload();
         } catch (e) { toast.error("Failed"); }
     };
+    const perPersonTotal = computeLineTotal({
+        govtFee: gov,
+        serviceFee: srv,
+        gstPercent: DEFAULT_GST_PERCENT,
+        headcount: 1,
+    });
+    const serviceGst = Math.round((Number(srv) || 0) * DEFAULT_GST_PERCENT / 100);
     return (
         <div className="bg-surface-card border border-border rounded-sm p-4 mt-3 space-y-3" data-testid="pricing-tab">
             <div className="text-xs text-ink-muted">Changing pricing does NOT affect existing cases — snapshot rule §8.3.</div>
             <div className="grid grid-cols-2 gap-3">
-                <F label="Government fee (INR)"><input type="number" className={inp} value={gov} onChange={(e) => setGov(e.target.value)} data-testid="fee-govt" /></F>
-                <F label="Service fee (INR)"><input type="number" className={inp} value={srv} onChange={(e) => setSrv(e.target.value)} data-testid="fee-service" /></F>
+                <F label={FEE_LABELS.govt}><input type="number" className={inp} value={gov} onChange={(e) => setGov(e.target.value)} data-testid="fee-govt" /></F>
+                <F label={FEE_LABELS.service}><input type="number" className={inp} value={srv} onChange={(e) => setSrv(e.target.value)} data-testid="fee-service" /></F>
             </div>
-            <div className="flex justify-between items-center">
-                <div className="text-sm text-ink-muted">Total: <span className="font-mono">{INR.format(Number(gov) + Number(srv))}</span></div>
+            <div className="flex justify-between items-center flex-wrap gap-2">
+                <div className="text-sm text-ink-muted space-y-0.5">
+                    <div>Per person: <span className="font-mono">{INR.format(perPersonTotal)}</span></div>
+                    <div className="text-[11px]">Includes {INR.format(serviceGst)} GST on service fee ({DEFAULT_GST_PERCENT}%)</div>
+                </div>
                 <button onClick={save} className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover" data-testid="fee-save">Save new pricing</button>
             </div>
         </div>
@@ -520,7 +531,12 @@ function PricingTab({ schema, reload }) {
 }
 
 function CustomerPreviewCard({ schema }) {
-    const total = (schema.fees?.govt_fee || 0) + (schema.fees?.service_fee || 0);
+    const total = computeLineTotal({
+        govtFee: schema.fees?.govt_fee || 0,
+        serviceFee: schema.fees?.service_fee || 0,
+        gstPercent: DEFAULT_GST_PERCENT,
+        headcount: 1,
+    });
     return (
         <div className="bg-surface-card border border-border rounded-lg overflow-hidden">
             {schema.banner_image_url && <img src={resolveFileUrl(schema.banner_image_url)} alt="" className="w-full h-32 object-cover" />}

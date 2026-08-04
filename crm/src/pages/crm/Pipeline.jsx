@@ -30,9 +30,9 @@ const slaStamp = {
 
 const FILTER_KEYS = [
   "country", "consultant_id", "stage", "source", "sla",
-  "payment_status", "on_hold", "unassigned", "from_date", "to_date",
+  "payment_status", "on_hold", "unassigned", "from_date", "to_date", "case_type",
 ];
-const LIST_DEFAULTS = { limit: "25", sort_by: "created_at", sort_order: "desc" };
+const LIST_DEFAULTS = { limit: "25", sort_by: "created_at", sort_order: "desc", case_type: "visa" };
 const BOARD_PAGE_SIZE = 50;
 
 function emptyBoardState() {
@@ -427,7 +427,16 @@ export default function Pipeline() {
             className="mb-0" // Remove bottom margin when inline
           />
         </div>
-        <div className="flex-shrink-0 pt-0.5">
+        <div className="flex-shrink-0 pt-0.5 space-y-2">
+          <Segmented
+            value={list.filters.case_type || "visa"}
+            onChange={(v) => list.setFilters({ case_type: v || "visa" })}
+            segments={[
+              { value: "visa", label: "Visa" },
+              { value: "passport", label: "Passport" },
+            ]}
+            testId="pipeline-case-type"
+          />
           <Segmented
             value={list.filters.stage || ""}
             onChange={(v) => list.setFilters({ stage: v === list.filters.stage ? "" : v })}

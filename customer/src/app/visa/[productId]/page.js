@@ -148,8 +148,8 @@ export default function VisaDetailPage() {
             <div className="font-display text-4xl text-navy mb-4">{INR.format(total)}</div>
 
             <div className="space-y-2.5 py-4 border-y border-border text-sm">
-              <FeeRow label="Government fee" amount={schema.fees?.govt_fee} />
-              <FeeRow label="Service fee" amount={schema.fees?.service_fee} />
+              <FeeRow label="Government fee (incl. GST)" amount={schema.fees?.govt_fee} />
+              <FeeRow label="Service fee (excl. GST)" amount={schema.fees?.service_fee} />
             </div>
 
             <div className="flex items-center gap-2 py-4 text-xs text-ink-muted">

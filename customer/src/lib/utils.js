@@ -84,6 +84,8 @@ export const SUPPORT = {
   phone: process.env.NEXT_PUBLIC_SUPPORT_PHONE || "+91-80-0000-0000",
   whatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "https://wa.me/918000000000",
   crmUrl: process.env.NEXT_PUBLIC_CRM_URL || "http://localhost:3001/login",
+  appStoreUrl: process.env.NEXT_PUBLIC_APP_STORE_URL || "/coming-soon",
+  playStoreUrl: process.env.NEXT_PUBLIC_PLAY_STORE_URL || "/coming-soon",
 };
 
 export function formatVisaType(type = "") {

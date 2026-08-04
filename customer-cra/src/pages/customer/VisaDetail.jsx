@@ -94,8 +94,8 @@ export default function VisaDetail() {
                     <div className="bg-white border border-border rounded-xl p-6 shadow-card">
                         <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-1">Fees breakdown</div>
                         <div className="space-y-2 py-4 border-b border-border">
-                            <FeeRow label="Government fee" amount={schema.fees?.govt_fee} />
-                            <FeeRow label="Service fee" amount={schema.fees?.service_fee} />
+                            <FeeRow label="Government fee (incl. GST)" amount={schema.fees?.govt_fee} />
+                            <FeeRow label="Service fee (excl. GST)" amount={schema.fees?.service_fee} />
                         </div>
                         <div className="flex items-center justify-between py-4 border-b border-border">
                             <span className="font-medium">Total</span>

@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
+const DEFAULT_GET_OPTION_VALUE = (o) => o?.id ?? o?.code ?? o?.value;
+const DEFAULT_GET_OPTION_LABEL = (o) =>
+    o?.label ?? o?.full_name ?? o?.name ?? o?.title ?? String(DEFAULT_GET_OPTION_VALUE(o) ?? "");
+
 /**
  * SearchableSelect — theme-matched searchable combobox.
  *
@@ -25,8 +29,8 @@ export function SearchableSelect({
     fetcher,
     value = null,
     onChange,
-    getOptionValue = (o) => o?.id ?? o?.code ?? o?.value,
-    getOptionLabel = (o) => o?.label ?? o?.full_name ?? o?.name ?? o?.title ?? String(getOptionValue(o) ?? ""),
+    getOptionValue = DEFAULT_GET_OPTION_VALUE,
+    getOptionLabel = DEFAULT_GET_OPTION_LABEL,
     renderOption,
     renderValue,
     multiple = false,
@@ -36,6 +40,7 @@ export function SearchableSelect({
     debounceMs = 300,
     pageSize = 10,
     clearable = true,
+    showChipsInline = false,
     disabled = false,
     className = "",
     contentClassName = "",
@@ -230,14 +235,43 @@ export function SearchableSelect({
                     disabled={disabled}
                     data-testid={resolvedTestId}
                     className={cn(
-                        "flex h-8 w-full items-center justify-between gap-1 rounded-md border border-border bg-surface-elevated px-2 text-left text-xs outline-none",
+                        "flex min-h-8 w-full items-center justify-between gap-1 rounded-md border border-border bg-surface-elevated px-2 text-left text-xs outline-none",
+                        showChipsInline && multiple && values.length > 0 && "h-auto py-1.5",
                         "hover:border-border-strong focus:border-navy focus:shadow-[0_0_0_3px_var(--glow-navy)]",
                         "transition-all duration-150 disabled:opacity-50",
                         !values.length && "text-ink-muted",
                         className,
                     )}
                 >
-                    <span className="truncate flex-1 min-w-0">{triggerLabel()}</span>
+                    {showChipsInline && multiple && values.length > 0 ? (
+                        <span className="flex flex-wrap gap-1 flex-1 min-w-0">
+                            {selectedOptions.map((o) => (
+                                <span
+                                    key={String(getOptionValue(o))}
+                                    className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider bg-surface border border-border rounded-sm px-1.5 py-0.5"
+                                >
+                                    {getOptionLabel(o)}
+                                    <span
+                                        role="button"
+                                        tabIndex={0}
+                                        className="text-ink-muted hover:text-danger cursor-pointer"
+                                        onClick={(e) => { e.stopPropagation(); toggle(o); }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                toggle(o);
+                                            }
+                                        }}
+                                    >
+                                        <X className="w-2.5 h-2.5" />
+                                    </span>
+                                </span>
+                            ))}
+                        </span>
+                    ) : (
+                        <span className="truncate flex-1 min-w-0">{triggerLabel()}</span>
+                    )}
                     <span className="flex items-center gap-0.5 shrink-0">
                         {clearable && values.length > 0 && !disabled && (
                             <span

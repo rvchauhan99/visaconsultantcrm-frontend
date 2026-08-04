@@ -498,11 +498,11 @@ function ApplyFeeSheet({ schema, total, processingDays }) {
           </DrawerHeader>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-ink-muted">Government fee</span>
+              <span className="text-ink-muted">Government fee (incl. GST)</span>
               <span className="font-mono">{INR.format(schema.fees?.govt_fee || 0)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-ink-muted">Service fee</span>
+              <span className="text-ink-muted">Service fee (excl. GST)</span>
               <span className="font-mono">{INR.format(schema.fees?.service_fee || 0)}</span>
             </div>
             <div className="flex justify-between pt-2 border-t border-border font-medium">
@@ -533,6 +533,15 @@ function TravelerStep({
   const handleScan = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const okType =
+      /^image\/(jpeg|png|webp)$/i.test(file.type) ||
+      file.type === "application/pdf" ||
+      /\.(jpe?g|png|webp|pdf)$/i.test(file.name);
+    if (!okType) {
+      toast.error("Please upload a JPG, PNG, WebP, or PDF passport scan.");
+      e.target.value = "";
+      return;
+    }
     setScanning(true);
     try {
       const form = new FormData();
@@ -579,13 +588,13 @@ function TravelerStep({
           <input
             type="file"
             hidden
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
             onChange={handleScan}
             disabled={scanning}
             data-testid="scan-passport-input"
           />
         </label>
-        <span className="text-xs text-ink-muted self-center">Optional</span>
+        <span className="text-xs text-ink-muted self-center">Optional · JPG, PNG, or PDF</span>
       </div>
 
       {profiles.length > 0 && (
@@ -986,7 +995,7 @@ function PaymentStep({ schema, total, submit, submitting }) {
   return (
     <div>
       <h2 className="font-display text-xl text-navy mb-1">Payment</h2>
-      <p className="text-sm text-ink-muted mb-4">Government fee and service fee shown separately. No hidden charges.</p>
+      <p className="text-sm text-ink-muted mb-4">Government fee includes GST; service fee excludes GST and is shown separately. No hidden charges.</p>
       <div className="bg-surface border border-border rounded-xl p-6 max-w-md mx-auto">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-ink-muted">Government fee</span>

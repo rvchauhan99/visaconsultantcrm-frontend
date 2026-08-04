@@ -9,7 +9,7 @@ export function useVisaProducts(params = {}) {
     queryKey: queryKeys.visaProducts(params),
     queryFn: async () => {
       const r = await api.get("/visa-products", { params });
-      return r.data;
+      return Array.isArray(r.data) ? r.data : [];
     },
   });
 }
