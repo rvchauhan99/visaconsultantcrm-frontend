@@ -3,13 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { Clock } from "lucide-react";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useVisaProducts } from "@/hooks/customer-api";
 import { useCatalogSearch } from "@/context/catalog-search";
 import {
   INR,
+  SUPPORT,
   countryCoverUrl,
+  docsLabelForProduct,
   formatVisaTypeShort,
   formatValidityShort,
   guaranteedByDateTime,
@@ -93,6 +96,15 @@ const COVER_FALLBACK =
 function VisaCard({ product, index }) {
   const totalFee = (product.fees?.govt_fee || 0) + (product.fees?.service_fee || 0);
   const [cover, setCover] = useState(() => countryCoverUrl(product));
+  const docsSummary = docsLabelForProduct(product);
+  const primaryDoc = docsSummary.split(",")[0]?.trim() || "Passport";
+
+  const openEmergency = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    track("emergency_assist_click", { product_id: product.id, country: product.country_name });
+    window.open(SUPPORT.whatsapp, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div
@@ -103,7 +115,7 @@ function VisaCard({ product, index }) {
         href={`/visa/${product.id}`}
         data-testid={`visa-card-${product.country_code}`}
         onClick={() => track("visa_card_click", { product_id: product.id })}
-        className="group block"
+        className="group block relative"
       >
         <div className="atlys-destination-card">
           <Image
@@ -117,18 +129,53 @@ function VisaCard({ product, index }) {
             }}
           />
           <div className="atlys-destination-overlay" />
-          <div className="atlys-destination-cta" aria-hidden="true">
-            <span className="atlys-destination-cta-btn">More details</span>
+
+          {/* Hover tooltip — Apply for {Country} Visa */}
+          <div className="atlys-destination-tip" aria-hidden="true">
+            Apply for {product.country_name} Visa
           </div>
+
           <div className="atlys-destination-content">
             <span className="text-2xl md:text-3xl leading-none drop-shadow-sm">{product.country_flag}</span>
             <h3 className="font-display text-sm sm:text-lg md:text-xl tracking-[0.08em] sm:tracking-[0.12em] text-white uppercase text-center leading-tight px-1">
               {product.country_name}
             </h3>
-            <div className="grid grid-cols-3 gap-1 sm:gap-2 w-full mt-1 px-0.5 sm:px-1">
+
+            <div className="atlys-destination-divider" aria-hidden="true" />
+
+            <div className="grid grid-cols-3 gap-1 sm:gap-2 w-full px-0.5 sm:px-1">
               <CardMeta label="Type" value={formatVisaTypeShort(product.visa_type)} />
               <CardMeta label="Valid" value={formatValidityShort(product.validity_days)} />
               <CardMeta label="Fees" value={INR.format(totalFee)} />
+            </div>
+
+            {/* Hover-only expanded details */}
+            <div className="atlys-destination-extra">
+              <div className="atlys-destination-divider" aria-hidden="true" />
+              <div className="w-full text-center px-1">
+                <div className="text-[9px] md:text-[10px] uppercase tracking-wider text-white/65 font-medium">
+                  Documents needed
+                </div>
+                <div className="text-[11px] md:text-xs font-semibold text-white mt-0.5 truncate" title={docsSummary}>
+                  {primaryDoc}
+                </div>
+              </div>
+
+              <div className="atlys-destination-divider" aria-hidden="true" />
+
+              <span
+                role="link"
+                tabIndex={0}
+                className="atlys-destination-assist"
+                data-testid={`emergency-assist-${product.country_code}`}
+                onClick={openEmergency}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") openEmergency(e);
+                }}
+              >
+                <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                Get emergency assistance
+              </span>
             </div>
           </div>
         </div>
