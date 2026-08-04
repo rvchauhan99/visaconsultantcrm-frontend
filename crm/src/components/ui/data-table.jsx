@@ -63,11 +63,11 @@ export function DataTable({
       : <ChevronDown className="w-3 h-3 text-navy" />;
   };
 
-  const cellPad = density === "compact" ? "py-1.5 px-2" : "";
+  const cellPad = density === "compact" ? "py-2 px-3" : "";
 
   return (
     <div className={cn("overflow-x-auto", className)}>
-      <table className={cn("data-table w-full border-collapse", density === "compact" && "text-[0.78rem]")}>
+      <table className={cn("data-table w-full border-collapse", density === "compact" && "text-[0.8rem]")}>
         <thead className={stickyHeader ? "sticky top-0 z-10 bg-surface-card" : undefined}>
           <tr>
             {columns.map((col) => (
@@ -94,7 +94,7 @@ export function DataTable({
               <tr key={i}>
                 {columns.map((col) => (
                   <td key={col.key} className={cellPad}>
-                    <div className="h-4 rounded bg-surface-muted animate-[shimmer_1.6s_linear_infinite] bg-gradient-to-r from-surface-muted via-surface-card to-surface-muted bg-[length:200%_100%]" />
+                    <div className="h-4 rounded-lg bg-surface-muted animate-[shimmer_1.6s_linear_infinite] bg-gradient-to-r from-surface-muted via-surface-card to-surface-muted bg-[length:200%_100%]" />
                   </td>
                 ))}
               </tr>
@@ -110,7 +110,7 @@ export function DataTable({
                     action={empty.action}
                   />
                 ) : (
-                  <div className="py-8 text-center text-xs text-ink-muted italic">No data</div>
+                  <div className="py-10 text-center text-sm text-ink-muted italic">No data</div>
                 )}
               </td>
             </tr>

@@ -1,329 +1,334 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
-  Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
-} from "recharts";
+  AlertTriangle,
+  Briefcase,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  FileCheck,
+  PauseCircle,
+  RefreshCw,
+  Target,
+  TrendingUp,
+  UserX,
+  Wallet,
+} from "lucide-react";
 import api from "@/lib/api";
 import { formatCaseNumber } from "@/lib/utils";
 import Stamp from "@/components/Stamp";
-import { ConsultantSelect } from "@/components/forms/selects";
-import { CrmStatCard, CrmTableCard, CrmCardHeader, CrmEmptyState, CrmCard, CrmSkeleton } from "@/components/ui/crm-card";
+import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";
+import { TeamScopeBanner } from "@/components/crm/TeamScopeBanner";
+import DashboardCharts from "@/components/crm/dashboard/DashboardCharts";
+import DashboardTeamTable from "@/components/crm/dashboard/DashboardTeamTable";
+import DashboardWarnings, { DashboardQueueSections } from "@/components/crm/dashboard/DashboardWarnings";
+import {
+  CrmStatCard,
+  CrmTableCard,
+  CrmCardHeader,
+  CrmEmptyState,
+  CrmSkeleton,
+} from "@/components/ui/crm-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { FilterPanel } from "@/components/ui/filter-panel";
-import { MeterBar } from "@/components/ui/meter-bar";
+import { Segmented } from "@/components/ui/segmented";
 import { useListQueryState } from "@/hooks/useListQueryState";
+import { SERVICE_TYPE_OPTIONS } from "@/lib/leadServiceSchemas";
 import {
-  Briefcase, AlertTriangle, Clock, CheckCircle2, ListChecks,
-  UserX, FileCheck, CreditCard, PauseCircle, StampIcon, RefreshCw, Wallet, PhoneCall, UserPlus,
-} from "lucide-react";
+  appendScope,
+  buildDashboardParams,
+  detectPeriod,
+  inr,
+  periodToRange,
+  QUICK_PERIODS,
+  SLA_COLORS,
+} from "@/lib/dashboardUtils";
 
-const FILTER_KEYS = ["from_date", "to_date", "consultant_id"];
-const LIST_DEFAULTS = {};
-
-const STAGE_ORDER = ["new", "docs_pending", "ready_to_submit", "submitted", "decision"];
-const STAGE_LABELS = {
-  new: "New", docs_pending: "Docs pending", ready_to_submit: "Ready",
-  submitted: "Submitted", decision: "Decision", closed: "Closed",
-};
-
-const slaColor = {
-  on_track: "success", due_soon: "warning", overdue: "danger", completed: "muted",
-};
-
-function queueCount(q, key) {
-  if (!q) return 0;
-  const v = q[key];
-  if (v == null) return 0;
-  if (typeof v === "number") return v;
-  if (typeof v === "object") return v.count ?? v.total ?? (Array.isArray(v.items) ? v.items.length : 0);
-  return 0;
-}
-
-function inr(n) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency", currency: "INR", maximumFractionDigits: 0,
-  }).format(Number(n) || 0);
-}
-
-const QUEUE_CARDS = [
-  { key: "leads_due_today", label: "Leads due today", to: "/follow-ups?due=today", icon: PhoneCall, tone: "warning", scopeKeys: [] },
-  { key: "leads_overdue", label: "Leads overdue", to: "/follow-ups?due=overdue", icon: UserPlus, tone: "danger", scopeKeys: [] },
-  { key: "tasks_overdue", label: "Tasks overdue", to: "/tasks?status=open&due=overdue", icon: ListChecks, tone: "danger", scopeKeys: ["from_date", "to_date"] },
-  { key: "tasks_due_today", label: "Tasks due today", to: "/tasks?status=open&due=today", icon: Clock, tone: "warning", scopeKeys: ["from_date", "to_date"] },
-  { key: "unassigned_cases", label: "Unassigned cases", to: "/pipeline?unassigned=true", icon: UserX, tone: "default", scopeKeys: ["from_date", "to_date", "consultant_id"] },
-  { key: "docs_pending_review", label: "Docs to review", to: "/pipeline?stage=docs_pending", icon: FileCheck, tone: "default", scopeKeys: ["from_date", "to_date", "consultant_id"] },
-  { key: "pending_payments", label: "Pending payments", to: "/pipeline?payment_status=pending", icon: CreditCard, tone: "warning", scopeKeys: ["from_date", "to_date", "consultant_id"] },
-  { key: "on_hold", label: "On hold / RFI", to: "/pipeline?on_hold=true", icon: PauseCircle, tone: "warning", scopeKeys: ["from_date", "to_date", "consultant_id"] },
-  { key: "overdue_sla", label: "SLA overdue", to: "/pipeline?sla=overdue", icon: AlertTriangle, tone: "danger", scopeKeys: ["from_date", "to_date", "consultant_id"] },
-  { key: "passport_expiry_30d", label: "Passport expiry (30d)", to: "/passport-expiry?days=30", icon: StampIcon, tone: "default", scopeKeys: [] },
+const FILTER_KEYS = [
+  "period", "from_date", "to_date", "service_type", "country", "source", "consultant_id",
+  "stage", "sla", "payment_status", "case_type", "visa_type", "on_hold", "unassigned",
 ];
 
-function pickScope(scope, keys) {
-  if (!scope || !keys || keys.length === 0) return {};
-  const out = {};
-  keys.forEach((k) => {
-    if (scope[k] != null && scope[k] !== "") out[k] = scope[k];
-  });
-  return out;
-}
+const LIST_DEFAULTS = { period: "30d", ...periodToRange("30d") };
 
-function appendScope(path, scope) {
-  if (!scope || Object.keys(scope).length === 0) return path;
-  const [base, qs = ""] = path.split("?");
-  const params = new URLSearchParams(qs);
-  Object.entries(scope).forEach(([k, v]) => {
-    if (v != null && v !== "") params.set(k, v);
-  });
-  const out = params.toString();
-  return out ? `${base}?${out}` : base;
-}
-
-function WidgetError({ message, onRetry }) {
-  return (
-    <div className="p-4 text-center">
-      <p className="text-xs text-danger mb-2">{message || "Failed to load"}</p>
-      {onRetry && (
-        <CrmButton variant="outline" size="xs" onClick={onRetry}>Retry</CrmButton>
-      )}
-    </div>
-  );
-}
+const ease = [0.16, 1, 0.3, 1];
 
 export default function CrmDashboard() {
-  const list = useListQueryState({
-    filterKeys: FILTER_KEYS,
-    defaults: LIST_DEFAULTS,
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlInitialized = useRef(false);
+  const list = useListQueryState({ filterKeys: FILTER_KEYS, defaults: LIST_DEFAULTS });
 
-  const [pipeline, setPipeline] = useState(null);
-  const [sla, setSla] = useState(null);
-  const [funnel, setFunnel] = useState(null);
-  const [recent, setRecent] = useState([]);
+  const [data, setData] = useState(null);
   const [workload, setWorkload] = useState(null);
-  const [queues, setQueues] = useState(null);
-  const [collections, setCollections] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [workloadLoading, setWorkloadLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const reportParams = useMemo(() => ({ ...list.filters }), [list.filters]);
-  const scopeQuery = reportParams;
+  useEffect(() => {
+    if (urlInitialized.current) return;
+    urlInitialized.current = true;
+    const next = new URLSearchParams(searchParams);
+    const hasFrom = next.get("from_date");
+    const hasTo = next.get("to_date");
+    const periodParam = next.get("period");
+    if (!hasFrom || !hasTo) {
+      const range = periodToRange(periodParam || "30d");
+      next.set("period", periodParam || "30d");
+      next.set("from_date", range.from_date);
+      next.set("to_date", range.to_date);
+    } else if (!periodParam) {
+      const detected = detectPeriod(hasFrom, hasTo);
+      if (detected) next.set("period", detected);
+    }
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  const scopeParams = useMemo(
+    () => buildDashboardParams(list.filters, list.q),
+    [list.filters, list.q],
+  );
+
+  const scopeQuery = scopeParams;
+  const activePeriod = useMemo(
+    () => detectPeriod(list.filters.from_date, list.filters.to_date),
+    [list.filters.from_date, list.filters.to_date],
+  );
+
+  const applyPeriod = useCallback((periodId) => {
+    const { from_date, to_date } = periodToRange(periodId);
+    list.setFilters({ period: periodId, from_date, to_date });
+  }, [list]);
+
+  const applyFilters = useCallback((draft) => {
+    const from = draft.from_date ?? list.filters.from_date;
+    const to = draft.to_date ?? list.filters.to_date;
+    const period = detectPeriod(from, to);
+    list.setFilters({ ...draft, period: period || "" });
+  }, [list]);
+
+  const clearFilters = useCallback(() => {
+    const { from_date, to_date } = periodToRange("30d");
+    const patch = { q: "", period: "30d", from_date, to_date };
+    FILTER_KEYS.forEach((k) => {
+      if (!["period", "from_date", "to_date"].includes(k)) patch[k] = "";
+    });
+    list.write(patch, { resetPage: false });
+  }, [list]);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setWorkloadLoading(true);
+    api.get("/crm/reports/dashboard", { params: scopeParams })
+      .then((r) => {
+        setData(r.data);
+        setLastUpdated(new Date());
+      })
+      .catch(() => {
+        toast.error("Could not load dashboard");
+        setData(null);
+      })
+      .finally(() => setLoading(false));
+
+    api.get("/crm/workload")
+      .then((r) => setWorkload(r.data))
+      .catch(() => setWorkload(null))
+      .finally(() => setWorkloadLoading(false));
+  }, [scopeParams]);
+
+  useEffect(() => { load(); }, [load]);
 
   const filterFields = useMemo(() => [
     { key: "range", label: "Date range", type: "daterange", fromKey: "from_date", toKey: "to_date" },
+    { key: "service_type", label: "Service type", type: "multiselect", options: SERVICE_TYPE_OPTIONS },
+    {
+      key: "country",
+      label: "Country",
+      type: "async",
+      render: (value, onChange) => (
+        <CountrySelect value={value || null} onChange={(v) => onChange(v || "")} placeholder="All countries" />
+      ),
+    },
     {
       key: "consultant_id",
       label: "Consultant",
       type: "async",
       render: (value, onChange) => (
-        <ConsultantSelect
-          value={value || null}
-          onChange={(v) => onChange(v || "")}
-          placeholder="All consultants"
-        />
+        <ConsultantSelect value={value || null} onChange={(v) => onChange(v || "")} placeholder="All consultants" />
       ),
+    },
+    {
+      key: "source",
+      label: "Source",
+      type: "select",
+      options: [{ value: "online", label: "Online" }, { value: "offline", label: "Offline" }],
+    },
+    {
+      key: "stage",
+      label: "Stage",
+      type: "multiselect",
+      options: [
+        { value: "new", label: "New" },
+        { value: "docs_pending", label: "Docs pending" },
+        { value: "ready_to_submit", label: "Ready" },
+        { value: "submitted", label: "Submitted" },
+        { value: "decision", label: "Decision" },
+        { value: "closed", label: "Closed" },
+      ],
+    },
+    {
+      key: "sla",
+      label: "SLA",
+      type: "select",
+      options: [
+        { value: "on_track", label: "On track" },
+        { value: "due_soon", label: "Due soon" },
+        { value: "overdue", label: "Overdue" },
+        { value: "completed", label: "Completed" },
+      ],
+    },
+    {
+      key: "payment_status",
+      label: "Payment",
+      type: "multiselect",
+      options: [
+        { value: "pending", label: "Pending" },
+        { value: "paid", label: "Paid" },
+        { value: "partial", label: "Partial" },
+        { value: "refunded", label: "Refunded" },
+      ],
+    },
+    {
+      key: "case_type",
+      label: "Case type",
+      type: "select",
+      options: [{ value: "visa", label: "Visa" }, { value: "passport", label: "Passport" }],
     },
   ], []);
 
-  const load = useCallback(() => {
-    let cancelled = false;
-    const track = (key, promise, setter) => {
-      setLoading((l) => ({ ...l, [key]: true }));
-      setErrors((e) => ({ ...e, [key]: null }));
-      promise
-        .then((r) => { if (!cancelled) setter(r.data); })
-        .catch(() => { if (!cancelled) setErrors((e) => ({ ...e, [key]: true })); })
-        .finally(() => { if (!cancelled) setLoading((l) => ({ ...l, [key]: false })); });
-    };
+  const kpis = data?.kpis || {};
+  const payments = data?.payments || {};
+  const recent = data?.recent_cases || [];
 
-    track("pipeline", api.get("/crm/reports/pipeline", { params: reportParams }), setPipeline);
-    track("sla", api.get("/crm/reports/sla", { params: reportParams }), setSla);
-    track("funnel", api.get("/crm/reports/funnel", { params: reportParams }), setFunnel);
-    track("recent", api.get("/crm/cases", {
-      params: { ...reportParams, stage_group: "active", page: 1, limit: 8, include_summary: false },
-    }), (data) => setRecent(Array.isArray(data) ? data.slice(0, 8) : (data?.items || []).slice(0, 8)));
-    track("workload", api.get("/crm/workload"), setWorkload);
-    track("queues", api.get("/crm/ops/queues"), setQueues);
-    track("collections", api.get("/crm/reports/payments", { params: reportParams }), setCollections);
-
-    return () => { cancelled = true; };
-  }, [reportParams]);
-
-  useEffect(() => {
-    const cancel = load();
-    return cancel;
-  }, [load]);
-
-  const stageTotal = pipeline?.by_stage
-    ? STAGE_ORDER.reduce((a, s) => a + (pipeline.by_stage[s] || 0), 0)
-    : 0;
-
-  const trendData = useMemo(() => {
-    const periods = collections?.by_period || [];
-    return periods.map((p) => ({ date: p.date, collected: p.amount }));
-  }, [collections]);
+  const kpiCards = [
+    { label: "Open", value: kpis.open ?? "—", icon: Briefcase, to: "/pipeline", tone: "default" },
+    { label: "Overdue SLA", value: kpis.overdue_sla ?? "—", icon: AlertTriangle, to: "/pipeline?sla=overdue", tone: kpis.overdue_sla > 0 ? "danger" : "default" },
+    { label: "Due soon", value: kpis.due_soon ?? "—", icon: Clock, to: "/pipeline?sla=due_soon", tone: kpis.due_soon > 0 ? "warning" : "default" },
+    { label: "Unassigned", value: kpis.unassigned ?? "—", icon: UserX, to: "/pipeline?unassigned=true", tone: "default" },
+    { label: "On hold", value: kpis.on_hold ?? "—", icon: PauseCircle, to: "/pipeline?on_hold=true", tone: "warning" },
+    { label: "Docs review", value: kpis.docs_pending_review ?? "—", icon: FileCheck, to: "/pipeline?stage=docs_pending", tone: "default" },
+    { label: "Closed", value: kpis.closed ?? "—", icon: CheckCircle2, to: "/cases/closed", tone: "default", delta: "in range" },
+    { label: "Approval rate", value: kpis.approval_rate != null ? `${kpis.approval_rate}%` : "—", icon: Target, tone: "success" },
+    { label: "Avg days to close", value: kpis.avg_days_to_close ?? "—", icon: TrendingUp, tone: "default" },
+    { label: "Collected", value: payments.total_collected != null ? inr(payments.total_collected) : "—", icon: Wallet, to: "/reports/payments", tone: "success" },
+    { label: "Refunds", value: payments.total_refunded != null ? inr(payments.total_refunded) : "—", icon: CreditCard, tone: "default" },
+    { label: "Net", value: payments.net != null ? inr(payments.net) : "—", icon: Wallet, to: "/reports/payments", tone: "default" },
+  ];
 
   return (
-    <div className="p-4 max-w-full space-y-4">
+    <div className="p-3 lg:p-4 max-w-full space-y-2.5">
       <PageHeader
         label="Overview"
         title="Dashboard"
-        subtitle="Pipeline, SLA and collections at a glance"
-        actions={
-          <CrmButton variant="outline" size="sm" onClick={load} data-testid="dashboard-refresh">
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
-          </CrmButton>
-        }
+        subtitle="Operations command center — all service types, KPIs, and performance"
+        actions={(
+          <div className="flex items-center gap-3">
+            <Segmented
+              value={activePeriod || list.filters.period || "30d"}
+              onChange={applyPeriod}
+              segments={QUICK_PERIODS.map((p) => ({ value: p.id, label: p.label }))}
+            />
+            <div className="hidden lg:flex items-center gap-2 border-l border-border pl-3 ml-1">
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-ink-muted hidden xl:inline">
+                  Updated {lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+              <CrmButton variant="outline" size="sm" onClick={load} data-testid="dashboard-refresh">
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Refresh</span>
+              </CrmButton>
+            </div>
+          </div>
+        )}
       />
+
+      <TeamScopeBanner scope={data?.meta?.scope} entity="cases" testId="dashboard-scope" />
 
       <FilterPanel
         fields={filterFields}
         values={list.filters}
         activeCount={list.activeFilterCount}
-        onApply={list.setFilters}
-        onClear={list.clearFilters}
+        onApply={applyFilters}
+        onClear={clearFilters}
+        onQChange={list.setQ}
+        q={list.q}
         defaultOpen
         testId="dashboard-filters"
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2" data-testid="dashboard-metrics">
-        {[
-          { to: appendScope("/pipeline", scopeQuery), loading: loading.pipeline && !pipeline, content: <CrmStatCard label="Open cases" value={pipeline?.total_open ?? (errors.pipeline ? "!" : "—")} icon={Briefcase} /> },
-          { to: appendScope("/pipeline?sla=overdue", scopeQuery), content: <CrmStatCard label="Overdue" value={sla?.overdue ?? (errors.sla ? "!" : "—")} icon={AlertTriangle} tone={sla?.overdue > 0 ? "danger" : "default"} /> },
-          { to: appendScope("/pipeline?sla=due_soon", scopeQuery), content: <CrmStatCard label="Due soon" value={sla?.due_soon ?? "—"} icon={Clock} tone={sla?.due_soon > 0 ? "warning" : "default"} /> },
-          { to: appendScope("/cases/closed", scopeQuery), content: <CrmStatCard label="Completed" value={funnel?.closed ?? "—"} icon={CheckCircle2} delta="closed cases" /> },
-        ].map((card, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, duration: 0.35 }}>
-            <Link to={card.to} className="block hover:opacity-90 transition-opacity">
-              {card.loading ? <CrmSkeleton className="h-[88px]" /> : card.content}
-            </Link>
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3" data-testid="dashboard-metrics">
+        {kpiCards.map((card, i) => (
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04, duration: 0.45, ease }}
+          >
+            {card.to ? (
+              <Link to={appendScope(card.to, scopeQuery)} className="block">
+                {loading ? <CrmSkeleton className="h-[100px]" /> : (
+                  <CrmStatCard label={card.label} value={card.value} icon={card.icon} tone={card.tone} delta={card.delta} />
+                )}
+              </Link>
+            ) : (
+              loading ? <CrmSkeleton className="h-[100px]" /> : (
+                <CrmStatCard label={card.label} value={card.value} icon={card.icon} tone={card.tone} delta={card.delta} />
+              )
+            )}
           </motion.div>
         ))}
       </div>
 
-      {/* Collections snapshot */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {[
-          { to: appendScope("/reports/payments", scopeQuery), content: <CrmStatCard label="Collected" value={collections ? inr(collections.total_collected) : "—"} icon={Wallet} tone="success" /> },
-          { content: <CrmStatCard label="Refunds" value={collections ? inr(collections.total_refunded) : "—"} /> },
-          { content: <CrmStatCard label="Net" value={collections ? inr(collections.net) : "—"} icon={CreditCard} /> },
-          { to: appendScope("/reports/payments", scopeQuery), content: <CrmStatCard label="Payment desk" value="Open →" icon={CreditCard} /> },
-        ].map((card, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 + i * 0.06, duration: 0.35 }}>
-            {card.to ? <Link to={card.to} className="block">{card.content}</Link> : card.content}
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Ops queues */}
-      <motion.div data-testid="ops-queues" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.4 }}>
-        <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-2">Work queues</div>
-        {errors.queues ? (
-          <WidgetError message="Queues unavailable" onRetry={load} />
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {QUEUE_CARDS.map((q, i) => {
-              const count = queueCount(queues, q.key);
-              const Icon = q.icon;
-              return (
-                <motion.div key={q.key} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.55 + i * 0.04, duration: 0.3 }}>
-                  <Link to={appendScope(q.to, pickScope(scopeQuery, q.scopeKeys))} data-testid={`queue-${q.key}`}>
-                    <CrmCard hover className="p-3">
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted leading-none">
-                          {q.label}
-                        </div>
-                        <Icon className="w-3.5 h-3.5 text-ink-muted shrink-0" />
-                      </div>
-                      <div className={`font-mono text-xl font-semibold ${
-                        q.tone === "danger" && count > 0 ? "text-danger"
-                          : q.tone === "warning" && count > 0 ? "text-warning"
-                            : "text-ink"
-                      }`}>
-                        {queues ? count : (loading.queues ? "…" : "—")}
-                      </div>
-                    </CrmCard>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2, duration: 0.5 }}>
+        <DashboardWarnings risk={data?.risk} scope={scopeQuery} loading={loading} />
       </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-3">
-        <CrmTableCard>
-          <CrmCardHeader label="Pipeline" title="By stage" />
-          <div className="p-3 space-y-2.5">
-            {errors.pipeline ? (
-              <WidgetError message="Pipeline report failed" onRetry={load} />
-            ) : pipeline?.by_stage && stageTotal > 0 ? (
-              STAGE_ORDER.map((stage) => {
-                const count = pipeline.by_stage[stage] ?? 0;
-                return (
-                  <Link key={stage} to={appendScope(`/pipeline?stage=${stage}`, scopeQuery)} className="block hover:opacity-90">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-ink capitalize">{STAGE_LABELS[stage]}</span>
-                      <span className="font-mono text-ink-muted">{count}</span>
-                    </div>
-                    <MeterBar value={count} max={stageTotal || 1} height="h-1.5" tone="navy" />
-                  </Link>
-                );
-              })
-            ) : (
-              <CrmEmptyState title="No open cases yet" />
-            )}
-          </div>
-        </CrmTableCard>
+      <DashboardCharts data={data} scope={scopeQuery} loading={loading} />
 
-        <CrmTableCard>
-          <CrmCardHeader label="Collections" title="Trend" />
-          <div className="h-48 p-3">
-            {errors.collections ? (
-              <WidgetError message="Collections unavailable" onRetry={load} />
-            ) : trendData.length === 0 ? (
-              <CrmEmptyState title="No ledger activity in range" />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E4D9C8" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} width={40} />
-                  <Tooltip formatter={(v) => inr(v)} />
-                  <Area type="monotone" dataKey="collected" stroke="#1F4A3A" fill="#2F6B5A33" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </CrmTableCard>
-      </div>
+      <DashboardTeamTable team={data?.team} scope={scopeQuery} loading={loading} />
 
-      <div className="grid md:grid-cols-2 gap-3">
+      <DashboardQueueSections queues={data?.queues} scope={scopeQuery} loading={loading} />
+
+      <div className="grid md:grid-cols-2 gap-4">
         <CrmTableCard>
           <CrmCardHeader label="Cases" title="Recent active" />
           <ul className="divide-y divide-border">
-            {errors.recent ? (
-              <li><WidgetError message="Recent cases failed" onRetry={load} /></li>
+            {loading ? (
+              <li className="p-4 text-sm text-ink-muted">Loading…</li>
             ) : recent.length === 0 ? (
-              <li><CrmEmptyState title="No cases yet" /></li>
+              <li><CrmEmptyState title="No cases in range" /></li>
             ) : (
               recent.map((c) => (
                 <li key={c.id}>
                   <Link
                     to={`/cases/${c.id}`}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-surface-muted transition-colors"
-                    data-testid={`recent-case-${c.id.slice(0, 6)}`}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-surface-hover transition-colors"
                   >
                     <span className="text-lg shrink-0">{c.config_snapshot_json?.country_flag}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-ink truncate">
-                        {c.customer?.full_name || c.config_snapshot_json?.country_name}
+                      <div className="text-[13px] font-medium text-ink truncate">
+                        {c.customer_full_name || c.config_snapshot_json?.country_name || c.config_snapshot_json?.title}
                       </div>
                       <div className="text-[10px] font-mono text-ink-muted truncate">{formatCaseNumber(c)}</div>
                     </div>
-                    <Stamp tone={slaColor[c.sla_status] ?? "muted"} size="sm">{c.stage}</Stamp>
+                    <Stamp tone={SLA_COLORS[c.stage === "closed" ? "completed" : "muted"] ?? "muted"} size="sm">
+                      {c.stage}
+                    </Stamp>
                   </Link>
                 </li>
               ))
@@ -334,28 +339,17 @@ export default function CrmDashboard() {
         <CrmTableCard data-testid="workload-panel">
           <CrmCardHeader
             label="Workload"
-            title="Current workload"
+            title="My open cases"
             actions={workload && (
               <div className="flex items-center gap-2">
                 <Stamp tone="ink" size="sm">{workload.open} open</Stamp>
-                <Stamp tone={workload.due_soon > 0 ? "warning" : "muted"} size="sm">
-                  {workload.due_soon} due soon
-                </Stamp>
-                <Stamp tone={workload.overdue > 0 ? "danger" : "muted"} size="sm">
-                  {workload.overdue} overdue
-                </Stamp>
+                <Stamp tone={workload.overdue > 0 ? "danger" : "muted"} size="sm">{workload.overdue} overdue</Stamp>
               </div>
             )}
           />
-          {errors.workload ? (
-            <WidgetError message="Workload unavailable" onRetry={load} />
-          ) : !workload ? (
-            <div className="p-3">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-8 rounded bg-gradient-to-r from-surface-muted via-surface-card to-surface-muted bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite] mb-2" />
-              ))}
-            </div>
-          ) : workload.cases.length === 0 ? (
+          {workloadLoading ? (
+            <div className="p-4 text-sm text-ink-muted">Loading…</div>
+          ) : !workload?.cases?.length ? (
             <CrmEmptyState title="No open cases assigned" description="You're all caught up." />
           ) : (
             <table className="data-table w-full">
@@ -365,31 +359,22 @@ export default function CrmDashboard() {
                   <th>Country</th>
                   <th>Customer</th>
                   <th>SLA</th>
-                  <th>Due</th>
                 </tr>
               </thead>
               <tbody>
                 {workload.cases.slice(0, 10).map((c) => (
                   <tr key={c.id} className="clickable">
                     <td>
-                      <Link to={`/cases/${c.id}`} className="font-mono text-navy hover:underline" data-testid={`workload-case-${c.id.slice(0, 6)}`}>
+                      <Link to={`/cases/${c.id}`} className="font-mono text-navy hover:underline font-medium">
                         {formatCaseNumber(c)}
                       </Link>
                     </td>
+                    <td>{c.country || "—"}</td>
+                    <td>{c.customer_name || "—"}</td>
                     <td>
-                      <span className="inline-flex items-center gap-1.5">
-                        {c.country_flag ? <span>{c.country_flag}</span> : null}
-                        <span>{c.country || "—"}</span>
-                      </span>
-                    </td>
-                    <td className="text-ink">{c.customer_name || c.customer_full_name || "—"}</td>
-                    <td>
-                      <Stamp tone={slaColor[c.sla_status] ?? "muted"} size="sm">
+                      <Stamp tone={SLA_COLORS[c.sla_status] ?? "muted"} size="sm">
                         {c.sla_status?.replace("_", " ") || "—"}
                       </Stamp>
-                    </td>
-                    <td className="font-mono text-ink-muted">
-                      {c.sla_due_date ? new Date(c.sla_due_date).toLocaleDateString("en-IN") : "—"}
                     </td>
                   </tr>
                 ))}

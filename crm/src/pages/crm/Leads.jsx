@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { UserPlus, LayoutGrid, List, RefreshCw, BarChart2, PhoneCall, X } from "lucide-react";
@@ -97,6 +97,7 @@ function isOverdue(iso) {
 
 export default function Leads() {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const list = useListQueryState({
     filterKeys: FILTER_KEYS,
     defaults: LIST_DEFAULTS,
@@ -112,7 +113,6 @@ export default function Leads() {
   const [selected, setSelected] = useState(new Set());
   const [bulkConsultant, setBulkConsultant] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(false);
   const [dragOverStage, setDragOverStage] = useState("");
   const [fuModal, setFuModal] = useState(null); // { lead, forcedStatus }
   const [convertModal, setConvertModal] = useState(null);
@@ -243,18 +243,6 @@ export default function Leads() {
     });
     return map;
   }, [leads]);
-
-  const analysisStats = useMemo(() => {
-    const total = leads.length;
-    if (!total) return null;
-    const converted = byStage.converted.length;
-    const rate = ((converted / total) * 100).toFixed(1);
-    const bySource = leads.reduce((acc, l) => {
-      acc[l.source || "unknown"] = (acc[l.source || "unknown"] || 0) + 1;
-      return acc;
-    }, {});
-    return { total, converted, rate, bySource };
-  }, [leads, byStage]);
 
   const filterFields = useMemo(() => [
     {
@@ -464,7 +452,11 @@ export default function Leads() {
                 <List className="w-4 h-4 relative z-10" />
               </button>
             </div>
-            <CrmButton variant="outline" size="sm" onClick={() => setShowAnalysis((s) => !s)} className={cn(showAnalysis && "bg-navy text-white hover:bg-navy/90 hover:text-white")}>
+            <CrmButton
+              variant="outline"
+              size="sm"
+              onClick={() => nav({ pathname: "/leads/analysis", search: searchParams.toString() })}
+            >
               <BarChart2 className="w-3.5 h-3.5" />
               Analysis
             </CrmButton>
@@ -515,45 +507,6 @@ export default function Leads() {
             />
           )}
         </div>
-
-        <AnimatePresence>
-          {showAnalysis && analysisStats && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden mb-4"
-            >
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-surface-card border border-border rounded-xl p-4">
-                  <div className="text-[10px] uppercase font-mono tracking-wider text-ink-muted mb-1">Total Loaded Leads</div>
-                  <div className="text-2xl font-semibold text-ink">{analysisStats.total}</div>
-                </div>
-                <div className="bg-surface-card border border-border rounded-xl p-4">
-                  <div className="text-[10px] uppercase font-mono tracking-wider text-ink-muted mb-1">Converted Leads</div>
-                  <div className="text-2xl font-semibold text-teal">{analysisStats.converted}</div>
-                </div>
-                <div className="bg-surface-card border border-border rounded-xl p-4">
-                  <div className="text-[10px] uppercase font-mono tracking-wider text-ink-muted mb-1">Conversion Rate</div>
-                  <div className="text-2xl font-semibold text-ink">{analysisStats.rate}%</div>
-                </div>
-                <div className="bg-surface-card border border-border rounded-xl p-4 overflow-hidden">
-                  <div className="text-[10px] uppercase font-mono tracking-wider text-ink-muted mb-1">Top Sources</div>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(analysisStats.bySource)
-                      .sort((a, b) => b[1] - a[1])
-                      .slice(0, 3)
-                      .map(([src, count]) => (
-                        <span key={src} className="text-xs bg-surface-muted px-2 py-0.5 rounded capitalize">
-                          {src}: <span className="font-semibold">{count}</span>
-                        </span>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {viewMode === "list" ? (

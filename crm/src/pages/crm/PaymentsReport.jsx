@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmStatCard, CrmTableCard, CrmCardHeader } from "@/components/ui/crm-card";
 import { FilterPanel } from "@/components/ui/filter-panel";
+import { TeamScopeBanner } from "@/components/crm/TeamScopeBanner";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { Segmented } from "@/components/ui/segmented";
 import { BreakdownRow } from "@/components/ui/meter-bar";
@@ -42,6 +43,7 @@ export default function PaymentsReport() {
   const [meta, setMeta] = useState({ total: 0 });
   const [summary, setSummary] = useState(null);
   const [receivables, setReceivables] = useState(null);
+  const [reportScope, setReportScope] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
@@ -65,6 +67,7 @@ export default function PaymentsReport() {
         setMeta(m);
         setSummary(sumRes.data);
         setReceivables(recvRes.data);
+        if (sumRes.data?.meta?.scope) setReportScope(sumRes.data.meta.scope);
       })
       .catch(() => toast.error("Failed to load payments report"))
       .finally(() => setLoading(false));
@@ -190,6 +193,8 @@ export default function PaymentsReport() {
           </>
         }
       />
+
+      <TeamScopeBanner scope={reportScope} entity="payments" testId="payments-scope" />
 
       <div
         className="rounded-md border border-navy/15 bg-navy/[0.03] px-3 py-2 text-xs text-ink-muted"

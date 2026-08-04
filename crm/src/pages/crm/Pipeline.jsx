@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
-import { Segmented } from "@/components/ui/segmented";
+import { PipelineQuickFilters } from "@/components/crm/pipeline/PipelineQuickFilters";
 import { MeterBar } from "@/components/ui/meter-bar";
 import { useListQueryState, unwrapListResponse } from "@/hooks/useListQueryState";
 import { RefreshCw, LayoutGrid, List, AlertTriangle } from "lucide-react";
@@ -374,7 +374,7 @@ export default function Pipeline() {
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-65px)] p-4 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-56px)] p-3 lg:p-4 overflow-hidden">
       <PageHeader
         label="Cases"
         title="Active pipeline"
@@ -412,36 +412,33 @@ export default function Pipeline() {
         }
       />
 
-      <div className="flex items-start gap-4 mb-3">
-        <div className="flex-1">
-          <FilterPanel
-            fields={filterFields}
-            values={list.filters}
-            q={list.q}
-            activeCount={list.activeFilterCount}
-            onQChange={list.setQ}
-            onApply={list.setFilters}
-            onClear={list.clearFilters}
-            searchPlaceholder="Search case #, customer, country…"
-            testId="pipeline-filters"
-            className="mb-0" // Remove bottom margin when inline
-          />
-        </div>
-        <div className="flex-shrink-0 pt-0.5 space-y-2">
-          <Segmented
-            value={list.filters.case_type || "visa"}
-            onChange={(v) => list.setFilters({ case_type: v || "visa" })}
-            segments={[
-              { value: "visa", label: "Visa" },
-              { value: "passport", label: "Passport" },
-            ]}
-            testId="pipeline-case-type"
+      <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-3">
+        <FilterPanel
+          fields={filterFields}
+          values={list.filters}
+          q={list.q}
+          activeCount={list.activeFilterCount}
+          onQChange={list.setQ}
+          onApply={list.setFilters}
+          onClear={list.clearFilters}
+          searchPlaceholder="Search case #, customer, country…"
+          testId="pipeline-filters"
+          className="mb-0 flex-1 max-w-full xl:max-w-xs shrink-0"
+        />
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          <PipelineQuickFilters
+            filters={list.filters}
+            setFilters={list.setFilters}
+            summary={summary}
+            activeStages={ACTIVE_STAGES}
+            stageLabels={STAGE_LABELS}
+            stageTotal={stageTotal}
           />
           <Segmented
             value={list.filters.stage || ""}
             onChange={(v) => list.setFilters({ stage: v === list.filters.stage ? "" : v })}
             segments={[
-              { value: "", label: "All", count: stageTotal || meta.total || 0 },
+              { value: "", label: "All stages", count: stageTotal || meta.total || 0 },
               ...ACTIVE_STAGES.map((s) => ({
                 value: s,
                 label: STAGE_LABELS[s],
@@ -452,28 +449,6 @@ export default function Pipeline() {
           />
         </div>
       </div>
-
-      {viewMode === "list" && stageTotal > 0 && (
-        <div className="mb-3 grid grid-cols-2 md:grid-cols-5 gap-2">
-          {ACTIVE_STAGES.map((s) => {
-            const count = stageCounts[s] || 0;
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => list.setFilters({ stage: list.filters.stage === s ? "" : s })}
-                className="text-left bg-surface-card border border-border rounded-lg px-2.5 py-2 hover:border-navy/30"
-              >
-                <div className="flex items-center justify-between text-[10px] mb-1">
-                  <span className="uppercase font-mono tracking-wider text-ink-muted">{STAGE_LABELS[s]}</span>
-                  <span className="font-mono text-ink">{count}</span>
-                </div>
-                <MeterBar value={count} max={stageTotal || 1} height="h-1" tone="navy" />
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {boardTruncated && viewMode === "board" && (
         <div className="mb-3 flex items-center gap-2 rounded-[10px] border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-ink" data-testid="pipeline-board-cap">
@@ -528,14 +503,14 @@ export default function Pipeline() {
           ))}
         </div>
       ) : (
-        <div className="flex gap-4 min-w-max flex-1 overflow-x-auto overflow-y-hidden pb-4 pt-1 px-1" data-testid="pipeline-board">
+        <div className="flex gap-3 xl:gap-4 min-w-max flex-1 overflow-x-auto overflow-y-hidden pb-4 pt-1 px-1 custom-scrollbar" data-testid="pipeline-board">
           {ACTIVE_STAGES.map((s) => (
             <div
               key={s}
               className={cn(
-                "kanban-col w-[320px] h-full rounded-2xl flex flex-col shrink-0 transition-colors duration-200",
-                "bg-gradient-to-b from-surface-warm/40 to-surface-card/20 backdrop-blur-md border border-border/60 shadow-sm",
-                dragOverStage === s && "border-navy/40 bg-navy/5 shadow-glow-navy"
+                "kanban-col w-[260px] 2xl:flex-1 2xl:min-w-[250px] 2xl:max-w-[320px] h-full rounded-2xl flex flex-col shrink-0 transition-colors duration-200",
+                "bg-gradient-to-b from-surface-card to-surface-warm border border-border shadow-[var(--shadow-card)]",
+                dragOverStage === s && "border-navy/40 bg-navy/5 shadow-[var(--shadow-premium)]"
               )}
               data-testid={`pipeline-col-${s}`}
               onDragOver={(e) => onDragOverCol(e, s)}
@@ -682,10 +657,10 @@ function PipelineCard({ c, onDragStart, selected, onToggleSelect, showSelect }) 
         to={`/cases/${c.id}`}
         data-testid={`pipeline-card-${c.id.slice(0, 8)}`}
         className={cn(
-          "block bg-surface border border-border/80 rounded-xl p-3.5",
-          "relative overflow-hidden",
-          selected ? "ring-2 ring-navy/50 border-navy/50 bg-navy/5 shadow-glow-navy" : "hover:border-navy/30 hover:shadow-glow-navy",
-          "transition-all duration-200"
+          "block bg-surface border border-border rounded-[12px] p-3",
+          "relative overflow-hidden shadow-[var(--shadow-xs)]",
+          selected ? "ring-2 ring-navy/50 border-navy/50 bg-navy/5 shadow-[var(--shadow-premium)]" : "hover:border-navy/30 hover:shadow-[var(--shadow-premium)] hover:-translate-y-px",
+          "transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)]"
         )}
       >
         <div className={cn("absolute top-0 left-0 bottom-0 w-1 opacity-80", "bg-gradient-to-b from-transparent to-transparent", sla === "muted" ? "" : `via-${slaBorder.split('-')[1]}`)} />

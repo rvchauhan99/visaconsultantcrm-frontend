@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmInput, CrmSelect } from "@/components/ui/crm-field";
 import { DatePicker } from "@/components/ui/date-picker";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 /**
  * Declarative collapsible filter panel.
@@ -108,15 +109,15 @@ export function FilterPanel({
   };
 
   return (
-    <div className={cn("bg-surface-card border border-border rounded-[10px] shadow-[var(--shadow-card)] mb-3", className)} data-testid={testId}>
-      <div className="flex flex-wrap items-center gap-2 p-2">
-        <div className="relative flex-1 min-w-[180px] max-w-[280px]">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-muted" />
+    <div className={cn("bg-gradient-to-br from-surface-card to-surface-warm border border-border rounded-[14px] shadow-[var(--shadow-card)] mb-2.5", className)} data-testid={testId}>
+      <div className="flex flex-wrap items-center gap-2 p-2.5">
+        <div className="relative flex-1 min-w-[180px] max-w-[300px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-muted" />
           <CrmInput
             value={draftQ}
             onChange={(e) => setDraftQ(e.target.value)}
             placeholder={searchPlaceholder}
-            className="pl-7 h-8 text-xs"
+            className="pl-8 h-9 text-xs"
             data-testid={`${testId}-q`}
           />
         </div>
@@ -126,16 +127,16 @@ export function FilterPanel({
           size="sm"
           onClick={() => setOpen((o) => !o)}
           data-testid={`${testId}-toggle`}
-          className="h-8"
+          className="h-9"
         >
           <Filter className="w-3.5 h-3.5" />
           Filters
           {activeCount > 0 && (
-            <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.1rem] h-4 px-1 rounded-full bg-navy text-white text-[10px] font-mono">
+            <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.2rem] h-[1.1rem] px-1 rounded-full bg-gradient-to-r from-navy to-teal text-white text-[10px] font-mono">
               {activeCount}
             </span>
           )}
-          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", open && "rotate-180")} />
+          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", open && "rotate-180")} />
         </CrmButton>
 
         {chips.length > 0 && (
@@ -145,18 +146,18 @@ export function FilterPanel({
                 key={chip.key}
                 type="button"
                 onClick={() => removeChip(chip)}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-muted border border-border/50 text-[10px] text-ink hover:border-navy/40 transition-colors group"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-muted border border-border/50 text-[10px] text-ink hover:border-navy/30 transition-all duration-200 group"
                 data-testid={`${testId}-chip-${chip.key}`}
               >
                 <span className="text-ink-muted">{chip.label}:</span>
-                <span className="font-medium max-w-[140px] truncate">{chip.value}</span>
+                <span className="font-semibold max-w-[140px] truncate">{chip.value}</span>
                 <X className="w-3 h-3 text-ink-muted group-hover:text-ink transition-colors" />
               </button>
             ))}
             <button
               type="button"
               onClick={clear}
-              className="text-[11px] font-medium text-ink-muted hover:text-ink px-2 py-1 rounded hover:bg-surface-muted transition-colors ml-1"
+              className="text-[11px] font-semibold text-ink-muted hover:text-ink px-2 py-1 rounded-lg hover:bg-surface-muted transition-all duration-200 ml-1"
               data-testid={`${testId}-clear`}
             >
               Clear all
@@ -166,19 +167,19 @@ export function FilterPanel({
       </div>
 
       {open && (
-        <div className="border-t border-border p-2.5">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+        <div className="border-t border-border p-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2.5">
             {fields.map((f) => (
               <div key={f.key} className={cn(
                 (f.type === "daterange" || f.type === "numrange") && "col-span-2",
                 f.type === "async" && "col-span-1",
               )}>
-                <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-1">{f.label}</div>
+                <div className="text-[10px] uppercase font-mono tracking-[0.14em] text-ink-muted mb-1.5">{f.label}</div>
                 <FilterField field={f} draft={draft} setField={setField} />
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-end gap-2 mt-2.5 pt-2 border-t border-border">
+          <div className="flex items-center justify-end gap-2.5 mt-3 pt-3 border-t border-border">
             <CrmButton type="button" variant="ghost" size="sm" onClick={clear}>Clear all</CrmButton>
             <CrmButton type="button" variant="solid" size="sm" onClick={apply} data-testid={`${testId}-apply`}>
               Apply filters
@@ -210,21 +211,14 @@ function FilterField({ field, draft, setField }) {
   }
 
   if (field.type === "multiselect") {
-    const selected = new Set(String(draft[field.key] || "").split(",").filter(Boolean));
     return (
-      <CrmSelect
-        multiple
-        value={Array.from(selected)}
-        onChange={(e) => {
-          const opts = Array.from(e.target.selectedOptions).map((o) => o.value);
-          setField(field.key, opts.join(","));
-        }}
-        className="h-auto min-h-8 py-1"
-      >
-        {(field.options || []).map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </CrmSelect>
+      <MultiSelect
+        value={draft[field.key] || ""}
+        onChange={(v) => setField(field.key, v)}
+        options={field.options || []}
+        placeholder={field.placeholder || "Any"}
+        testId={`filter-${field.key}`}
+      />
     );
   }
 
@@ -241,7 +235,7 @@ function FilterField({ field, draft, setField }) {
     const fromKey = field.fromKey || `${field.key}_from`;
     const toKey = field.toKey || `${field.key}_to`;
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <DatePicker
           value={draft[fromKey] || null}
           onChange={(v) => setField(fromKey, v || "")}
@@ -261,7 +255,7 @@ function FilterField({ field, draft, setField }) {
     const minKey = field.minKey || `${field.key}_min`;
     const maxKey = field.maxKey || `${field.key}_max`;
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <CrmInput type="number" placeholder="Min" value={draft[minKey] || ""} onChange={(e) => setField(minKey, e.target.value)} />
         <span className="text-[10px] text-ink-muted">–</span>
         <CrmInput type="number" placeholder="Max" value={draft[maxKey] || ""} onChange={(e) => setField(maxKey, e.target.value)} />
@@ -271,7 +265,7 @@ function FilterField({ field, draft, setField }) {
 
   if (field.type === "checkbox") {
     return (
-      <label className="inline-flex items-center gap-2 h-8 px-2 rounded-md border border-border bg-surface text-xs text-ink cursor-pointer">
+      <label className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-surface-card text-xs text-ink cursor-pointer hover:border-border-strong transition-colors">
         <input
           type="checkbox"
           checked={draft[field.key] === true || draft[field.key] === "true" || draft[field.key] === "1"}

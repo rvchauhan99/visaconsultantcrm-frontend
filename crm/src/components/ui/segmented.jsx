@@ -53,7 +53,9 @@ export function Segmented({
             {seg.count != null && (
               <span className={cn(
                 "relative z-10 font-mono text-[10px] px-1.5 py-0.5 leading-none rounded-full min-w-[1.25rem] text-center transition-colors",
-                active ? "bg-white/20 text-white" : "bg-surface-card text-ink-muted border border-border/50",
+                active ? "bg-white/20 text-white" : seg.countDanger && seg.count > 0
+                  ? "bg-danger/10 text-danger border border-danger/30"
+                  : "bg-surface-card text-ink-muted border border-border/50",
               )}>
                 {seg.count}
               </span>
