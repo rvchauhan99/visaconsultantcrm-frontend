@@ -130,11 +130,6 @@ function VisaCard({ product, index }) {
           />
           <div className="atlys-destination-overlay" />
 
-          {/* Hover tooltip — Apply for {Country} Visa */}
-          <div className="atlys-destination-tip" aria-hidden="true">
-            Apply for {product.country_name} Visa
-          </div>
-
           <div className="atlys-destination-content">
             <span className="text-2xl md:text-3xl leading-none drop-shadow-sm">{product.country_flag}</span>
             <h3 className="font-display text-sm sm:text-lg md:text-xl tracking-[0.08em] sm:tracking-[0.12em] text-white uppercase text-center leading-tight px-1">

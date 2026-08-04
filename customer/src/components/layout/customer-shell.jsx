@@ -132,27 +132,12 @@ export default function CustomerShell({ children }) {
         Skip to content
       </a>
 
-      <motion.header
+      <header
         className={cn(
           "catalog-sticky-header sticky top-0 z-50",
-          compact
-            ? "is-compact border-b border-white/50"
-            : "border-b border-transparent",
+          compact ? "is-compact" : "",
         )}
         data-compact={compact ? "true" : "false"}
-        initial={false}
-        animate={
-          compact
-            ? {
-                backgroundColor: "rgba(255,255,255,0.62)",
-                boxShadow: "0 8px 32px rgba(28,20,16,0.09), inset 0 1px 0 rgba(255,255,255,0.75)",
-              }
-            : {
-                backgroundColor: "rgba(255,255,255,0.48)",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
-              }
-        }
-        transition={motionTx}
       >
         <div
           className={cn(
@@ -478,7 +463,7 @@ export default function CustomerShell({ children }) {
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.header>
+      </header>
 
       <main id="main" className="pb-mobile-nav md:pb-0">
         {children}

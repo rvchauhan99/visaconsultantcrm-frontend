@@ -10,7 +10,7 @@ export default function SupportCard({ source = "generic", caseId, caseNumber, co
   const click = (channel) => track("support_click", { channel, source, case_id: caseId });
 
   return (
-    <Card className={compact ? "p-4" : "p-5 md:p-6"} data-testid="support-card">
+    <Card variant="glass" className={compact ? "p-4" : "p-5 md:p-6"} data-testid="support-card">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center shrink-0">
           <Headphones className="w-4 h-4 text-navy" />

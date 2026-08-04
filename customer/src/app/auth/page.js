@@ -79,7 +79,7 @@ export default function AuthPage() {
   const googleEnabled = isFirebaseAuthConfigured();
 
   useEffect(() => {
-    if (isCustomer()) router.replace("/account");
+    if (isCustomer()) router.replace("/");
   }, [router]);
 
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function AuthPage() {
   const finishAuth = (token, user, successMessage) => {
     saveSession(token, user);
     toast.success(successMessage);
-    router.replace(consumeNextPath("/account"));
+    router.replace(consumeNextPath("/"));
   };
 
   const submitGoogle = async () => {
