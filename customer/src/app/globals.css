@@ -490,9 +490,59 @@
     }
   }
 
+  /* Account hub — light glass layout */
+  .account-glass-page {
+    position: relative;
+    isolation: isolate;
+    min-height: calc(100dvh - 5rem);
+    background:
+      radial-gradient(ellipse 80% 50% at 10% -10%, rgba(31, 74, 58, 0.06), transparent 55%),
+      radial-gradient(ellipse 60% 40% at 95% 20%, rgba(176, 141, 87, 0.07), transparent 50%),
+      linear-gradient(180deg, #f7f8f7 0%, #ffffff 45%, #fafafa 100%);
+  }
+
+  .account-glass-page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+    background-image: radial-gradient(rgba(0, 0, 0, 0.045) 0.6px, transparent 0.6px);
+    background-size: 18px 18px;
+  }
+
+  .account-glass-page > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .account-glass-panel {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(18px) saturate(1.35);
+    -webkit-backdrop-filter: blur(18px) saturate(1.35);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 8px 28px rgba(28, 20, 16, 0.05);
+    border-radius: 24px;
+  }
+
+  .account-glass-panel--soft {
+    background: rgba(255, 255, 255, 0.55);
+    border-color: rgba(255, 255, 255, 0.65);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .account-glass-panel,
+    .account-glass-panel--soft {
+      background: rgba(255, 255, 255, 0.96);
+    }
+  }
+
   .atlys-filter-section {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.625rem;
     flex: 0 0 auto;
     min-width: 7.25rem;
@@ -503,7 +553,12 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    margin-top: 0.125rem;
+    margin-top: 0;
+  }
+
+  .atlys-filter-bar--compact .atlys-filter-icon {
+    height: 2rem;
+    width: 2rem;
   }
 
   .atlys-filter-fields {

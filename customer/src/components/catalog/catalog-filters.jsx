@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Plane, Umbrella, Zap } from "lucide-react";
+import { CalendarHeart, Files, PlaneTakeoff, Rocket } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useCatalogSearch } from "@/context/catalog-search";
@@ -57,7 +57,11 @@ export default function CatalogFilters({ compact = false, className }) {
       data-testid="filter-bar"
       data-compact={compact ? "true" : "false"}
     >
-      <FilterSection icon={<Zap className="w-4 h-4 text-emerald-500" />} label="Visa delivery">
+      <FilterSection
+        icon={<Rocket className="w-4 h-4" strokeWidth={2.25} />}
+        iconTone="emerald"
+        label="Visa delivery"
+      >
         <SearchableSelect
           data-testid="filter-delivery"
           searchable={false}
@@ -73,7 +77,11 @@ export default function CatalogFilters({ compact = false, className }) {
 
       <FilterDivider />
 
-      <FilterSection icon={<Plane className="w-4 h-4 text-sky-500" />} label="Type">
+      <FilterSection
+        icon={<PlaneTakeoff className="w-4 h-4" strokeWidth={2.25} />}
+        iconTone="sky"
+        label="Type"
+      >
         <SearchableSelect
           data-testid="filter-type"
           searchable={false}
@@ -89,7 +97,11 @@ export default function CatalogFilters({ compact = false, className }) {
 
       <FilterDivider />
 
-      <FilterSection icon={<FileText className="w-4 h-4 text-orange-500" />} label="Documents">
+      <FilterSection
+        icon={<Files className="w-4 h-4" strokeWidth={2.25} />}
+        iconTone="amber"
+        label="Documents"
+      >
         <SearchableSelect
           data-testid="filter-complexity"
           searchable={false}
@@ -105,7 +117,11 @@ export default function CatalogFilters({ compact = false, className }) {
 
       <FilterDivider />
 
-      <FilterSection icon={<Umbrella className="w-4 h-4 text-pink-500" />} label="Holidays">
+      <FilterSection
+        icon={<CalendarHeart className="w-4 h-4" strokeWidth={2.25} />}
+        iconTone="rose"
+        label="Holidays"
+      >
         <DatePicker
           data-testid="filter-travel-date"
           value={travelDate || null}
@@ -132,10 +148,24 @@ export default function CatalogFilters({ compact = false, className }) {
   );
 }
 
-function FilterSection({ icon, label, children, testid }) {
+const ICON_TONES = {
+  emerald: "bg-emerald-500/12 text-emerald-600 ring-emerald-500/15",
+  sky: "bg-sky-500/12 text-sky-600 ring-sky-500/15",
+  amber: "bg-amber-500/12 text-amber-600 ring-amber-500/15",
+  rose: "bg-rose-500/12 text-rose-500 ring-rose-500/15",
+};
+
+function FilterSection({ icon, iconTone = "emerald", label, children, testid }) {
   return (
     <div className="atlys-filter-section" data-testid={testid}>
-      <div className="atlys-filter-icon">{icon}</div>
+      <div
+        className={cn(
+          "atlys-filter-icon flex h-9 w-9 items-center justify-center rounded-full ring-1 shrink-0",
+          ICON_TONES[iconTone],
+        )}
+      >
+        {icon}
+      </div>
       <div className="atlys-filter-fields">
         <span className="atlys-filter-label">{label}</span>
         {children}

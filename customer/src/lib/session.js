@@ -35,7 +35,7 @@ export function setNextPath(path) {
   sessionStorage.setItem(NEXT_KEY, path);
 }
 
-export function consumeNextPath(fallback = "/account") {
+export function consumeNextPath(fallback = "/") {
   if (typeof window === "undefined") return fallback;
   const next = sessionStorage.getItem(NEXT_KEY);
   sessionStorage.removeItem(NEXT_KEY);

@@ -48,7 +48,7 @@ export default function CustomerProfile() {
   const nice = (v) => (v ? formatInDate(v, { day: "numeric", month: "long" }) : "—");
 
   return (
-    <Card className="p-5 md:p-6" data-testid="customer-profile">
+    <Card variant="glass" className="p-5 md:p-6" data-testid="customer-profile">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-display text-lg text-navy">Your profile</h2>
         {!editing && (

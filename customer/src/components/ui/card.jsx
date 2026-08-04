@@ -14,9 +14,9 @@ const cardVariants = {
     "hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]",
   ].join(" "),
   glass: [
-    "bg-[var(--glass)] backdrop-blur-xl",
-    "border border-[var(--border-glass)] rounded-[20px]",
-    "shadow-[var(--shadow-card)]",
+    "bg-white/70 backdrop-blur-xl",
+    "border border-white/80 rounded-[20px]",
+    "shadow-[0_8px_28px_rgba(28,20,16,0.05)]",
   ].join(" "),
   elevated: [
     "bg-surface-elevated border border-border rounded-[20px]",
