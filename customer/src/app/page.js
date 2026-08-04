@@ -3,7 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import { FileText, Umbrella, Zap, Plane } from "lucide-react";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,15 +12,12 @@ import { useVisaProducts } from "@/hooks/customer-api";
 import { useCatalogSearch } from "@/context/catalog-search";
 import {
   INR,
-  cn,
   countryCoverUrl,
   formatVisaTypeShort,
   formatValidityShort,
   guaranteedByDateTime,
 } from "@/lib/utils";
 import { track } from "@/lib/telemetry";
-
-const ease = [0.16, 1, 0.3, 1];
 
 const FILTER_TRIGGER =
   "border-0 bg-transparent shadow-none px-0 py-0 rounded-none font-semibold text-sm hover:border-0 focus:border-transparent focus:shadow-none min-w-0 w-full justify-between";
@@ -49,7 +45,6 @@ const COMPLEXITY_OPTIONS = [
 ];
 
 export default function LandingPage() {
-  const reduce = useReducedMotion();
   const { q, setQ } = useCatalogSearch();
   const [visaType, setVisaType] = useState("");
   const [delivery, setDelivery] = useState("any");
@@ -63,7 +58,11 @@ export default function LandingPage() {
     return p;
   }, [complexity, travelDate]);
 
-  const { data: products = [], isLoading, isError, refetch } = useVisaProducts(params);
+  const { data: rawProducts, isLoading, isError, refetch } = useVisaProducts(params);
+  const products = useMemo(
+    () => (Array.isArray(rawProducts) ? rawProducts : []),
+    [rawProducts],
+  );
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -101,7 +100,7 @@ export default function LandingPage() {
                 searchable={false}
                 clearable={false}
                 value={delivery}
-                onChange={(v) => setDelivery(v ?? "any")}
+                onChange={(v) => setDelivery(typeof v === "string" ? v : "any")}
                 options={DELIVERY_OPTIONS}
                 className="w-full min-w-0"
                 triggerClassName={FILTER_TRIGGER}
@@ -120,7 +119,7 @@ export default function LandingPage() {
                 searchable={false}
                 clearable={false}
                 value={visaType}
-                onChange={(v) => setVisaType(v ?? "")}
+                onChange={(v) => setVisaType(typeof v === "string" ? v : "")}
                 options={VISA_TYPE_OPTIONS}
                 className="w-full min-w-0"
                 triggerClassName={FILTER_TRIGGER}
@@ -139,7 +138,7 @@ export default function LandingPage() {
                 searchable={false}
                 clearable={false}
                 value={complexity}
-                onChange={(v) => setComplexity(v ?? "")}
+                onChange={(v) => setComplexity(typeof v === "string" ? v : "")}
                 options={COMPLEXITY_OPTIONS}
                 className="w-full min-w-0"
                 triggerClassName={FILTER_TRIGGER}
@@ -156,7 +155,7 @@ export default function LandingPage() {
               <DatePicker
                 data-testid="filter-travel-date"
                 value={travelDate || null}
-                onChange={(v) => setTravelDate(v || "")}
+                onChange={(v) => setTravelDate(typeof v === "string" ? v : "")}
                 placeholder="Select Dates"
                 clearable
                 className="w-full min-w-0"
@@ -197,7 +196,7 @@ export default function LandingPage() {
             data-testid="catalog-grid"
           >
             {filtered.map((p, i) => (
-              <VisaCard key={p.id} product={p} index={i} reduce={reduce} />
+              <VisaCard key={p.id} product={p} index={i} />
             ))}
           </div>
         )}
@@ -222,16 +221,17 @@ function FilterDivider() {
   return <div className="hidden md:block w-px self-stretch min-h-[2.5rem] bg-border/70 shrink-0" />;
 }
 
-function VisaCard({ product, index, reduce }) {
+const COVER_FALLBACK =
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?crop=entropy&cs=srgb&fm=jpg&q=80&w=900";
+
+function VisaCard({ product, index }) {
   const totalFee = (product.fees?.govt_fee || 0) + (product.fees?.service_fee || 0);
-  const cover = countryCoverUrl(product);
+  const [cover, setCover] = useState(() => countryCoverUrl(product));
 
   return (
-    <motion.div
-      initial={reduce ? false : { opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-20px" }}
-      transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.25), ease }}
+    <div
+      className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
+      style={{ animationDelay: `${Math.min(index * 50, 250)}ms`, animationDuration: "400ms" }}
     >
       <Link
         href={`/visa/${product.id}`}
@@ -246,6 +246,9 @@ function VisaCard({ product, index, reduce }) {
             fill
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 20vw"
             className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
+            onError={() => {
+              if (cover !== COVER_FALLBACK) setCover(COVER_FALLBACK);
+            }}
           />
           <div className="atlys-destination-overlay" />
           <div className="atlys-destination-cta" aria-hidden="true">
@@ -270,7 +273,7 @@ function VisaCard({ product, index, reduce }) {
           </span>
         </p>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 

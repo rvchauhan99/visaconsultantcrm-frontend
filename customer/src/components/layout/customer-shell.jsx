@@ -231,16 +231,9 @@ export default function CustomerShell({ children }) {
         </AnimatePresence>
       </header>
 
-      <motion.main
-        id="main"
-        className="pb-mobile-nav md:pb-0"
-        key={pathname}
-        initial={reduce ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.25 }}
-      >
+      <main id="main" className="pb-mobile-nav md:pb-0">
         {children}
-      </motion.main>
+      </main>
 
       <footer className="mt-16 border-t border-border/60 bg-navy-deep">
         <FooterContent />
