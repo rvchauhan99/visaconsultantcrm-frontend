@@ -20,6 +20,7 @@ import api from "@/lib/api";
 import DocumentActions from "@/components/ui/document-actions";
 import { draftKey, getUser } from "@/lib/session";
 import { INR, humanizeKey, cn } from "@/lib/utils";
+import { computeFeeBreakdown } from "@/lib/productPricing";
 import { track } from "@/lib/telemetry";
 import { useTravelerProfiles, useVaultByKey, useVisaProduct } from "@/hooks/customer-api";
 import Stamp from "@/components/ui/stamp";
@@ -265,7 +266,10 @@ export default function ApplyPageInner() {
     );
   }
 
-  const total = (schema.fees?.govt_fee || 0) + (schema.fees?.service_fee || 0);
+  const feeBreakdown = computeFeeBreakdown({
+    govtFee: schema.fees?.govt_fee,
+    serviceFee: schema.fees?.service_fee,
+  });
   const requiredDocs = (schema.documents || []).filter((d) => d.required);
   const allRequiredUploaded = requiredDocs.every((d) => uploads[d.doc_key]);
   const requiredFields = (schema.fields || []).filter((f) => f.required);
@@ -354,7 +358,7 @@ export default function ApplyPageInner() {
           <div className="min-w-0">
             <h1 className="font-display text-3xl md:text-4xl text-navy leading-tight truncate">{schema.title}</h1>
             <div className="text-xs font-mono uppercase tracking-widest text-ink-muted mt-1.5 hidden md:block">
-              Processing {schema.processing_time_days} days · {INR.format(total)}
+              Processing {schema.processing_time_days} days · {INR.format(feeBreakdown.total)}
             </div>
           </div>
         </div>
@@ -435,7 +439,7 @@ export default function ApplyPageInner() {
                 {step === 1 && <FieldsStep schema={schema} fields={fields} setFields={setFields} />}
                 {step === 2 && <DocsStep schema={schema} uploads={uploads} setUploads={setUploads} />}
                 {step === 3 && <ReviewStep schema={schema} traveler={traveler} fields={fields} uploads={uploads} />}
-                {step === 4 && <PaymentStep schema={schema} total={total} submit={submit} submitting={submitting} />}
+                {step === 4 && <PaymentStep breakdown={feeBreakdown} submit={submit} submitting={submitting} />}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -469,12 +473,12 @@ export default function ApplyPageInner() {
         </div>
       </div>
 
-      <ApplyFeeSheet schema={schema} total={total} processingDays={schema.processing_time_days} />
+      <ApplyFeeSheet breakdown={feeBreakdown} processingDays={schema.processing_time_days} />
     </div>
   );
 }
 
-function ApplyFeeSheet({ schema, total, processingDays }) {
+function ApplyFeeSheet({ breakdown, processingDays }) {
   return (
     <div
       className="md:hidden fixed bottom-16 inset-x-0 z-40 border-t border-border bg-white/95 backdrop-blur safe-area-pb"
@@ -485,7 +489,7 @@ function ApplyFeeSheet({ schema, total, processingDays }) {
           <button type="button" className="w-full flex items-center justify-between px-5 py-3 text-left">
             <div>
               <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Fee summary</div>
-              <div className="font-display text-lg text-navy">{INR.format(total)}</div>
+              <div className="font-display text-lg text-navy">{INR.format(breakdown.total)}</div>
             </div>
             <span className="inline-flex items-center gap-1 text-xs text-teal">
               Details <ChevronUp className="w-4 h-4" />
@@ -499,15 +503,19 @@ function ApplyFeeSheet({ schema, total, processingDays }) {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-ink-muted">Government fee (incl. GST)</span>
-              <span className="font-mono">{INR.format(schema.fees?.govt_fee || 0)}</span>
+              <span className="font-mono">{INR.format(breakdown.govtFee)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-ink-muted">Service fee (excl. GST)</span>
-              <span className="font-mono">{INR.format(schema.fees?.service_fee || 0)}</span>
+              <span className="font-mono">{INR.format(breakdown.serviceFee)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-muted">GST on service ({breakdown.gstPercent}%)</span>
+              <span className="font-mono">{INR.format(breakdown.serviceGst)}</span>
             </div>
             <div className="flex justify-between pt-2 border-t border-border font-medium">
               <span>Total</span>
-              <span className="font-display text-xl text-navy">{INR.format(total)}</span>
+              <span className="font-display text-xl text-navy">{INR.format(breakdown.total)}</span>
             </div>
             <p className="text-xs text-ink-muted pt-2">Processing about {processingDays} days · no hidden charges</p>
           </div>
@@ -991,29 +999,33 @@ function ReviewRow({ label, value }) {
   );
 }
 
-function PaymentStep({ schema, total, submit, submitting }) {
+function PaymentStep({ breakdown, submit, submitting }) {
   return (
     <div>
       <h2 className="font-display text-xl text-navy mb-1">Payment</h2>
       <p className="text-sm text-ink-muted mb-4">Government fee includes GST; service fee excludes GST and is shown separately. No hidden charges.</p>
       <div className="bg-surface border border-border rounded-xl p-6 max-w-md mx-auto">
         <div className="flex justify-between text-sm mb-2">
-          <span className="text-ink-muted">Government fee</span>
-          <span className="font-mono">{INR.format(schema.fees?.govt_fee || 0)}</span>
+          <span className="text-ink-muted">Government fee (incl. GST)</span>
+          <span className="font-mono">{INR.format(breakdown.govtFee)}</span>
+        </div>
+        <div className="flex justify-between text-sm mb-2">
+          <span className="text-ink-muted">Service fee (excl. GST)</span>
+          <span className="font-mono">{INR.format(breakdown.serviceFee)}</span>
         </div>
         <div className="flex justify-between text-sm mb-4 pb-4 border-b border-border">
-          <span className="text-ink-muted">Service fee</span>
-          <span className="font-mono">{INR.format(schema.fees?.service_fee || 0)}</span>
+          <span className="text-ink-muted">GST on service ({breakdown.gstPercent}%)</span>
+          <span className="font-mono">{INR.format(breakdown.serviceGst)}</span>
         </div>
         <div className="flex justify-between items-baseline">
           <span className="font-medium">Total</span>
-          <span className="font-display text-3xl text-navy">{INR.format(total)}</span>
+          <span className="font-display text-3xl text-navy">{INR.format(breakdown.total)}</span>
         </div>
       </div>
       <div className="mt-6 max-w-md mx-auto space-y-3">
         <div className="text-center text-xs font-mono uppercase text-ink-muted">Mock payment · replace with real gateway later</div>
         <Button type="button" onClick={() => submit("success")} disabled={submitting} data-testid="pay-success" className="w-full" size="lg">
-          {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Pay {INR.format(total)}
+          {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Pay {INR.format(breakdown.total)}
         </Button>
         {ALLOW_MOCK_PAYMENT && (
           <button

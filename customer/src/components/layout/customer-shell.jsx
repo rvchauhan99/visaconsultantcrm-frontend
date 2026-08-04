@@ -18,17 +18,13 @@ import CatalogFilters from "@/components/catalog/catalog-filters";
 import { useCatalogSearch } from "@/context/catalog-search";
 import { track } from "@/lib/telemetry";
 
-const COMPACT_SCROLL_PX = 48;
+const COMPACT_ENTER_PX = 72;
+const COMPACT_EXIT_PX = 24;
 const HEADER_EASE = [0.16, 1, 0.3, 1];
 
 function readScrollY() {
   if (typeof window === "undefined") return 0;
-  return Math.max(
-    window.scrollY || 0,
-    window.pageYOffset || 0,
-    document.documentElement?.scrollTop || 0,
-    document.body?.scrollTop || 0,
-  );
+  return window.scrollY || 0;
 }
 
 export default function CustomerShell({ children }) {
@@ -38,6 +34,7 @@ export default function CustomerShell({ children }) {
   const reduce = useReducedMotion();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchInputRef = useRef(null);
+  const compactRef = useRef(false);
   const isHome = pathname === "/";
   const catalog = useCatalogSearch();
   // Local compact state — more reliable than reading only from context during scroll
@@ -48,9 +45,6 @@ export default function CustomerShell({ children }) {
   const motionTx = reduce
     ? { duration: 0 }
     : { duration: 0.4, ease: HEADER_EASE };
-  const springTx = reduce
-    ? { duration: 0 }
-    : { type: "spring", stiffness: 380, damping: 32, mass: 0.85 };
 
   useEffect(() => {
     setUser(getUser());
@@ -58,6 +52,7 @@ export default function CustomerShell({ children }) {
 
   useEffect(() => {
     if (!isHome) {
+      compactRef.current = false;
       setScrolledCompact(false);
       setHeaderCompact(false);
       setSearchExpanded(false);
@@ -66,8 +61,15 @@ export default function CustomerShell({ children }) {
 
     let frame = 0;
     const apply = () => {
-      const next = readScrollY() > COMPACT_SCROLL_PX;
-      setScrolledCompact((prev) => (prev === next ? prev : next));
+      const y = readScrollY();
+      const prev = compactRef.current;
+      let next = prev;
+      if (!prev && y > COMPACT_ENTER_PX) next = true;
+      else if (prev && y < COMPACT_EXIT_PX) next = false;
+      if (next === prev) return;
+
+      compactRef.current = next;
+      setScrolledCompact(next);
       setHeaderCompact(next);
       if (!next) setSearchExpanded(false);
     };
@@ -81,19 +83,12 @@ export default function CustomerShell({ children }) {
     };
 
     apply();
-    // capture:true — catch scroll on html/body when overflow-x creates a nested scrollport
-    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
-    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
-    document.documentElement.addEventListener("scroll", onScroll, { passive: true });
-    document.body.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
 
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", onScroll, { capture: true });
-      document.removeEventListener("scroll", onScroll, { capture: true });
-      document.documentElement.removeEventListener("scroll", onScroll);
-      document.body.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
   }, [isHome, setHeaderCompact, setSearchExpanded]);
@@ -175,15 +170,15 @@ export default function CustomerShell({ children }) {
 
           {/* Center: Explore fades out → filters float in */}
           <div className="catalog-header-center relative flex items-center justify-center min-w-0">
-            <AnimatePresence mode="popLayout" initial={false}>
-              {!compact && (
+            <AnimatePresence mode="wait" initial={false}>
+              {!compact ? (
                 <motion.div
                   key="explore-nav"
                   className="hidden md:flex items-center justify-center"
-                  initial={reduce ? false : { opacity: 0, y: 8, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={reduce ? undefined : { opacity: 0, y: -10, scale: 0.88 }}
-                  transition={motionTx}
+                  initial={reduce ? false : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduce ? undefined : { opacity: 0, y: -6 }}
+                  transition={{ ...motionTx, duration: reduce ? 0 : 0.22 }}
                 >
                   <Link
                     href="/"
@@ -214,22 +209,20 @@ export default function CustomerShell({ children }) {
                     )}
                   </Link>
                 </motion.div>
-              )}
-
-              {isHome && compact && (
+              ) : isHome ? (
                 <motion.div
                   key="inline-filters"
                   className="catalog-header-filters-inline hidden md:block w-full min-w-0"
-                  initial={reduce ? false : { opacity: 0, y: 18, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={reduce ? undefined : { opacity: 0, y: 12, scale: 0.97 }}
-                  transition={springTx}
+                  initial={reduce ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduce ? undefined : { opacity: 0, y: 6 }}
+                  transition={{ ...motionTx, duration: reduce ? 0 : 0.22 }}
                 >
                   <div className="amara-filter-scroll">
                     <CatalogFilters compact className="amara-filter-scroll-inner" />
                   </div>
                 </motion.div>
-              )}
+              ) : null}
             </AnimatePresence>
           </div>
 
@@ -237,20 +230,18 @@ export default function CustomerShell({ children }) {
           <div className="catalog-header-right flex items-center gap-1.5 sm:gap-2.5 justify-end min-w-0">
             {isHome && (
               <div className="relative flex items-center justify-end">
-                <AnimatePresence mode="popLayout" initial={false}>
+                <AnimatePresence mode="wait" initial={false}>
                   {!compact ? (
                     <motion.div
                       key="search-wide"
                       className="hidden sm:block w-[min(100%,16rem)] md:w-[min(100%,18rem)] lg:w-[20rem]"
-                      initial={reduce ? false : { opacity: 0, scaleX: 0.85, originX: 1 }}
-                      animate={{ opacity: 1, scaleX: 1 }}
-                      exit={reduce ? undefined : { opacity: 0, scaleX: 0.55, originX: 1 }}
-                      transition={motionTx}
+                      initial={reduce ? false : { opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={reduce ? undefined : { opacity: 0 }}
+                      transition={{ ...motionTx, duration: reduce ? 0 : 0.2 }}
                     >
                       <div className="atlys-search w-full">
-                        <motion.span layoutId={reduce ? undefined : "amara-search-icon"} className="inline-flex shrink-0">
-                          <Search className="w-4 h-4 text-ink-muted" aria-hidden />
-                        </motion.span>
+                        <Search className="w-4 h-4 text-ink-muted shrink-0" aria-hidden />
                         <input
                           type="search"
                           placeholder="Search Country"
@@ -266,10 +257,10 @@ export default function CustomerShell({ children }) {
                     <motion.div
                       key="search-compact"
                       className="relative"
-                      initial={reduce ? false : { opacity: 0, scale: 0.7 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={reduce ? undefined : { opacity: 0, scale: 0.8 }}
-                      transition={springTx}
+                      initial={reduce ? false : { opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={reduce ? undefined : { opacity: 0 }}
+                      transition={{ ...motionTx, duration: reduce ? 0 : 0.2 }}
                     >
                       <button
                         type="button"
@@ -279,9 +270,7 @@ export default function CustomerShell({ children }) {
                         data-testid="compact-search-toggle"
                         onClick={() => catalog.setSearchExpanded(!catalog.searchExpanded)}
                       >
-                        <motion.span layoutId={reduce ? undefined : "amara-search-icon"} className="inline-flex">
-                          <Search className="w-4 h-4" strokeWidth={2} />
-                        </motion.span>
+                        <Search className="w-4 h-4" strokeWidth={2} />
                       </button>
 
                       <AnimatePresence>
@@ -361,68 +350,50 @@ export default function CustomerShell({ children }) {
             </button>
           </div>
 
-          {/* Before scroll: filter bar below — slides up on exit */}
-          <AnimatePresence initial={false}>
-            {isHome && !compact && (
-              <motion.div
-                key="filters-expanded"
-                className="catalog-header-filters-row col-span-full pt-2 pb-4 md:pb-5"
-                initial={reduce ? false : { opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduce ? undefined : { opacity: 0, y: -28, scale: 0.97, height: 0, paddingTop: 0, paddingBottom: 0, marginTop: 0 }}
-                transition={motionTx}
-              >
-                <div className="amara-filter-scroll -mx-4 px-4 md:mx-0 md:px-0">
-                  <CatalogFilters className="amara-filter-scroll-inner" />
-                </div>
-              </motion.div>
+          {/* Before scroll: filter bar below */}
+          <div
+            className={cn(
+              "catalog-header-filters-row col-span-full pt-2 pb-4 md:pb-5",
+              isHome && !compact ? "block" : "hidden",
             )}
-          </AnimatePresence>
+            aria-hidden={!(isHome && !compact)}
+          >
+            <div className="amara-filter-scroll -mx-4 px-4 md:mx-0 md:px-0">
+              <CatalogFilters className="amara-filter-scroll-inner" />
+            </div>
+          </div>
 
           {/* After scroll (mobile): compact filters under header */}
-          <AnimatePresence initial={false}>
-            {isHome && compact && (
-              <motion.div
-                key="filters-mobile-compact"
-                className="catalog-header-filters-mobile md:hidden col-span-full pb-3 -mx-4 px-4"
-                initial={reduce ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduce ? undefined : { opacity: 0, y: -8 }}
-                transition={springTx}
-              >
-                <div className="amara-filter-scroll">
-                  <CatalogFilters compact className="amara-filter-scroll-inner" />
-                </div>
-              </motion.div>
+          <div
+            className={cn(
+              "catalog-header-filters-mobile md:hidden col-span-full pb-3 -mx-4 px-4",
+              isHome && compact ? "block" : "hidden",
             )}
-          </AnimatePresence>
+            aria-hidden={!(isHome && compact)}
+          >
+            <div className="amara-filter-scroll">
+              <CatalogFilters compact className="amara-filter-scroll-inner" />
+            </div>
+          </div>
         </div>
 
         {/* Before scroll (mobile): full search under nav */}
-        <AnimatePresence initial={false}>
-          {isHome && !compact && (
-            <motion.div
-              key="mobile-search-expanded"
-              className="sm:hidden px-4 pb-3"
-              initial={reduce ? false : { opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduce ? undefined : { opacity: 0, y: -10, height: 0, paddingBottom: 0 }}
-              transition={motionTx}
-            >
-              <div className="atlys-search w-full">
-                <Search className="w-4 h-4 text-ink-muted shrink-0" aria-hidden />
-                <input
-                  type="search"
-                  placeholder="Search Country"
-                  value={catalog.q}
-                  onChange={(e) => catalog.setQ(e.target.value)}
-                  aria-label="Search country"
-                  className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div
+          className={cn("sm:hidden px-4 pb-3", isHome && !compact ? "block" : "hidden")}
+          aria-hidden={!(isHome && !compact)}
+        >
+          <div className="atlys-search w-full">
+            <Search className="w-4 h-4 text-ink-muted shrink-0" aria-hidden />
+            <input
+              type="search"
+              placeholder="Search Country"
+              value={catalog.q}
+              onChange={(e) => catalog.setQ(e.target.value)}
+              aria-label="Search country"
+              className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70"
+            />
+          </div>
+        </div>
 
         <AnimatePresence>
           {mobileMenuOpen && (
