@@ -91,10 +91,10 @@ export default function CustomerShell({ children }) {
 
       <header
         className={cn(
-          "catalog-sticky-header sticky top-0 z-50 bg-white",
-          "transition-[box-shadow,border-color,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "catalog-sticky-header sticky top-0 z-50",
+          "transition-[box-shadow,border-color,background-color,backdrop-filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
           compact
-            ? "is-compact border-b border-border/70 shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
+            ? "is-compact border-b border-white/50 shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
             : "border-b border-transparent",
         )}
         data-compact={compact ? "true" : "false"}
@@ -402,7 +402,7 @@ export default function CustomerShell({ children }) {
         {children}
       </main>
 
-      <footer className="mt-16 md:mt-24 bg-white">
+      <footer className="amara-footer-glass mt-16 md:mt-24">
         <FooterContent />
       </footer>
 
@@ -445,7 +445,7 @@ function FooterContent() {
   return (
     <div className="max-w-[1200px] mx-auto px-5 md:px-10">
       {/* Top divider — content-width like Atlys */}
-      <div className="border-t border-[#e6e6e6]" />
+      <div className="border-t border-black/[0.08]" />
 
       {/* Main footer content between the two lines */}
       <div className="py-12 md:py-14">
@@ -556,7 +556,7 @@ function FooterContent() {
       </div>
 
       {/* Bottom divider — content-width */}
-      <div className="border-t border-[#e6e6e6]" />
+      <div className="border-t border-black/[0.08]" />
 
       {/* Copyright row below the second line */}
       <div className="py-6 flex flex-col sm:flex-row items-center justify-between gap-4">

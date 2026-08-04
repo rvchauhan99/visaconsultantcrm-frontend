@@ -289,76 +289,79 @@ export default function AuthPage() {
   const showModeTabs = step === "form";
 
   return (
-    <div className="min-h-[calc(100vh-64px)] grid md:grid-cols-2">
-      <div className="hidden md:flex flex-col relative overflow-hidden bg-navy-deep">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_30%_40%,rgba(47,107,90,0.5),transparent_70%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_80%_80%,rgba(176,141,87,0.12),transparent_60%)]" />
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E\")",
-              backgroundRepeat: "repeat",
-              backgroundSize: "180px",
-            }}
-          />
-        </div>
-
-        <div className="relative flex flex-col h-full p-10 lg:p-14">
-          <div className="mb-16">
-            <AmaraVisaLogo size="lg" invert className="opacity-95" />
-          </div>
-
-          <div className="flex-1 flex flex-col justify-center">
-            <Stamp tone="gold" size="sm" className="mb-6 self-start">
-              Visa consultancy
-            </Stamp>
-
-            <h2 className="font-display text-4xl lg:text-5xl text-surface-card leading-[1.08] tracking-tight mb-6">
-              A quieter way<br />
-              to travel{" "}
-              <span className="italic text-gold/90">papers.</span>
-            </h2>
-
-            <p className="text-base text-surface-muted/70 leading-relaxed max-w-sm mb-10">
-              For Indian passport holders who want calm, private, carefully guided visa support — not a portal maze.
-            </p>
-
-            <div className="space-y-4">
-              {TRUST_POINTS.map((p, i) => (
-                <motion.div
-                  key={i}
-                  initial={reduce ? false : { opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 + i * 0.12, ease }}
-                  className="flex items-center gap-3 text-sm text-surface-muted/70"
-                >
-                  <span className="shrink-0 w-7 h-7 rounded-full bg-teal/20 border border-teal/25 flex items-center justify-center text-teal/80">
-                    {p.icon}
-                  </span>
-                  {p.text}
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-10 text-sm text-surface-muted/40">
-            Need help?{" "}
-            <a href={`mailto:${SUPPORT.email}`} className="text-gold/70 hover:text-gold transition-colors">
-              {SUPPORT.email}
-            </a>
-          </div>
-        </div>
+    <div className="auth-glass-page min-h-[calc(100vh-4rem)] relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none" aria-hidden>
+        <div className="absolute inset-0 bg-[#ebe7e1]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_8%_15%,rgba(176,141,87,0.28),transparent_52%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_92%_85%,rgba(43,92,255,0.1),transparent_48%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_50%,rgba(255,255,255,0.45),transparent_70%)]" />
+        <div
+          className="absolute inset-0 opacity-[0.45]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, rgba(28,20,16,0.07) 1px, transparent 0)",
+            backgroundSize: "22px 22px",
+          }}
+        />
       </div>
 
-      <div className="flex flex-col items-center justify-center px-5 sm:px-10 md:px-12 lg:px-16 py-12 bg-surface">
-        <div className="w-full max-w-md">
+      <div className="relative grid md:grid-cols-2 min-h-[calc(100vh-4rem)]">
+        <div className="hidden md:flex flex-col relative p-8 lg:p-10">
+          <div className="auth-glass-panel flex flex-col h-full p-10 lg:p-12 rounded-[28px]">
+            <div className="mb-12">
+              <AmaraVisaLogo size="lg" className="opacity-95" />
+            </div>
+
+            <div className="flex-1 flex flex-col justify-center">
+              <Stamp tone="gold" size="sm" className="mb-6 self-start">
+                Visa consultancy
+              </Stamp>
+
+              <h2 className="font-display text-4xl lg:text-5xl text-ink leading-[1.08] tracking-tight mb-6">
+                A quieter way<br />
+                to travel{" "}
+                <span className="italic text-gold">papers.</span>
+              </h2>
+
+              <p className="text-base text-ink-muted leading-relaxed max-w-sm mb-10">
+                For Indian passport holders who want calm, private, carefully guided visa support — not a portal maze.
+              </p>
+
+              <div className="space-y-4">
+                {TRUST_POINTS.map((p, i) => (
+                  <motion.div
+                    key={i}
+                    initial={reduce ? false : { opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 + i * 0.12, ease }}
+                    className="flex items-center gap-3 text-sm text-ink-muted"
+                  >
+                    <span className="shrink-0 w-7 h-7 rounded-full bg-white/70 border border-black/8 flex items-center justify-center text-ink shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+                      {p.icon}
+                    </span>
+                    {p.text}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-10 text-sm text-ink-muted">
+              Need help?{" "}
+              <a href={`mailto:${SUPPORT.email}`} className="text-ink font-medium hover:text-gold transition-colors">
+                {SUPPORT.email}
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center justify-center px-5 sm:px-10 md:px-12 lg:px-16 py-12">
+          <div className="auth-glass-card w-full max-w-md p-6 sm:p-8 rounded-[28px]">
           <div className="md:hidden text-center mb-8 flex justify-center">
             <AmaraVisaLogo size="md" />
           </div>
 
           {showModeTabs && (
-            <div className="flex mb-8 bg-surface-muted rounded-2xl p-1">
+            <div className="flex mb-8 bg-white/50 backdrop-blur-sm rounded-2xl p-1 border border-white/60">
               {["login", "signup"].map((m) => (
                 <button
                   key={m}
@@ -367,7 +370,7 @@ export default function AuthPage() {
                   className={cn(
                     "flex-1 py-2.5 text-sm font-medium rounded-xl transition-all duration-300",
                     mode === m
-                      ? "bg-surface-card text-navy shadow-[var(--shadow-card)]"
+                      ? "bg-white text-ink shadow-[var(--shadow-card)]"
                       : "text-ink-muted hover:text-ink",
                   )}
                   data-testid={`auth-tab-${m}`}
@@ -389,13 +392,13 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={() => goToForm(step === "verify-signup" ? "signup" : "login")}
-                className="mb-4 inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-navy transition-colors"
+                className="mb-4 inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </button>
             )}
-            <h1 className="font-display text-3xl md:text-4xl text-navy tracking-tight">
+            <h1 className="font-display text-3xl md:text-4xl text-ink tracking-tight">
               {heading.title}
             </h1>
             <p className="text-sm text-ink-muted mt-2 leading-relaxed">
@@ -487,10 +490,10 @@ export default function AuthPage() {
 
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant="solid"
                   size="lg"
                   loading={busy}
-                  className="w-full mt-2"
+                  className="w-full mt-2 !bg-ink hover:!bg-ink/90 shadow-[0_4px_16px_rgba(28,20,16,0.18)]"
                   data-testid="auth-submit"
                 >
                   {mode === "login" ? "Sign in" : "Create account"}
@@ -525,11 +528,11 @@ export default function AuthPage() {
 
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant="solid"
                   size="lg"
                   loading={busy}
                   disabled={otp.length !== 6}
-                  className="w-full"
+                  className="w-full !bg-ink hover:!bg-ink/90 shadow-[0_4px_16px_rgba(28,20,16,0.18)]"
                   data-testid="auth-verify-submit"
                 >
                   Verify email
@@ -542,7 +545,7 @@ export default function AuthPage() {
                     type="button"
                     disabled={resendCooldown > 0 || busy}
                     onClick={() => { void resendSignupOtp(); }}
-                    className="text-teal hover:text-navy font-medium disabled:opacity-50"
+                    className="text-ink hover:text-gold font-medium disabled:opacity-50"
                     data-testid="auth-resend-otp"
                   >
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
@@ -573,10 +576,10 @@ export default function AuthPage() {
 
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant="solid"
                   size="lg"
                   loading={busy}
-                  className="w-full mt-2"
+                  className="w-full mt-2 !bg-ink hover:!bg-ink/90 shadow-[0_4px_16px_rgba(28,20,16,0.18)]"
                   data-testid="forgot-email-submit"
                 >
                   Send reset code
@@ -635,11 +638,11 @@ export default function AuthPage() {
 
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant="solid"
                   size="lg"
                   loading={busy}
                   disabled={otp.length !== 6}
-                  className="w-full mt-2"
+                  className="w-full mt-2 !bg-ink hover:!bg-ink/90 shadow-[0_4px_16px_rgba(28,20,16,0.18)]"
                   data-testid="forgot-reset-submit"
                 >
                   Update password
@@ -652,7 +655,7 @@ export default function AuthPage() {
                     type="button"
                     disabled={resendCooldown > 0 || busy}
                     onClick={() => { void requestForgotPassword(); }}
-                    className="text-teal hover:text-navy font-medium disabled:opacity-50"
+                    className="text-ink hover:text-gold font-medium disabled:opacity-50"
                     data-testid="forgot-resend-otp"
                   >
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
@@ -669,7 +672,7 @@ export default function AuthPage() {
                 Forgot password?{" "}
                 <button
                   type="button"
-                  className="text-teal hover:text-navy font-medium transition-colors"
+                  className="text-ink hover:text-gold font-medium transition-colors"
                   data-testid="forgot-password-link"
                   onClick={() => {
                     track("forgot_password_click");
@@ -686,13 +689,14 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setMode(mode === "login" ? "signup" : "login")}
-                  className="text-teal hover:text-navy font-medium transition-colors underline underline-offset-3"
+                  className="text-ink hover:text-gold font-medium transition-colors underline underline-offset-3"
                   data-testid="auth-toggle"
                 >
                   {mode === "login" ? "Create an account" : "Sign in instead"}
                 </button>
               </p>
             )}
+          </div>
           </div>
         </div>
       </div>
