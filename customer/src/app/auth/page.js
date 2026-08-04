@@ -110,7 +110,11 @@ export default function AuthPage() {
   };
 
   const submitGoogle = async () => {
-    if (!googleEnabled || googleBusy || busy) return;
+    if (googleBusy || busy) return;
+    if (!googleEnabled) {
+      toast.error("Google sign-in is not configured. Add Firebase keys to customer/.env.local.");
+      return;
+    }
     setGoogleBusy(true);
     try {
       const idToken = await signInWithGoogle();
@@ -415,22 +419,20 @@ export default function AuthPage() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3, ease }}
               >
-                {googleEnabled && (
-                  <div className="mb-6 space-y-4">
-                    <GoogleSignInButton
-                      onClick={() => { void submitGoogle(); }}
-                      loading={googleBusy}
-                      disabled={busy}
-                    />
-                    <div className="flex items-center gap-3">
-                      <div className="h-px flex-1 bg-border" />
-                      <span className="text-xs uppercase tracking-wider text-ink-muted">
-                        or continue with email
-                      </span>
-                      <div className="h-px flex-1 bg-border" />
-                    </div>
+                <div className="mb-6 space-y-4">
+                  <GoogleSignInButton
+                    onClick={() => { void submitGoogle(); }}
+                    loading={googleBusy}
+                    disabled={busy}
+                  />
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs uppercase tracking-wider text-ink-muted">
+                      or continue with email
+                    </span>
+                    <div className="h-px flex-1 bg-border" />
                   </div>
-                )}
+                </div>
 
                 <form onSubmit={bindSubmit(submit)} className="space-y-4">
                 {mode === "signup" && (
