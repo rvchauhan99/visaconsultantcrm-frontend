@@ -145,5 +145,5 @@ function FilterSection({ icon, label, children, testid }) {
 }
 
 function FilterDivider() {
-  return <div className="atlys-filter-divider hidden md:block w-px self-stretch min-h-[2.5rem] bg-border/70 shrink-0" />;
+  return <div className="atlys-filter-divider w-px self-stretch min-h-[2.5rem] bg-border/70 shrink-0" />;
 }

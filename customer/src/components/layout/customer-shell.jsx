@@ -18,7 +18,18 @@ import CatalogFilters from "@/components/catalog/catalog-filters";
 import { useCatalogSearch } from "@/context/catalog-search";
 import { track } from "@/lib/telemetry";
 
-const COMPACT_SCROLL_PX = 80;
+const COMPACT_SCROLL_PX = 48;
+const HEADER_EASE = [0.16, 1, 0.3, 1];
+
+function readScrollY() {
+  if (typeof window === "undefined") return 0;
+  return Math.max(
+    window.scrollY || 0,
+    window.pageYOffset || 0,
+    document.documentElement?.scrollTop || 0,
+    document.body?.scrollTop || 0,
+  );
+}
 
 export default function CustomerShell({ children }) {
   const pathname = usePathname();
@@ -29,7 +40,17 @@ export default function CustomerShell({ children }) {
   const searchInputRef = useRef(null);
   const isHome = pathname === "/";
   const catalog = useCatalogSearch();
-  const compact = isHome && catalog.headerCompact;
+  // Local compact state — more reliable than reading only from context during scroll
+  const [scrolledCompact, setScrolledCompact] = useState(false);
+  const compact = isHome && scrolledCompact;
+  const setHeaderCompact = catalog.setHeaderCompact;
+  const setSearchExpanded = catalog.setSearchExpanded;
+  const motionTx = reduce
+    ? { duration: 0 }
+    : { duration: 0.4, ease: HEADER_EASE };
+  const springTx = reduce
+    ? { duration: 0 }
+    : { type: "spring", stiffness: 380, damping: 32, mass: 0.85 };
 
   useEffect(() => {
     setUser(getUser());
@@ -37,23 +58,45 @@ export default function CustomerShell({ children }) {
 
   useEffect(() => {
     if (!isHome) {
-      catalog.setHeaderCompact(false);
-      catalog.setSearchExpanded(false);
+      setScrolledCompact(false);
+      setHeaderCompact(false);
+      setSearchExpanded(false);
       return undefined;
     }
 
-    const onScroll = () => {
-      const next = window.scrollY > COMPACT_SCROLL_PX;
-      catalog.setHeaderCompact(next);
-      if (!next) catalog.setSearchExpanded(false);
+    let frame = 0;
+    const apply = () => {
+      const next = readScrollY() > COMPACT_SCROLL_PX;
+      setScrolledCompact((prev) => (prev === next ? prev : next));
+      setHeaderCompact(next);
+      if (!next) setSearchExpanded(false);
     };
 
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-    // catalog setters are stable enough; avoid rebinding on every filter change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHome]);
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        apply();
+      });
+    };
+
+    apply();
+    // capture:true — catch scroll on html/body when overflow-x creates a nested scrollport
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    document.documentElement.addEventListener("scroll", onScroll, { passive: true });
+    document.body.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      document.removeEventListener("scroll", onScroll, { capture: true });
+      document.documentElement.removeEventListener("scroll", onScroll);
+      document.body.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [isHome, setHeaderCompact, setSearchExpanded]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -89,15 +132,27 @@ export default function CustomerShell({ children }) {
         Skip to content
       </a>
 
-      <header
+      <motion.header
         className={cn(
           "catalog-sticky-header sticky top-0 z-50",
-          "transition-[box-shadow,border-color,background-color,backdrop-filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
           compact
-            ? "is-compact border-b border-white/50 shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
+            ? "is-compact border-b border-white/50"
             : "border-b border-transparent",
         )}
         data-compact={compact ? "true" : "false"}
+        initial={false}
+        animate={
+          compact
+            ? {
+                backgroundColor: "rgba(255,255,255,0.62)",
+                boxShadow: "0 8px 32px rgba(28,20,16,0.09), inset 0 1px 0 rgba(255,255,255,0.75)",
+              }
+            : {
+                backgroundColor: "rgba(255,255,255,0.48)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
+              }
+        }
+        transition={motionTx}
       >
         <div
           className={cn(
@@ -105,197 +160,195 @@ export default function CustomerShell({ children }) {
             compact ? "catalog-header-grid--compact" : "catalog-header-grid--expanded",
           )}
         >
-          {/* Left: logo + guarantee */}
-          <div className="catalog-header-left flex items-center gap-3 md:gap-4 min-w-0">
-            <Link href="/" data-testid="brand-logo" className="flex items-center group shrink-0">
+          {/* Left: logo + guarantee — keep full size on scroll */}
+          <div className="catalog-header-left flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
+            <Link href="/" data-testid="brand-logo" className="flex items-center group shrink-0 max-w-[46vw] xs:max-w-none sm:max-w-none">
               <AmaraVisaLogo
-                size={compact ? "lg" : "xl"}
+                size="lg"
                 priority
-                className="transition-all duration-300 group-hover:opacity-90"
+                className="transition-opacity duration-300 group-hover:opacity-90"
               />
             </Link>
             <div
-              className={cn(
-                "hidden md:block w-px bg-border shrink-0 transition-all duration-300",
-                compact ? "h-7" : "h-8",
-              )}
+              className="hidden lg:block w-px bg-border shrink-0 h-8"
               aria-hidden
             />
-            <div className="hidden md:flex items-center gap-2 shrink-0">
-              <span
-                className={cn(
-                  "flex items-center justify-center rounded-full border border-border bg-white transition-all duration-300",
-                  compact ? "h-7 w-7" : "h-8 w-8",
-                )}
-              >
-                <ShieldCheck className={cn("text-ink transition-all duration-300", compact ? "w-3.5 h-3.5" : "w-4 h-4")} strokeWidth={2} />
+            <div className="hidden lg:flex items-center gap-2 shrink-0">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white/80">
+                <ShieldCheck className="w-4 h-4 text-ink" strokeWidth={2} />
               </span>
               <div className="leading-tight">
-                <div className="text-[12px] font-semibold text-ink underline underline-offset-2 decoration-ink/80 whitespace-nowrap">
+                <div className="font-semibold text-ink underline underline-offset-2 decoration-ink/80 whitespace-nowrap text-[12px]">
                   Visas On Time
                 </div>
-                <div className="text-[12px] font-medium text-ink whitespace-nowrap">Guaranteed</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Center: passport (expanded) / filters (compact desktop) */}
-          <div className="catalog-header-center flex items-center justify-center min-w-0">
-            <div
-              className={cn(
-                "hidden md:flex items-center justify-center transition-all duration-300",
-                compact ? "opacity-0 scale-95 pointer-events-none absolute w-0 h-0 overflow-hidden" : "opacity-100 scale-100",
-              )}
-              aria-hidden={compact}
-            >
-              <Link
-                href="/"
-                data-testid="nav-catalog"
-                aria-label="Explore visas"
-                aria-current={isActive("/", true) ? "page" : undefined}
-                tabIndex={compact ? -1 : undefined}
-                className={cn(
-                  "relative flex h-11 w-11 items-center justify-center rounded-full transition-colors",
-                  "bg-[#f3f3f3] hover:bg-[#ebebeb]",
-                  isActive("/", true) && "ring-1 ring-black/10",
-                )}
-              >
-                <Image
-                  src="/brand/explore-icon.png"
-                  alt=""
-                  width={30}
-                  height={30}
-                  className="w-[30px] h-[30px] object-contain drop-shadow-sm"
-                  aria-hidden
-                />
-                {isActive("/", true) && (
-                  <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-ink" />
-                )}
-              </Link>
-            </div>
-
-            {isHome && compact && (
-              <div className="catalog-header-filters-inline hidden md:flex w-full min-w-0 opacity-100">
-                <CatalogFilters compact className="w-full max-w-none" />
-              </div>
-            )}
-          </div>
-
-          {/* Right: search / flag / profile */}
-          <div className="catalog-header-right flex items-center gap-2 sm:gap-3 justify-end min-w-0">
-            {isHome && (
-              <>
-                {/* Full search — expanded desktop */}
-                <div
-                  className={cn(
-                    "transition-all duration-300 overflow-hidden",
-                    compact
-                      ? "w-0 opacity-0 pointer-events-none"
-                      : "hidden sm:block w-[min(100%,18rem)] md:w-[min(100%,20rem)] lg:w-[22rem] opacity-100",
-                  )}
-                >
-                  <div className="atlys-search w-full">
-                    <Search className="w-4 h-4 text-ink-muted shrink-0" aria-hidden />
-                    <input
-                      type="search"
-                      placeholder="Search Country"
-                      value={catalog.q}
-                      onChange={(e) => catalog.setQ(e.target.value)}
-                      data-testid="hero-search"
-                      aria-label="Search country"
-                      tabIndex={compact ? -1 : undefined}
-                      className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70 min-w-0"
-                    />
-                  </div>
+                <div className="font-medium text-ink whitespace-nowrap text-[12px]">
+                  Guaranteed
                 </div>
+              </div>
+            </div>
+          </div>
 
-                {/* Compact search icon */}
-                <div
-                  className={cn(
-                    "relative transition-all duration-300",
-                    compact ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none absolute w-0 h-0 overflow-hidden",
-                  )}
+          {/* Center: Explore fades out → filters float in */}
+          <div className="catalog-header-center relative flex items-center justify-center min-w-0">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {!compact && (
+                <motion.div
+                  key="explore-nav"
+                  className="hidden md:flex items-center justify-center"
+                  initial={reduce ? false : { opacity: 0, y: 8, scale: 0.92 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={reduce ? undefined : { opacity: 0, y: -10, scale: 0.88 }}
+                  transition={motionTx}
                 >
-                  <button
-                    type="button"
-                    className="h-9 w-9 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-full border border-border bg-white flex items-center justify-center text-ink hover:bg-[#f7f7f7] transition-colors"
-                    aria-label="Search country"
-                    aria-expanded={catalog.searchExpanded}
-                    data-testid="compact-search-toggle"
-                    onClick={() => catalog.setSearchExpanded(!catalog.searchExpanded)}
-                    tabIndex={compact ? undefined : -1}
+                  <Link
+                    href="/"
+                    data-testid="nav-catalog"
+                    aria-label="Explore visas"
+                    aria-current={isActive("/", true) ? "page" : undefined}
+                    className="relative flex flex-col items-center gap-1 px-2"
                   >
-                    <Search className="w-4 h-4" />
-                  </button>
-
-                  <AnimatePresence>
-                    {compact && catalog.searchExpanded && (
-                      <motion.div
-                        initial={reduce ? false : { opacity: 0, y: -6, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                        className="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[min(calc(100vw-2rem),20rem)]"
-                      >
-                        <div className="atlys-search w-full shadow-[0_8px_28px_rgba(0,0,0,0.12)]">
-                          <Search className="w-4 h-4 text-ink-muted shrink-0" aria-hidden />
-                          <input
-                            ref={searchInputRef}
-                            type="search"
-                            placeholder="Search Country"
-                            value={catalog.q}
-                            onChange={(e) => catalog.setQ(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Escape") catalog.setSearchExpanded(false);
-                            }}
-                            data-testid="compact-search-input"
-                            aria-label="Search country"
-                            className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70 min-w-0"
-                          />
-                          {catalog.q && (
-                            <button
-                              type="button"
-                              className="text-ink-muted hover:text-ink p-0.5"
-                              aria-label="Clear search"
-                              onClick={() => catalog.setQ("")}
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </motion.div>
+                    <span
+                      className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-full",
+                        "bg-[#f3f3f3] hover:bg-[#ebebeb]",
+                        isActive("/", true) && "ring-1 ring-black/10",
+                      )}
+                    >
+                      <Image
+                        src="/brand/explore-icon.png"
+                        alt=""
+                        width={30}
+                        height={30}
+                        className="w-[30px] h-[30px] object-contain drop-shadow-sm"
+                        aria-hidden
+                      />
+                    </span>
+                    <span className="text-[11px] font-medium text-ink leading-none">Explore</span>
+                    {isActive("/", true) && (
+                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-ink" />
                     )}
-                  </AnimatePresence>
-                </div>
-              </>
-            )}
-
-            {/* India flag — expanded only */}
-            <div
-              className={cn(
-                "transition-all duration-300",
-                compact
-                  ? "opacity-0 scale-95 pointer-events-none absolute w-0 h-0 overflow-hidden"
-                  : "hidden sm:flex opacity-100",
+                  </Link>
+                </motion.div>
               )}
-              aria-hidden={compact}
-            >
-              <div
-                className="h-9 w-9 flex items-center justify-center rounded-full border border-border bg-white text-base leading-none select-none"
-                title="India"
-                aria-label="Indian passport"
-                role="img"
-              >
-                🇮🇳
+
+              {isHome && compact && (
+                <motion.div
+                  key="inline-filters"
+                  className="catalog-header-filters-inline hidden md:block w-full min-w-0"
+                  initial={reduce ? false : { opacity: 0, y: 18, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={reduce ? undefined : { opacity: 0, y: 12, scale: 0.97 }}
+                  transition={springTx}
+                >
+                  <div className="amara-filter-scroll">
+                    <CatalogFilters compact className="amara-filter-scroll-inner" />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Right: search morphs wide → circular icon */}
+          <div className="catalog-header-right flex items-center gap-1.5 sm:gap-2.5 justify-end min-w-0">
+            {isHome && (
+              <div className="relative flex items-center justify-end">
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {!compact ? (
+                    <motion.div
+                      key="search-wide"
+                      className="hidden sm:block w-[min(100%,16rem)] md:w-[min(100%,18rem)] lg:w-[20rem]"
+                      initial={reduce ? false : { opacity: 0, scaleX: 0.85, originX: 1 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      exit={reduce ? undefined : { opacity: 0, scaleX: 0.55, originX: 1 }}
+                      transition={motionTx}
+                    >
+                      <div className="atlys-search w-full">
+                        <motion.span layoutId={reduce ? undefined : "amara-search-icon"} className="inline-flex shrink-0">
+                          <Search className="w-4 h-4 text-ink-muted" aria-hidden />
+                        </motion.span>
+                        <input
+                          type="search"
+                          placeholder="Search Country"
+                          value={catalog.q}
+                          onChange={(e) => catalog.setQ(e.target.value)}
+                          data-testid="hero-search"
+                          aria-label="Search country"
+                          className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70 min-w-0"
+                        />
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="search-compact"
+                      className="relative"
+                      initial={reduce ? false : { opacity: 0, scale: 0.7 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={reduce ? undefined : { opacity: 0, scale: 0.8 }}
+                      transition={springTx}
+                    >
+                      <button
+                        type="button"
+                        className="amara-search-icon-btn h-9 w-9 rounded-full border border-black/10 bg-white shadow-[0_1px_8px_rgba(0,0,0,0.06)] flex items-center justify-center text-ink hover:bg-[#f7f7f7] transition-colors"
+                        aria-label="Search country"
+                        aria-expanded={catalog.searchExpanded}
+                        data-testid="compact-search-toggle"
+                        onClick={() => catalog.setSearchExpanded(!catalog.searchExpanded)}
+                      >
+                        <motion.span layoutId={reduce ? undefined : "amara-search-icon"} className="inline-flex">
+                          <Search className="w-4 h-4" strokeWidth={2} />
+                        </motion.span>
+                      </button>
+
+                      <AnimatePresence>
+                        {catalog.searchExpanded && (
+                          <motion.div
+                            initial={reduce ? false : { opacity: 0, y: -6, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                            transition={{ duration: 0.22, ease: HEADER_EASE }}
+                            className="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[min(calc(100vw-2rem),20rem)]"
+                          >
+                            <div className="atlys-search w-full shadow-[0_8px_28px_rgba(0,0,0,0.12)]">
+                              <Search className="w-4 h-4 text-ink-muted shrink-0" aria-hidden />
+                              <input
+                                ref={searchInputRef}
+                                type="search"
+                                placeholder="Search Country"
+                                value={catalog.q}
+                                onChange={(e) => catalog.setQ(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Escape") catalog.setSearchExpanded(false);
+                                }}
+                                data-testid="compact-search-input"
+                                aria-label="Search country"
+                                className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70 min-w-0"
+                              />
+                              {catalog.q && (
+                                <button
+                                  type="button"
+                                  className="text-ink-muted hover:text-ink p-0.5"
+                                  aria-label="Clear search"
+                                  onClick={() => catalog.setQ("")}
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            </div>
+            )}
 
             {customer && <NotificationBell />}
 
             {customer ? (
               <Link
                 href="/account"
-                className="h-9 w-9 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-full border border-border bg-white flex items-center justify-center text-xs font-bold text-ink hover:bg-[#f7f7f7] transition-colors"
+                className="h-9 w-9 rounded-full border border-black/10 bg-white shadow-[0_1px_8px_rgba(0,0,0,0.06)] flex items-center justify-center text-xs font-bold text-ink hover:bg-[#f7f7f7] transition-colors"
                 data-testid="nav-user"
                 aria-label="Account"
               >
@@ -304,7 +357,7 @@ export default function CustomerShell({ children }) {
             ) : (
               <Link
                 href="/auth"
-                className="h-9 w-9 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-full border border-border bg-white flex items-center justify-center text-ink-muted hover:text-ink hover:bg-[#f7f7f7] transition-colors"
+                className="h-9 w-9 rounded-full border border-black/10 bg-white shadow-[0_1px_8px_rgba(0,0,0,0.06)] flex items-center justify-center text-ink-muted hover:text-ink hover:bg-[#f7f7f7] transition-colors"
                 data-testid="nav-signin"
                 aria-label="Sign in"
               >
@@ -323,39 +376,68 @@ export default function CustomerShell({ children }) {
             </button>
           </div>
 
-          {/* Expanded: full-width filter row (desktop + mobile) */}
-          {isHome && !compact && (
-            <div className="catalog-header-filters-row col-span-full pt-1 pb-4 md:pb-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-              <div className="flex justify-center">
-                <CatalogFilters />
-              </div>
-            </div>
-          )}
+          {/* Before scroll: filter bar below — slides up on exit */}
+          <AnimatePresence initial={false}>
+            {isHome && !compact && (
+              <motion.div
+                key="filters-expanded"
+                className="catalog-header-filters-row col-span-full pt-2 pb-4 md:pb-5"
+                initial={reduce ? false : { opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduce ? undefined : { opacity: 0, y: -28, scale: 0.97, height: 0, paddingTop: 0, paddingBottom: 0, marginTop: 0 }}
+                transition={motionTx}
+              >
+                <div className="amara-filter-scroll -mx-4 px-4 md:mx-0 md:px-0">
+                  <CatalogFilters className="amara-filter-scroll-inner" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Compact mobile: horizontally scrollable filters */}
-          {isHome && compact && (
-            <div className="catalog-header-filters-mobile md:hidden col-span-full pb-3 -mx-4 px-4 overflow-x-auto scrollbar-none">
-              <CatalogFilters compact className="!w-max min-w-full !flex-nowrap" />
-            </div>
-          )}
+          {/* After scroll (mobile): compact filters under header */}
+          <AnimatePresence initial={false}>
+            {isHome && compact && (
+              <motion.div
+                key="filters-mobile-compact"
+                className="catalog-header-filters-mobile md:hidden col-span-full pb-3 -mx-4 px-4"
+                initial={reduce ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduce ? undefined : { opacity: 0, y: -8 }}
+                transition={springTx}
+              >
+                <div className="amara-filter-scroll">
+                  <CatalogFilters compact className="amara-filter-scroll-inner" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Expanded mobile search under nav when not compact */}
-        {isHome && !compact && (
-          <div className="sm:hidden px-4 pb-3">
-            <div className="atlys-search w-full">
-              <Search className="w-4 h-4 text-ink-muted shrink-0" aria-hidden />
-              <input
-                type="search"
-                placeholder="Search Country"
-                value={catalog.q}
-                onChange={(e) => catalog.setQ(e.target.value)}
-                aria-label="Search country"
-                className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70"
-              />
-            </div>
-          </div>
-        )}
+        {/* Before scroll (mobile): full search under nav */}
+        <AnimatePresence initial={false}>
+          {isHome && !compact && (
+            <motion.div
+              key="mobile-search-expanded"
+              className="sm:hidden px-4 pb-3"
+              initial={reduce ? false : { opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduce ? undefined : { opacity: 0, y: -10, height: 0, paddingBottom: 0 }}
+              transition={motionTx}
+            >
+              <div className="atlys-search w-full">
+                <Search className="w-4 h-4 text-ink-muted shrink-0" aria-hidden />
+                <input
+                  type="search"
+                  placeholder="Search Country"
+                  value={catalog.q}
+                  onChange={(e) => catalog.setQ(e.target.value)}
+                  aria-label="Search country"
+                  className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted/70"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {mobileMenuOpen && (
@@ -396,7 +478,7 @@ export default function CustomerShell({ children }) {
             </motion.div>
           )}
         </AnimatePresence>
-      </header>
+      </motion.header>
 
       <main id="main" className="pb-mobile-nav md:pb-0">
         {children}
@@ -443,26 +525,26 @@ function FooterContent() {
   const year = new Date().getFullYear();
 
   return (
-    <div className="max-w-[1200px] mx-auto px-5 md:px-10">
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-5 md:px-10">
       {/* Top divider — content-width like Atlys */}
       <div className="border-t border-black/[0.08]" />
 
       {/* Main footer content between the two lines */}
-      <div className="py-12 md:py-14">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
+      <div className="py-10 sm:py-12 md:py-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-8">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-4">
-            <Link href="/" className="inline-flex mb-5" aria-label="AmaraVisa home">
+            <Link href="/" className="inline-flex mb-4 sm:mb-5" aria-label="AmaraVisa home">
               <AmaraVisaLogo size="md" />
             </Link>
-            <p className="text-[15px] text-ink-muted leading-relaxed max-w-[280px]">
+            <p className="text-sm sm:text-[15px] text-ink-muted leading-relaxed max-w-[280px]">
               AmaraVisa helps you plan, apply, and track visas seamlessly — with transparent fees and expert review.
             </p>
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-muted/60 px-3.5 py-2">
+            <div className="mt-5 sm:mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-muted/60 px-3.5 py-2">
               <ShieldCheck className="w-4 h-4 text-navy shrink-0" />
               <span className="text-xs font-semibold text-ink">Visas On Time Guaranteed</span>
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-2.5 sm:gap-3">
               <StoreBadgeLink
                 href={SUPPORT.appStoreUrl}
                 label="Download on the App Store"

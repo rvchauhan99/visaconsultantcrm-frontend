@@ -289,7 +289,7 @@ export default function AuthPage() {
   const showModeTabs = step === "form";
 
   return (
-    <div className="auth-glass-page min-h-[calc(100vh-4rem)] relative overflow-hidden">
+    <div className="auth-glass-page min-h-[calc(100dvh-4rem)] relative overflow-x-hidden">
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <div className="absolute inset-0 bg-[#ebe7e1]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_8%_15%,rgba(176,141,87,0.28),transparent_52%)]" />
@@ -305,29 +305,29 @@ export default function AuthPage() {
         />
       </div>
 
-      <div className="relative grid md:grid-cols-2 min-h-[calc(100vh-4rem)]">
-        <div className="hidden md:flex flex-col relative p-8 lg:p-10">
-          <div className="auth-glass-panel flex flex-col h-full p-10 lg:p-12 rounded-[28px]">
-            <div className="mb-12">
+      <div className="relative grid md:grid-cols-2 min-h-[calc(100dvh-4rem)]">
+        <div className="hidden md:flex flex-col relative p-5 lg:p-8 xl:p-10 min-h-0">
+          <div className="auth-glass-panel flex flex-col h-full min-h-[min(640px,calc(100dvh-6rem))] p-7 lg:p-10 xl:p-12 rounded-[24px] lg:rounded-[28px]">
+            <div className="mb-8 lg:mb-12">
               <AmaraVisaLogo size="lg" className="opacity-95" />
             </div>
 
-            <div className="flex-1 flex flex-col justify-center">
-              <Stamp tone="gold" size="sm" className="mb-6 self-start">
+            <div className="flex-1 flex flex-col justify-center min-w-0">
+              <Stamp tone="gold" size="sm" className="mb-5 lg:mb-6 self-start">
                 Visa consultancy
               </Stamp>
 
-              <h2 className="font-display text-4xl lg:text-5xl text-ink leading-[1.08] tracking-tight mb-6">
+              <h2 className="font-display text-[clamp(1.75rem,3.5vw,3rem)] text-ink leading-[1.08] tracking-tight mb-4 lg:mb-6">
                 A quieter way<br />
                 to travel{" "}
                 <span className="italic text-gold">papers.</span>
               </h2>
 
-              <p className="text-base text-ink-muted leading-relaxed max-w-sm mb-10">
+              <p className="text-sm lg:text-base text-ink-muted leading-relaxed max-w-sm mb-8 lg:mb-10">
                 For Indian passport holders who want calm, private, carefully guided visa support — not a portal maze.
               </p>
 
-              <div className="space-y-4">
+              <div className="space-y-3 lg:space-y-4">
                 {TRUST_POINTS.map((p, i) => (
                   <motion.div
                     key={i}
@@ -339,13 +339,13 @@ export default function AuthPage() {
                     <span className="shrink-0 w-7 h-7 rounded-full bg-white/70 border border-black/8 flex items-center justify-center text-ink shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
                       {p.icon}
                     </span>
-                    {p.text}
+                    <span className="min-w-0">{p.text}</span>
                   </motion.div>
                 ))}
               </div>
             </div>
 
-            <div className="mt-10 text-sm text-ink-muted">
+            <div className="mt-8 lg:mt-10 text-sm text-ink-muted break-words">
               Need help?{" "}
               <a href={`mailto:${SUPPORT.email}`} className="text-ink font-medium hover:text-gold transition-colors">
                 {SUPPORT.email}
@@ -354,9 +354,9 @@ export default function AuthPage() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center px-5 sm:px-10 md:px-12 lg:px-16 py-12">
-          <div className="auth-glass-card w-full max-w-md p-6 sm:p-8 rounded-[28px]">
-          <div className="md:hidden text-center mb-8 flex justify-center">
+        <div className="flex flex-col items-center justify-center px-4 sm:px-8 md:px-10 lg:px-14 py-8 sm:py-12 pb-[max(2rem,env(safe-area-inset-bottom))]">
+          <div className="auth-glass-card w-full max-w-md p-5 sm:p-7 md:p-8 rounded-[22px] sm:rounded-[28px]">
+          <div className="md:hidden text-center mb-6 sm:mb-8 flex justify-center">
             <AmaraVisaLogo size="md" />
           </div>
 
@@ -398,7 +398,7 @@ export default function AuthPage() {
                 Back
               </button>
             )}
-            <h1 className="font-display text-3xl md:text-4xl text-ink tracking-tight">
+            <h1 className="font-display text-[clamp(1.75rem,5vw,2.25rem)] md:text-4xl text-ink tracking-tight">
               {heading.title}
             </h1>
             <p className="text-sm text-ink-muted mt-2 leading-relaxed">

@@ -51,18 +51,38 @@
 }
 
 @layer base {
-  html,
-  body {
+  html {
     height: 100%;
+    max-width: 100vw;
   }
 
   body {
     margin: 0;
+    min-height: 100%;
+    max-width: 100vw;
+    overflow-x: clip;
     font-family: var(--font-sans);
     background-color: var(--surface);
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  img,
+  video,
+  svg,
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+    max-width: 100%;
   }
 
   * {
@@ -205,60 +225,96 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   }
 
-  /* Atlys unified filter bar — centered, ~3 of 5 card columns on md+ */
+  /* Atlys unified filter bar — horizontal pill with scroller */
   .atlys-filter-bar {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: stretch;
     gap: 0.75rem 1rem;
     padding: 0.75rem 1.25rem;
     border-radius: 999px;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     background: #fff;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
     margin-left: auto;
     margin-right: auto;
-    width: 100%;
+    width: max-content;
+    min-width: min(100%, 36rem);
+    max-width: none;
   }
 
   @media (min-width: 768px) {
     .atlys-filter-bar {
-      width: min(100%, calc((100% - 5rem) * 0.6 + 2.5rem));
-      max-width: 56rem;
+      min-width: min(100%, 40rem);
+      max-width: 52rem;
     }
   }
 
   @media (max-width: 767px) {
     .atlys-filter-bar {
-      border-radius: 24px;
-      padding: 1rem;
-      width: 100%;
+      padding: 0.7rem 1rem;
+      min-width: max-content;
     }
+  }
+
+  .atlys-filter-bar .atlys-filter-section {
+    flex: 0 0 auto;
+    min-width: 7.25rem;
   }
 
   .atlys-filter-bar--compact {
+    width: max-content;
+    max-width: none;
+    min-width: max-content;
+    margin: 0;
+    padding: 0.45rem 0.9rem;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.06);
+    gap: 0.45rem 0.7rem;
+  }
+
+  .atlys-filter-bar--compact .atlys-filter-section {
+    min-width: 6.5rem;
+  }
+
+  /* Horizontal scroller for filter pill */
+  .amara-filter-scroll {
     width: 100%;
-    max-width: 44rem;
-    margin: 0 auto;
-    padding: 0.5rem 1rem;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-    gap: 0.5rem 0.75rem;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+    overscroll-behavior-x: contain;
+  }
+
+  .amara-filter-scroll::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .amara-filter-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .amara-filter-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.14);
+    border-radius: 999px;
+  }
+
+  .amara-filter-scroll-inner {
+    width: max-content !important;
+    min-width: max-content !important;
+    max-width: none !important;
+    margin-inline: auto;
   }
 
   @media (max-width: 767px) {
-    .atlys-filter-bar--compact {
-      border-radius: 999px;
-      padding: 0.625rem 1rem;
-      flex-wrap: nowrap;
-      width: max-content;
-      min-width: 100%;
-      max-width: none;
+    .amara-filter-scroll-inner {
+      margin-inline: 0;
     }
+  }
 
-    .atlys-filter-bar--compact .atlys-filter-section {
-      flex: 0 0 auto;
-      min-width: 7.5rem;
-    }
+  .amara-search-icon-btn {
+    flex-shrink: 0;
   }
 
   /* Sticky catalog header layout */
@@ -303,12 +359,13 @@
   @media (min-width: 768px) {
     .catalog-header-grid--compact {
       grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
     }
 
     .catalog-header-grid--compact .catalog-header-center {
       width: 100%;
-      max-width: 44rem;
-      padding-inline: 0.75rem;
+      max-width: min(100%, 48rem);
+      padding-inline: 0.5rem 0.75rem;
     }
   }
 
@@ -327,15 +384,12 @@
     backdrop-filter: blur(28px) saturate(1.55);
     -webkit-backdrop-filter: blur(28px) saturate(1.55);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    will-change: background-color, box-shadow;
   }
 
   .catalog-sticky-header.is-compact {
-    background: rgba(255, 255, 255, 0.55);
     backdrop-filter: blur(36px) saturate(1.65);
     -webkit-backdrop-filter: blur(36px) saturate(1.65);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      0 8px 32px rgba(28, 20, 16, 0.08);
   }
 
   /* Light glass — footer */
@@ -412,8 +466,8 @@
     display: flex;
     align-items: flex-start;
     gap: 0.625rem;
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 0 0 auto;
+    min-width: 7.25rem;
   }
 
   .atlys-filter-icon {
@@ -466,7 +520,7 @@
   .atlys-destination-card {
     position: relative;
     aspect-ratio: 3 / 4;
-    border-radius: 28px;
+    border-radius: clamp(16px, 4vw, 28px);
     overflow: hidden;
     background: #e8e8e8;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
@@ -474,6 +528,100 @@
       box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1),
       transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
     will-change: transform, box-shadow;
+  }
+
+  @media (max-width: 480px) {
+    .group:hover .atlys-destination-card,
+    .group:focus-visible .atlys-destination-card {
+      transform: translateY(-4px) scale(1.01);
+    }
+  }
+
+  /* Responsive shell / layout helpers */
+  .catalog-header-grid {
+    padding-inline: 0;
+  }
+
+  @media (max-width: 639px) {
+    .catalog-header-grid {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.5rem 0.5rem;
+      padding-top: 0.5rem;
+    }
+
+    .catalog-header-center {
+      display: none;
+    }
+
+    .catalog-header-right {
+      grid-column: 2;
+    }
+
+    .catalog-header-filters-row,
+    .catalog-header-filters-mobile {
+      grid-column: 1 / -1;
+    }
+
+    .atlys-filter-bar:not(.atlys-filter-bar--compact) {
+      display: flex;
+      flex-wrap: nowrap;
+      border-radius: 999px;
+      padding: 0.7rem 1rem;
+      gap: 0.55rem 0.75rem;
+    }
+
+    .atlys-filter-bar:not(.atlys-filter-bar--compact) .atlys-filter-divider {
+      display: block;
+      min-height: 2.25rem;
+    }
+
+    .atlys-filter-bar:not(.atlys-filter-bar--compact) .atlys-filter-section {
+      flex: 0 0 auto;
+      min-width: 7rem;
+    }
+
+    .amara-footer-glass .max-w-\[1200px\] {
+      padding-inline: 1rem;
+    }
+  }
+
+  @media (max-width: 359px) {
+    .catalog-grid-tight {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .catalog-header-grid--compact {
+      grid-template-columns: max-content minmax(0, 1fr) max-content;
+      gap: 0.5rem;
+    }
+
+    .catalog-header-grid--compact .catalog-header-center {
+      max-width: min(100%, 28rem);
+      padding-inline: 0.25rem;
+    }
+
+    .atlys-filter-bar--compact {
+      padding: 0.35rem 0.65rem;
+    }
+  }
+
+  /* Safe area for fixed mobile chrome */
+  .atlys-fab {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .amara-whatsapp-fab {
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .amara-whatsapp-fab {
+      bottom: max(1.25rem, env(safe-area-inset-bottom));
+      right: max(1.25rem, env(safe-area-inset-right));
+    }
   }
 
   .group:hover .atlys-destination-card {

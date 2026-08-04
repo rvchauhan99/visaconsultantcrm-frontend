@@ -55,16 +55,16 @@ export default function LandingPage() {
   return (
     <div className="bg-white min-h-[calc(100vh-4rem)]">
       <div
-        className={`max-w-[1400px] mx-auto px-4 md:px-8 pb-24 transition-[padding] duration-300 ${
-          headerCompact ? "pt-5 md:pt-6" : "pt-2 md:pt-3"
+        className={`max-w-[1400px] mx-auto px-3 sm:px-4 md:px-8 pb-24 sm:pb-28 transition-[padding] duration-300 ${
+          headerCompact ? "pt-4 sm:pt-5 md:pt-6" : "pt-2 md:pt-3"
         }`}
       >
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
             {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
               <div key={i}>
-                <Skeleton className="aspect-[3/4] rounded-[28px]" />
-                <Skeleton className="h-4 w-3/4 mt-3 rounded-lg" />
+                <Skeleton className="aspect-[3/4] rounded-[20px] sm:rounded-[28px]" />
+                <Skeleton className="h-4 w-3/4 mt-3 rounded-lg mx-auto" />
               </div>
             ))}
           </div>
@@ -74,7 +74,7 @@ export default function LandingPage() {
           <EmptyCatalog hasFilters={hasFilters} onClear={clearFilters} />
         ) : (
           <div
-            className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5"
+            className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5"
             data-testid="catalog-grid"
           >
             {filtered.map((p, i) => (
@@ -122,17 +122,17 @@ function VisaCard({ product, index }) {
           </div>
           <div className="atlys-destination-content">
             <span className="text-2xl md:text-3xl leading-none drop-shadow-sm">{product.country_flag}</span>
-            <h3 className="font-display text-lg md:text-xl tracking-[0.12em] text-white uppercase text-center leading-tight">
+            <h3 className="font-display text-sm sm:text-lg md:text-xl tracking-[0.08em] sm:tracking-[0.12em] text-white uppercase text-center leading-tight px-1">
               {product.country_name}
             </h3>
-            <div className="grid grid-cols-3 gap-2 w-full mt-1 px-1">
+            <div className="grid grid-cols-3 gap-1 sm:gap-2 w-full mt-1 px-0.5 sm:px-1">
               <CardMeta label="Type" value={formatVisaTypeShort(product.visa_type)} />
               <CardMeta label="Valid" value={formatValidityShort(product.validity_days)} />
               <CardMeta label="Fees" value={INR.format(totalFee)} />
             </div>
           </div>
         </div>
-        <p className="mt-3 text-center text-xs md:text-sm text-ink-muted">
+        <p className="mt-2 sm:mt-3 text-center text-[11px] sm:text-xs md:text-sm text-ink-muted px-1 leading-snug">
           Guaranteed Visa On{" "}
           <span className="font-semibold text-ink">
             {guaranteedByDateTime(product.processing_time_days)}
