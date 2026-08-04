@@ -42,15 +42,17 @@ export default function DashboardCharts({ data, scope, loading }) {
   const byService = data?.by_service_type || [];
   const byStage = data?.by_stage || [];
   const byCountry = data?.cases?.by_country || [];
-  const bySla = data?.cases?.by_sla || {};
   const payments = data?.payments?.by_period || [];
 
-  const slaPie = useMemo(() => ([
-    { name: "On track", value: bySla.on_track || 0, color: CHART_COLORS[1] },
-    { name: "Due soon", value: bySla.due_soon || 0, color: CHART_COLORS[2] },
-    { name: "Overdue", value: bySla.overdue || 0, color: CHART_COLORS[4] },
-    { name: "Completed", value: bySla.completed || 0, color: CHART_COLORS[5] },
-  ].filter((x) => x.value > 0)), [bySla]);
+  const slaPie = useMemo(() => {
+    const bySla = data?.cases?.by_sla || {};
+    return [
+      { name: "On track", value: bySla.on_track || 0, color: CHART_COLORS[1] },
+      { name: "Due soon", value: bySla.due_soon || 0, color: CHART_COLORS[2] },
+      { name: "Overdue", value: bySla.overdue || 0, color: CHART_COLORS[4] },
+      { name: "Completed", value: bySla.completed || 0, color: CHART_COLORS[5] },
+    ].filter((x) => x.value > 0);
+  }, [data?.cases?.by_sla]);
 
   const stageTotal = STAGE_ORDER.reduce((a, s) => a + (byStage.find((r) => r.stage === s)?.count || 0), 0);
 
