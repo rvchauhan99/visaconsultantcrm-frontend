@@ -341,7 +341,7 @@ function TravelerStep({ traveler, setTraveler, profiles, onPrefill, saveAsProfil
                 <label className="inline-flex items-center gap-2 text-sm bg-navy text-white rounded-full px-4 py-2 cursor-pointer hover:bg-navy-hover" data-testid="scan-passport-btn">
                     {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
                     {scanning ? "Reading passport…" : "Scan passport to autofill"}
-                    <input type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={handleScan} disabled={scanning} data-testid="scan-passport-input" />
+                    <input type="file" hidden accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" onChange={handleScan} disabled={scanning} data-testid="scan-passport-input" />
                 </label>
                 <span className="text-xs text-ink-muted self-center">Optional — you can also fill fields manually.</span>
             </div>

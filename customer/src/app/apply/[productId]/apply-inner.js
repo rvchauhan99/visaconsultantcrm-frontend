@@ -533,6 +533,15 @@ function TravelerStep({
   const handleScan = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const okType =
+      /^image\/(jpeg|png|webp)$/i.test(file.type) ||
+      file.type === "application/pdf" ||
+      /\.(jpe?g|png|webp|pdf)$/i.test(file.name);
+    if (!okType) {
+      toast.error("Please upload a JPG, PNG, WebP, or PDF passport scan.");
+      e.target.value = "";
+      return;
+    }
     setScanning(true);
     try {
       const form = new FormData();
@@ -579,13 +588,13 @@ function TravelerStep({
           <input
             type="file"
             hidden
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
             onChange={handleScan}
             disabled={scanning}
             data-testid="scan-passport-input"
           />
         </label>
-        <span className="text-xs text-ink-muted self-center">Optional</span>
+        <span className="text-xs text-ink-muted self-center">Optional · JPG, PNG, or PDF</span>
       </div>
 
       {profiles.length > 0 && (

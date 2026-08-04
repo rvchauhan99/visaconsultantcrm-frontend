@@ -28,8 +28,8 @@ export default function AmaraVisaLogo({
         width={dims.width}
         height={dims.height}
         priority={priority}
-        className="h-full w-auto object-contain object-left"
-        style={{ height: dims.height, width: "auto" }}
+        className="h-full w-auto max-w-full object-contain object-left"
+        style={{ height: dims.height, width: "auto", maxWidth: "100%" }}
       />
     </span>
   );

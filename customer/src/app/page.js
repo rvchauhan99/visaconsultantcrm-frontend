@@ -3,58 +3,33 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { FileText, Umbrella, Zap, Plane } from "lucide-react";
+import { Clock } from "lucide-react";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/searchable-select";
-import { DatePicker } from "@/components/ui/date-picker";
 import { useVisaProducts } from "@/hooks/customer-api";
 import { useCatalogSearch } from "@/context/catalog-search";
 import {
   INR,
-  cn,
+  SUPPORT,
   countryCoverUrl,
+  docsLabelForProduct,
   formatVisaTypeShort,
   formatValidityShort,
   guaranteedByDateTime,
 } from "@/lib/utils";
 import { track } from "@/lib/telemetry";
 
-const ease = [0.16, 1, 0.3, 1];
-
-const FILTER_TRIGGER =
-  "border-0 bg-transparent shadow-none px-0 py-0 rounded-none font-semibold text-sm hover:border-0 focus:border-transparent focus:shadow-none min-w-0 w-full justify-between";
-
-const FILTER_DATE_TRIGGER =
-  `${FILTER_TRIGGER} [&_span:first-child>svg]:hidden`;
-
-const DELIVERY_OPTIONS = [
-  { value: "any", label: "Any Time" },
-  { value: "fast", label: "Fast (≤7 days)" },
-];
-
-const VISA_TYPE_OPTIONS = [
-  { value: "", label: "All Visa Types" },
-  { value: "tourist", label: "Tourist" },
-  { value: "business", label: "Business" },
-  { value: "transit", label: "Transit" },
-];
-
-const COMPLEXITY_OPTIONS = [
-  { value: "", label: "Any Documents" },
-  { value: "simple", label: "Simple (≤3)" },
-  { value: "medium", label: "Medium (4–6)" },
-  { value: "complex", label: "Complex (7+)" },
-];
-
 export default function LandingPage() {
-  const reduce = useReducedMotion();
-  const { q, setQ } = useCatalogSearch();
-  const [visaType, setVisaType] = useState("");
-  const [delivery, setDelivery] = useState("any");
-  const [complexity, setComplexity] = useState("");
-  const [travelDate, setTravelDate] = useState("");
+  const {
+    q,
+    visaType,
+    delivery,
+    complexity,
+    travelDate,
+    clearFilters,
+    hasFilters,
+    headerCompact,
+  } = useCatalogSearch();
 
   const params = useMemo(() => {
     const p = {};
@@ -63,7 +38,11 @@ export default function LandingPage() {
     return p;
   }, [complexity, travelDate]);
 
-  const { data: products = [], isLoading, isError, refetch } = useVisaProducts(params);
+  const { data: rawProducts, isLoading, isError, refetch } = useVisaProducts(params);
+  const products = useMemo(
+    () => (Array.isArray(rawProducts) ? rawProducts : []),
+    [rawProducts],
+  );
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -76,114 +55,19 @@ export default function LandingPage() {
     });
   }, [products, q, visaType, delivery]);
 
-  const clearFilters = () => {
-    setQ("");
-    setVisaType("");
-    setDelivery("any");
-    setComplexity("");
-    setTravelDate("");
-  };
-
-  const hasFilters = Boolean(q || visaType || delivery !== "any" || complexity || travelDate);
-
   return (
     <div className="bg-white min-h-[calc(100vh-4rem)]">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 pt-5 md:pt-8 pb-24">
-        {/* Centered filter pill ≈ width of middle 3 cards in a 5-col grid */}
-        <div className="flex justify-center mb-8">
-          <div className="atlys-filter-bar" data-testid="filter-bar">
-            <FilterSection
-              icon={<Zap className="w-4 h-4 text-emerald-500" />}
-              label="Visa delivery"
-            >
-              <SearchableSelect
-                data-testid="filter-delivery"
-                searchable={false}
-                clearable={false}
-                value={delivery}
-                onChange={(v) => setDelivery(v ?? "any")}
-                options={DELIVERY_OPTIONS}
-                className="w-full min-w-0"
-                triggerClassName={FILTER_TRIGGER}
-                contentClassName="min-w-[200px]"
-              />
-            </FilterSection>
-
-            <FilterDivider />
-
-            <FilterSection
-              icon={<Plane className="w-4 h-4 text-sky-500" />}
-              label="Type"
-            >
-              <SearchableSelect
-                data-testid="filter-type"
-                searchable={false}
-                clearable={false}
-                value={visaType}
-                onChange={(v) => setVisaType(v ?? "")}
-                options={VISA_TYPE_OPTIONS}
-                className="w-full min-w-0"
-                triggerClassName={FILTER_TRIGGER}
-                contentClassName="min-w-[200px]"
-              />
-            </FilterSection>
-
-            <FilterDivider />
-
-            <FilterSection
-              icon={<FileText className="w-4 h-4 text-orange-500" />}
-              label="Documents"
-            >
-              <SearchableSelect
-                data-testid="filter-complexity"
-                searchable={false}
-                clearable={false}
-                value={complexity}
-                onChange={(v) => setComplexity(v ?? "")}
-                options={COMPLEXITY_OPTIONS}
-                className="w-full min-w-0"
-                triggerClassName={FILTER_TRIGGER}
-                contentClassName="min-w-[200px]"
-              />
-            </FilterSection>
-
-            <FilterDivider />
-
-            <FilterSection
-              icon={<Umbrella className="w-4 h-4 text-pink-500" />}
-              label="Holidays"
-            >
-              <DatePicker
-                data-testid="filter-travel-date"
-                value={travelDate || null}
-                onChange={(v) => setTravelDate(v || "")}
-                placeholder="Select Dates"
-                clearable
-                className="w-full min-w-0"
-                triggerClassName={FILTER_DATE_TRIGGER}
-                contentClassName="min-w-[280px]"
-              />
-            </FilterSection>
-
-            {hasFilters && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="hidden lg:block ml-2 text-xs font-semibold text-teal hover:text-navy transition-colors whitespace-nowrap"
-                data-testid="clear-filters"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-
+      <div
+        className={`max-w-[1400px] mx-auto px-3 sm:px-4 md:px-8 pb-24 sm:pb-28 transition-[padding] duration-300 ${
+          headerCompact ? "pt-4 sm:pt-5 md:pt-6" : "pt-2 md:pt-3"
+        }`}
+      >
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
             {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
               <div key={i}>
-                <Skeleton className="aspect-[3/4] rounded-[28px]" />
-                <Skeleton className="h-4 w-3/4 mt-3 rounded-lg" />
+                <Skeleton className="aspect-[3/4] rounded-[20px] sm:rounded-[28px]" />
+                <Skeleton className="h-4 w-3/4 mt-3 rounded-lg mx-auto" />
               </div>
             ))}
           </div>
@@ -193,11 +77,11 @@ export default function LandingPage() {
           <EmptyCatalog hasFilters={hasFilters} onClear={clearFilters} />
         ) : (
           <div
-            className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5"
+            className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5"
             data-testid="catalog-grid"
           >
             {filtered.map((p, i) => (
-              <VisaCard key={p.id} product={p} index={i} reduce={reduce} />
+              <VisaCard key={p.id} product={p} index={i} />
             ))}
           </div>
         )}
@@ -206,38 +90,32 @@ export default function LandingPage() {
   );
 }
 
-function FilterSection({ icon, label, children, testid }) {
-  return (
-    <div className="atlys-filter-section" data-testid={testid}>
-      <div className="atlys-filter-icon">{icon}</div>
-      <div className="atlys-filter-fields">
-        <span className="atlys-filter-label">{label}</span>
-        {children}
-      </div>
-    </div>
-  );
-}
+const COVER_FALLBACK =
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?crop=entropy&cs=srgb&fm=jpg&q=80&w=900";
 
-function FilterDivider() {
-  return <div className="hidden md:block w-px self-stretch min-h-[2.5rem] bg-border/70 shrink-0" />;
-}
-
-function VisaCard({ product, index, reduce }) {
+function VisaCard({ product, index }) {
   const totalFee = (product.fees?.govt_fee || 0) + (product.fees?.service_fee || 0);
-  const cover = countryCoverUrl(product);
+  const [cover, setCover] = useState(() => countryCoverUrl(product));
+  const docsSummary = docsLabelForProduct(product);
+  const primaryDoc = docsSummary.split(",")[0]?.trim() || "Passport";
+
+  const openEmergency = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    track("emergency_assist_click", { product_id: product.id, country: product.country_name });
+    window.open(SUPPORT.whatsapp, "_blank", "noopener,noreferrer");
+  };
 
   return (
-    <motion.div
-      initial={reduce ? false : { opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-20px" }}
-      transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.25), ease }}
+    <div
+      className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
+      style={{ animationDelay: `${Math.min(index * 50, 250)}ms`, animationDuration: "400ms" }}
     >
       <Link
         href={`/visa/${product.id}`}
         data-testid={`visa-card-${product.country_code}`}
         onClick={() => track("visa_card_click", { product_id: product.id })}
-        className="group block"
+        className="group block relative"
       >
         <div className="atlys-destination-card">
           <Image
@@ -246,31 +124,69 @@ function VisaCard({ product, index, reduce }) {
             fill
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 20vw"
             className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
+            onError={() => {
+              if (cover !== COVER_FALLBACK) setCover(COVER_FALLBACK);
+            }}
           />
           <div className="atlys-destination-overlay" />
-          <div className="atlys-destination-cta" aria-hidden="true">
-            <span className="atlys-destination-cta-btn">More details</span>
+
+          {/* Hover tooltip — Apply for {Country} Visa */}
+          <div className="atlys-destination-tip" aria-hidden="true">
+            Apply for {product.country_name} Visa
           </div>
+
           <div className="atlys-destination-content">
             <span className="text-2xl md:text-3xl leading-none drop-shadow-sm">{product.country_flag}</span>
-            <h3 className="font-display text-lg md:text-xl tracking-[0.12em] text-white uppercase text-center leading-tight">
+            <h3 className="font-display text-sm sm:text-lg md:text-xl tracking-[0.08em] sm:tracking-[0.12em] text-white uppercase text-center leading-tight px-1">
               {product.country_name}
             </h3>
-            <div className="grid grid-cols-3 gap-2 w-full mt-1 px-1">
+
+            <div className="atlys-destination-divider" aria-hidden="true" />
+
+            <div className="grid grid-cols-3 gap-1 sm:gap-2 w-full px-0.5 sm:px-1">
               <CardMeta label="Type" value={formatVisaTypeShort(product.visa_type)} />
               <CardMeta label="Valid" value={formatValidityShort(product.validity_days)} />
               <CardMeta label="Fees" value={INR.format(totalFee)} />
             </div>
+
+            {/* Hover-only expanded details */}
+            <div className="atlys-destination-extra">
+              <div className="atlys-destination-divider" aria-hidden="true" />
+              <div className="w-full text-center px-1">
+                <div className="text-[9px] md:text-[10px] uppercase tracking-wider text-white/65 font-medium">
+                  Documents needed
+                </div>
+                <div className="text-[11px] md:text-xs font-semibold text-white mt-0.5 truncate" title={docsSummary}>
+                  {primaryDoc}
+                </div>
+              </div>
+
+              <div className="atlys-destination-divider" aria-hidden="true" />
+
+              <span
+                role="link"
+                tabIndex={0}
+                className="atlys-destination-assist"
+                data-testid={`emergency-assist-${product.country_code}`}
+                onClick={openEmergency}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") openEmergency(e);
+                }}
+              >
+                <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                Get emergency assistance
+              </span>
+            </div>
           </div>
         </div>
-        <p className="mt-3 text-center text-xs md:text-sm text-ink-muted">
+        <p className="mt-2 sm:mt-3 text-center text-[11px] sm:text-xs md:text-sm text-ink-muted px-1 leading-snug">
           Guaranteed Visa On{" "}
           <span className="font-semibold text-ink">
             {guaranteedByDateTime(product.processing_time_days)}
           </span>
         </p>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 
