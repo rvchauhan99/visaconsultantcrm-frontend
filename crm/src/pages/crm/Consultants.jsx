@@ -106,6 +106,16 @@ export default function Consultants() {
     }
   };
 
+  const updateManager = async (cid, managerId) => {
+    try {
+      await api.patch(`/admin/consultants/${cid}/manager`, { manager_id: managerId || null });
+      toast.success("Manager updated");
+      load();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Failed to update manager"));
+    }
+  };
+
   const columns = [
     {
       key: "full_name",
@@ -126,6 +136,22 @@ export default function Consultants() {
       key: "role",
       label: "Role",
       render: (row) => <Stamp tone={row.role === "admin" ? "gold" : "ink"} size="sm">{row.role}</Stamp>,
+    },
+    {
+      key: "manager_name",
+      label: "Manager",
+      render: (row) => (
+        <span className="text-xs text-ink-muted">{row.manager_name || "—"}</span>
+      ),
+    },
+    {
+      key: "direct_reports_count",
+      label: "Team",
+      render: (row) => (
+        row.direct_reports_count > 0
+          ? <Stamp tone="muted" size="sm">{row.direct_reports_count} reports</Stamp>
+          : <span className="text-ink-muted text-xs">—</span>
+      ),
     },
     {
       key: "country_codes",
@@ -159,7 +185,16 @@ export default function Consultants() {
       headerClassName: "text-right",
       className: "text-right",
       render: (row) => isConsultantActive(row) && row.role !== "admin" ? (
-        <div className="inline-flex gap-2 items-center">
+        <div className="inline-flex gap-2 items-center flex-wrap justify-end">
+          <ConsultantSelect
+            value={row.manager_id || null}
+            onChange={(v) => updateManager(row.id, v)}
+            admin
+            excludeId={row.id}
+            placeholder="Manager…"
+            testId={`edit-manager-${row.id.slice(0, 4)}`}
+            className="w-36"
+          />
           <CountrySelect
             value={row.country_codes || []}
             onChange={(codes) => updateCountries(row.id, codes)}
@@ -229,6 +264,7 @@ function NewConsultantForm({ onCancel, onCreate }) {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("consultant");
   const [countryCodes, setCountryCodes] = useState([]);
+  const [managerId, setManagerId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async (e) => {
@@ -249,6 +285,7 @@ function NewConsultantForm({ onCancel, onCreate }) {
         password,
         role,
         country_codes: role === "admin" ? [] : countryCodes,
+        manager_id: managerId || null,
       });
     } finally {
       setSubmitting(false);
@@ -284,7 +321,17 @@ function NewConsultantForm({ onCancel, onCreate }) {
           />
         </CrmField>
         {role === "consultant" && (
-          <CrmField label="Countries managed" required className="md:col-span-2" hint="Consultants only see cases for these destinations">
+          <>
+            <CrmField label="Manager (optional)" hint="Reporting line — managers see this consultant's data">
+              <ConsultantSelect
+                value={managerId}
+                onChange={setManagerId}
+                admin
+                placeholder="Select manager…"
+                testId="nc-manager"
+              />
+            </CrmField>
+            <CrmField label="Countries managed" required className="md:col-span-2" hint="Consultants only see cases for these destinations">
             <CountrySelect
               value={countryCodes}
               onChange={setCountryCodes}
@@ -293,6 +340,7 @@ function NewConsultantForm({ onCancel, onCreate }) {
               testId="nc-countries"
             />
           </CrmField>
+          </>
         )}
         <div className="md:col-span-2 flex justify-end gap-2 mt-2">
           <CrmButton type="button" variant="outline" size="sm" onClick={onCancel} disabled={submitting}>Cancel</CrmButton>

@@ -288,8 +288,8 @@ function ApplyFeeSheet({ schema, total, processingDays }) {
                         <DrawerTitle className="font-display text-navy">Fee breakdown</DrawerTitle>
                     </DrawerHeader>
                     <div className="space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="text-ink-muted">Government fee</span><span className="font-mono">{INR.format(schema.fees?.govt_fee || 0)}</span></div>
-                        <div className="flex justify-between"><span className="text-ink-muted">Service fee</span><span className="font-mono">{INR.format(schema.fees?.service_fee || 0)}</span></div>
+                        <div className="flex justify-between"><span className="text-ink-muted">Government fee (incl. GST)</span><span className="font-mono">{INR.format(schema.fees?.govt_fee || 0)}</span></div>
+                        <div className="flex justify-between"><span className="text-ink-muted">Service fee (excl. GST)</span><span className="font-mono">{INR.format(schema.fees?.service_fee || 0)}</span></div>
                         <div className="flex justify-between pt-2 border-t border-border font-medium"><span>Total</span><span className="font-display text-xl text-navy">{INR.format(total)}</span></div>
                         <p className="text-xs text-ink-muted pt-2">Processing about {processingDays} days · no hidden charges</p>
                     </div>
@@ -624,14 +624,14 @@ function PaymentStep({ schema, total, submit, submitting }) {
     return (
         <div>
             <h2 className="font-display text-xl text-navy mb-1">Payment</h2>
-            <p className="text-sm text-ink-muted mb-6">Government fee and service fee shown separately. No hidden charges.</p>
+            <p className="text-sm text-ink-muted mb-6">Government fee includes GST; service fee excludes GST and is shown separately. No hidden charges.</p>
             <div className="bg-surface border border-border rounded-xl p-6 max-w-md mx-auto">
                 <div className="flex justify-between text-sm mb-2">
-                    <span className="text-ink-muted">Government fee</span>
+                    <span className="text-ink-muted">Government fee (incl. GST)</span>
                     <span className="font-mono">{INR.format(schema.fees?.govt_fee || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-4 pb-4 border-b border-border">
-                    <span className="text-ink-muted">Service fee</span>
+                    <span className="text-ink-muted">Service fee (excl. GST)</span>
                     <span className="font-mono">{INR.format(schema.fees?.service_fee || 0)}</span>
                 </div>
                 <div className="flex justify-between items-baseline">

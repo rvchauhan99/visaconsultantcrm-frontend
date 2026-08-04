@@ -18,7 +18,9 @@ const ROUTE_LABELS = {
   "/cases/closed":   "Closed cases",
   "/tasks":          "My tasks",
   "/leads":          "Leads",
+  "/leads/new":      "Add Lead",
   "/follow-ups":     "Lead follow-ups",
+  "/service-orders": "Service orders",
   "/finance":        "Finance",
   "/reports/payments": "Payment reports",
   "/inbox":          "Communications",
@@ -26,6 +28,7 @@ const ROUTE_LABELS = {
   "/offline-case":   "New offline case",
   "/reports":        "Reports",
   "/products":       "Visa products",
+  "/passport-products": "Passport products",
   "/document-master":"Document master",
   "/field-master":   "Field master",
   "/consultants":    "Consultants",
@@ -90,15 +93,18 @@ export default function CrmLayout() {
   const pathParts = location.pathname.split("/").filter(Boolean);
   const breadcrumb = pathParts.length === 0
     ? "Dashboard"
-    : location.pathname === "/cases/closed"
-      ? "Closed cases"
-      : location.pathname === "/reports/payments"
-        ? "Payment reports"
-        : pathParts.length === 2 && pathParts[0] === "cases"
-          ? `Case #${pathParts[1].slice(0, 8)}`
-          : pathParts[0] === "tasks" && user?.role === "admin"
-            ? "Tasks"
-            : ROUTE_LABELS[`/${pathParts[0]}`] ?? pathParts[0];
+    : ROUTE_LABELS[location.pathname]
+      ?? (location.pathname === "/cases/closed"
+        ? "Closed cases"
+        : location.pathname === "/reports/payments"
+          ? "Payment reports"
+          : pathParts.length === 2 && pathParts[0] === "cases"
+            ? `Case #${pathParts[1].slice(0, 8)}`
+            : pathParts.length === 2 && pathParts[0] === "passport-products"
+              ? "Passport product"
+              : pathParts[0] === "tasks" && user?.role === "admin"
+                ? "Tasks"
+                : ROUTE_LABELS[`/${pathParts[0]}`] ?? pathParts[0]);
 
   let hoverTimeout;
   const onSidebarMouseEnter = () => {
@@ -152,6 +158,7 @@ export default function CrmLayout() {
           <RailLink to="/cases/closed" icon={<Archive className="w-4 h-4" />} label="Closed cases" testid="crm-nav-closed" showLabel={showLabels} />
           <RailLink to="/tasks" icon={<ListChecks className="w-4 h-4" />} label={user?.role === "admin" ? "Tasks" : "My tasks"} testid="crm-nav-tasks" showLabel={showLabels} />
           <RailLink to="/leads" icon={<UserPlus className="w-4 h-4" />} label="Leads" testid="crm-nav-leads" showLabel={showLabels} />
+          <RailLink to="/service-orders" icon={<Layers className="w-4 h-4" />} label="Service orders" testid="crm-nav-service-orders" showLabel={showLabels} />
           <RailLink to="/follow-ups" icon={<PhoneCall className="w-4 h-4" />} label="Follow-ups" testid="crm-nav-follow-ups" showLabel={showLabels} />
           <RailLink to="/finance" icon={<Wallet className="w-4 h-4" />} label="Finance" testid="crm-nav-finance" showLabel={showLabels} />
           <RailLink to="/reports/payments" icon={<CreditCard className="w-4 h-4" />} label="Payments" testid="crm-nav-payments" showLabel={showLabels} />
@@ -170,6 +177,7 @@ export default function CrmLayout() {
                 <div className="mt-3 mb-1 mx-auto w-5 border-t border-[rgba(255,252,247,0.12)]" />
               )}
               <RailLink to="/products" icon={<Layers className="w-4 h-4" />} label="Visa products" testid="crm-nav-products" showLabel={showLabels} />
+              <RailLink to="/passport-products" icon={<StampIcon className="w-4 h-4" />} label="Passport products" testid="crm-nav-passport-products" showLabel={showLabels} />
               <RailLink to="/document-master" icon={<FileText className="w-4 h-4" />} label="Document master" testid="crm-nav-doc-master" showLabel={showLabels} />
               <RailLink to="/field-master" icon={<FormInput className="w-4 h-4" />} label="Field master" testid="crm-nav-field-master" showLabel={showLabels} />
               <RailLink to="/consultants" icon={<Users2 className="w-4 h-4" />} label="Consultants" testid="crm-nav-consultants" showLabel={showLabels} />

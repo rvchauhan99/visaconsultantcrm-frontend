@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { PhoneCall, Plus, RefreshCw, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";
@@ -13,6 +12,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { useListQueryState, unwrapListResponse } from "@/hooks/useListQueryState";
 import Stamp from "@/components/Stamp";
 import { cn } from "@/lib/utils";
+import { SERVICE_TYPE_OPTIONS, SERVICE_TYPE_LABELS } from "@/lib/leadServiceSchemas";
 import AddLeadFollowUpForm, {
   FOLLOW_UP_OUTCOMES,
   FOLLOW_UP_CHANNELS,
@@ -40,7 +40,7 @@ const OUTCOME_TONE = {
 };
 
 const FILTER_KEYS = [
-  "status", "outcome", "channel", "source", "country", "assigned_to", "visa_type",
+  "status", "outcome", "channel", "source", "country", "assigned_to", "visa_type", "service_type",
   "due", "from_date", "to_date", "next_from", "next_to", "contacted_from", "contacted_to",
 ];
 const LIST_DEFAULTS = {
@@ -155,6 +155,12 @@ export default function LeadFollowUps() {
       ],
     },
     {
+      key: "service_type",
+      label: "Service",
+      type: "multiselect",
+      options: SERVICE_TYPE_OPTIONS,
+    },
+    {
       key: "visa_type",
       label: "Visa type",
       type: "select",
@@ -197,6 +203,14 @@ export default function LeadFollowUps() {
           </Link>
           <div className="font-mono text-[11px] text-ink-muted">{r.phone || r.email || "—"}</div>
         </div>
+      ),
+    },
+    {
+      key: "service_type",
+      label: "Service",
+      sortable: false,
+      render: (r) => (
+        <Stamp tone="teal" size="sm">{SERVICE_TYPE_LABELS[r.service_type] || r.service_type || "Visa"}</Stamp>
       ),
     },
     {
@@ -258,7 +272,7 @@ export default function LeadFollowUps() {
       <PageHeader
         label="Sales"
         title="Lead follow-ups"
-        subtitle="Today, overdue, and results for visa inquiry dialing"
+        subtitle="Today, overdue, and results across all service types"
         actions={
           <>
             <CrmButton variant="outline" size="sm" onClick={load}>
@@ -346,9 +360,9 @@ export default function LeadFollowUps() {
               lead={fuModal}
               onCancel={() => setFuModal(null)}
               onDone={() => { setFuModal(null); load(); }}
-              onNeedsConvert={() => {
+              onNeedsConvert={(lead) => {
                 setFuModal(null);
-                toast.message("Open Leads board to convert with a visa product");
+                toast.message(`Open Leads board to convert this ${SERVICE_TYPE_LABELS[lead?.service_type] || lead?.service_type || "lead"}`);
               }}
             />
           </div>
@@ -377,7 +391,10 @@ export default function LeadFollowUps() {
                   className="w-full text-left px-2 py-2 rounded-lg hover:bg-surface-muted text-sm"
                   onClick={() => { setPickLead(false); setFuModal(l); setLeadHits([]); setLeadSearch(""); }}
                 >
-                  <div className="font-medium text-ink">{l.full_name}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium text-ink">{l.full_name}</div>
+                    <Stamp tone="teal" size="sm">{SERVICE_TYPE_LABELS[l.service_type] || l.service_type || "Visa"}</Stamp>
+                  </div>
                   <div className="font-mono text-[11px] text-ink-muted">{l.phone || l.email}</div>
                 </button>
               ))}

@@ -7,11 +7,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
-import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
-import { CrmPhoneField } from "@/components/ui/crm-phone-field";
-import { SearchableSelect } from "@/components/forms/AsyncSelect";
-import { isValidPhoneOptional } from "@/lib/phone";
-import { CountrySelect, ConsultantSelect, ProductSelect } from "@/components/forms/selects";
+import { CrmField } from "@/components/ui/crm-field";
+import { CountrySelect, ConsultantSelect, ProductSelect, PassportProductSelect } from "@/components/forms/selects";
+import {
+  SERVICE_TYPE_OPTIONS,
+  SERVICE_TYPE_LABELS,
+  SIMPLE_SERVICE_TYPES,
+  emptyServiceDetails,
+} from "@/lib/leadServiceSchemas";
+import ServiceSectionFields from "@/components/crm/ServiceSectionFields";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { Segmented } from "@/components/ui/segmented";
@@ -51,19 +55,33 @@ const ACTIVE_STAGES = ["new", "contacted", "qualified", "converted", "lost"];
 
 const FILTER_KEYS = [
   "status", "source", "country", "from_date", "to_date", "assigned_to",
-  "due", "outcome", "visa_type", "next_from", "next_to",
+  "due", "outcome", "visa_type", "service_type", "next_from", "next_to",
 ];
 const LIST_DEFAULTS = { limit: "25", sort_by: "created_at", sort_order: "desc" };
 
-const emptyForm = {
-  full_name: "",
-  email: "",
-  phone: "",
-  source: "website",
-  country_code: "",
-  visa_type: "",
-  notes: "",
-};
+const SIMPLE_SERVICE_FILTER = "hotel_booking,ticket,package,travel_insurance,car_booking";
+
+const SERVICE_BOARD_SEGMENTS = [
+  { value: "all", label: "All services" },
+  { value: "visa", label: "Visa" },
+  { value: "passport", label: "Passport" },
+  { value: "orders", label: "Orders" },
+];
+
+function serviceBoardSegment(serviceTypeFilter) {
+  if (!serviceTypeFilter) return "all";
+  if (serviceTypeFilter === "visa") return "visa";
+  if (serviceTypeFilter === "passport") return "passport";
+  if (serviceTypeFilter === SIMPLE_SERVICE_FILTER) return "orders";
+  return "";
+}
+
+function serviceFilterForSegment(segment) {
+  if (segment === "visa") return "visa";
+  if (segment === "passport") return "passport";
+  if (segment === "orders") return SIMPLE_SERVICE_FILTER;
+  return "";
+}
 
 function formatDue(iso) {
   if (!iso) return null;
@@ -87,9 +105,6 @@ export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [meta, setMeta] = useState({ total: 0 });
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(null);
 
   // New Features State
@@ -100,8 +115,10 @@ export default function Leads() {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [dragOverStage, setDragOverStage] = useState("");
   const [fuModal, setFuModal] = useState(null); // { lead, forcedStatus }
-  const [convertModal, setConvertModal] = useState(null); // lead
+  const [convertModal, setConvertModal] = useState(null);
   const [convertProductId, setConvertProductId] = useState(null);
+  const [convertPassportProductId, setConvertPassportProductId] = useState(null);
+  const [convertOrderDetails, setConvertOrderDetails] = useState({});
   const [drawer, setDrawer] = useState(null); // { lead, follow_ups }
 
   const load = useCallback(() => {
@@ -122,55 +139,43 @@ export default function Leads() {
 
   useEffect(() => { load(); }, [load]);
 
-  const createLead = async (e) => {
-    e.preventDefault();
-    if (!isValidPhoneOptional(form.phone)) {
-      toast.error("Enter a valid phone number for the selected country");
-      return;
-    }
-    setSaving(true);
-    try {
-      await api.post("/crm/leads", {
-        full_name: form.full_name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim() || null,
-        source: form.source || null,
-        country_code: form.country_code || null,
-        visa_type: form.visa_type || null,
-        notes: form.notes.trim() || null,
-      });
-      toast.success("Lead created");
-      setForm(emptyForm);
-      setShowForm(false);
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to create lead");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const openConvert = (lead) => {
-    setConvertProductId(null);
+    const sd = lead.service_details || {};
+    setConvertProductId(sd.visa_product_id || null);
+    setConvertPassportProductId(sd.passport_product_id || null);
+    setConvertOrderDetails(sd || emptyServiceDetails(lead.service_type || "visa"));
     setConvertModal(lead);
   };
 
   const convertLead = async () => {
     if (!convertModal?.id) return;
-    if (!convertProductId) {
-      toast.error("Select a visa product to convert");
-      return;
+    const st = convertModal.service_type || "visa";
+    const body = { create_case: true, create_order: true };
+    if (st === "visa") {
+      if (!convertProductId) {
+        toast.error("Select a visa product to convert");
+        return;
+      }
+      body.visa_product_id = convertProductId;
+    } else if (st === "passport") {
+      if (!convertPassportProductId) {
+        toast.error("Select a passport product to convert");
+        return;
+      }
+      body.passport_product_id = convertPassportProductId;
+      body.create_order = false;
+    } else if (SIMPLE_SERVICE_TYPES.has(st)) {
+      body.create_case = false;
+      body.service_details = convertOrderDetails;
     }
     setConverting(convertModal.id);
     try {
-      const r = await api.post(`/crm/leads/${convertModal.id}/convert`, {
-        visa_product_id: convertProductId,
-        create_case: true,
-      });
+      const r = await api.post(`/crm/leads/${convertModal.id}/convert`, body);
       toast.success("Lead converted");
       setConvertModal(null);
       setFuModal(null);
       if (r.data?.case_id) nav(`/cases/${r.data.case_id}`);
+      else if (r.data?.service_order_id) nav("/service-orders");
       else load();
     } catch (err) {
       toast.error(err.response?.data?.detail || "Convert failed");
@@ -294,6 +299,12 @@ export default function Leads() {
       ],
     },
     {
+      key: "service_type",
+      label: "Service",
+      type: "multiselect",
+      options: SERVICE_TYPE_OPTIONS,
+    },
+    {
       key: "visa_type",
       label: "Visa type",
       type: "select",
@@ -337,6 +348,16 @@ export default function Leads() {
     { key: "email", label: "Email", render: (row) => <span className="font-mono text-xs">{row.email || "—"}</span> },
     { key: "phone", label: "Phone", render: (row) => <span className="font-mono text-xs">{row.phone || "—"}</span> },
     { key: "source", label: "Source", render: (row) => <span className="text-xs capitalize">{row.source || "—"}</span> },
+    {
+      key: "service_type",
+      label: "Service",
+      sortable: false,
+      render: (row) => (
+        <Stamp tone="teal" size="sm">
+          {SERVICE_TYPE_LABELS[row.service_type] || row.service_type || "Visa"}
+        </Stamp>
+      ),
+    },
     {
       key: "country_code",
       label: "Country",
@@ -451,7 +472,7 @@ export default function Leads() {
               <RefreshCw className="w-3.5 h-3.5" />
               Refresh
             </CrmButton>
-            <CrmButton variant="solid" size="sm" onClick={() => setShowForm((s) => !s)} data-testid="lead-new-btn" className="rounded-full shadow-glow-navy">
+            <CrmButton variant="solid" size="sm" onClick={() => nav("/leads/new")} data-testid="lead-new-btn" className="rounded-full shadow-glow-navy">
               <UserPlus className="w-3.5 h-3.5" />
               New lead
             </CrmButton>
@@ -473,7 +494,7 @@ export default function Leads() {
           className="mb-3"
         />
 
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
           <Segmented
             value={list.filters.due || ""}
             onChange={(v) => list.setFilters({ due: v })}
@@ -485,6 +506,14 @@ export default function Leads() {
             ]}
             testId="leads-due-presets"
           />
+          {viewMode === "board" && (
+            <Segmented
+              value={serviceBoardSegment(list.filters.service_type || "")}
+              onChange={(v) => list.setFilters({ service_type: serviceFilterForSegment(v) })}
+              segments={SERVICE_BOARD_SEGMENTS}
+              testId="leads-service-type"
+            />
+          )}
         </div>
 
         <AnimatePresence>
@@ -522,74 +551,6 @@ export default function Leads() {
                   </div>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showForm && (
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mb-4">
-              <CrmCard className="p-4">
-                <form onSubmit={createLead} className="space-y-3" data-testid="lead-form">
-                  <div className="grid md:grid-cols-3 gap-3">
-                    <CrmField label="Full name" required>
-                      <CrmInput required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} data-testid="lead-name" />
-                    </CrmField>
-                    <CrmField label="Email" required>
-                      <CrmInput type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="lead-email" />
-                    </CrmField>
-                    <CrmField label="Phone" error={(form.phone || "").trim() && !isValidPhoneOptional(form.phone) ? "Invalid for selected country" : undefined}>
-                      <CrmPhoneField value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} data-testid="lead-phone" />
-                    </CrmField>
-                    <CrmField label="Source">
-                      <SearchableSelect
-                        clearable={false}
-                        value={form.source}
-                        onChange={(v) => setForm({ ...form, source: v || "website" })}
-                        data-testid="lead-source"
-                        options={[
-                          { value: "website", label: "Website" },
-                          { value: "referral", label: "Referral" },
-                          { value: "walk_in", label: "Walk-in" },
-                          { value: "phone", label: "Phone" },
-                          { value: "partner", label: "Partner" },
-                          { value: "other", label: "Other" },
-                        ]}
-                      />
-                    </CrmField>
-                    <CrmField label="Country interest">
-                      <CountrySelect
-                        value={form.country_code || null}
-                        onChange={(v) => setForm({ ...form, country_code: v || "" })}
-                        placeholder="Select country…"
-                        testId="lead-country"
-                      />
-                    </CrmField>
-                    <CrmField label="Visa type">
-                      <SearchableSelect
-                        clearable
-                        value={form.visa_type || null}
-                        onChange={(v) => setForm({ ...form, visa_type: v || "" })}
-                        data-testid="lead-visa-type"
-                        placeholder="Any"
-                        options={[
-                          { value: "tourist", label: "Tourist" },
-                          { value: "business", label: "Business" },
-                          { value: "transit", label: "Transit" },
-                          { value: "medical", label: "Medical" },
-                        ]}
-                      />
-                    </CrmField>
-                  </div>
-                  <CrmField label="Notes">
-                    <CrmTextarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} data-testid="lead-notes" />
-                  </CrmField>
-                  <div className="flex justify-end gap-2">
-                    <CrmButton type="button" variant="outline" size="sm" onClick={() => setShowForm(false)}>Cancel</CrmButton>
-                    <CrmButton type="submit" variant="solid" size="sm" loading={saving} data-testid="lead-submit">Create lead</CrmButton>
-                  </div>
-                </form>
-              </CrmCard>
             </motion.div>
           )}
         </AnimatePresence>
@@ -725,25 +686,49 @@ export default function Leads() {
       {/* Convert with product */}
       {convertModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 p-4" data-testid="lead-convert-modal">
-          <div className="bg-surface-card border border-border rounded-[12px] shadow-[var(--shadow-premium)] w-full max-w-md p-4 space-y-3">
+          <div className="bg-surface-card border border-border rounded-[12px] shadow-[var(--shadow-premium)] w-full max-w-lg p-4 space-y-3 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-ink">Convert {convertModal.full_name}</h3>
+              <h3 className="text-sm font-semibold text-ink">
+                Convert {convertModal.full_name}
+                <span className="ml-2 text-ink-muted font-normal">
+                  ({SERVICE_TYPE_LABELS[convertModal.service_type] || convertModal.service_type || "Visa"})
+                </span>
+              </h3>
               <button type="button" onClick={() => setConvertModal(null)} className="text-ink-muted hover:text-ink">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <CrmField label="Visa product" required>
-              <ProductSelect
-                value={convertProductId}
-                onChange={(v) => setConvertProductId(v)}
-                placeholder="Select product…"
-                testId="lead-convert-product"
+            {(convertModal.service_type || "visa") === "visa" && (
+              <CrmField label="Visa product" required>
+                <ProductSelect
+                  value={convertProductId}
+                  onChange={(v) => setConvertProductId(v)}
+                  placeholder="Select product…"
+                  testId="lead-convert-product"
+                />
+              </CrmField>
+            )}
+            {convertModal.service_type === "passport" && (
+              <CrmField label="Passport product" required>
+                <PassportProductSelect
+                  value={convertPassportProductId}
+                  onChange={(v) => setConvertPassportProductId(v)}
+                  placeholder="Select passport product…"
+                  testId="lead-convert-passport-product"
+                />
+              </CrmField>
+            )}
+            {SIMPLE_SERVICE_TYPES.has(convertModal.service_type) && (
+              <ServiceSectionFields
+                serviceType={convertModal.service_type}
+                details={convertOrderDetails}
+                onChange={setConvertOrderDetails}
               />
-            </CrmField>
+            )}
             <div className="flex justify-end gap-2">
               <CrmButton variant="outline" size="sm" onClick={() => setConvertModal(null)}>Cancel</CrmButton>
               <CrmButton variant="solid" size="sm" loading={!!converting} onClick={convertLead} data-testid="lead-convert-confirm">
-                Convert to case
+                {SIMPLE_SERVICE_TYPES.has(convertModal.service_type) ? "Convert to order" : "Convert to case"}
               </CrmButton>
             </div>
           </div>
@@ -765,6 +750,9 @@ export default function Leads() {
             </div>
             <div className="flex flex-wrap gap-2 mb-4">
               <Stamp tone={STATUS_TONE[drawer.lead.status] || "muted"} size="sm">{drawer.lead.status}</Stamp>
+              <Stamp tone="teal" size="sm">
+                {SERVICE_TYPE_LABELS[drawer.lead.service_type] || drawer.lead.service_type || "Visa"}
+              </Stamp>
               {drawer.lead.last_follow_up_outcome && (
                 <Stamp tone={OUTCOME_TONE[drawer.lead.last_follow_up_outcome] || "muted"} size="sm">
                   {drawer.lead.last_follow_up_outcome}
@@ -776,6 +764,23 @@ export default function Leads() {
                 </span>
               )}
             </div>
+            {(drawer.sibling_leads || []).length > 0 && (
+              <div className="mb-4">
+                <div className="text-[10px] uppercase tracking-widest text-ink-muted font-mono mb-2">Same submission</div>
+                <div className="flex flex-wrap gap-1">
+                  {drawer.sibling_leads.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="text-xs px-2 py-1 rounded border border-border hover:border-navy/40"
+                      onClick={() => openDrawer(s.id)}
+                    >
+                      {SERVICE_TYPE_LABELS[s.service_type] || s.service_type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 mb-4">
               <CrmButton variant="outline" size="sm" onClick={() => setFuModal({ lead: drawer.lead, forcedStatus: null })}>
                 Log follow-up
@@ -857,6 +862,9 @@ function LeadCard({ lead, onDragStart, selected, onToggleSelect, onConvert, onOp
         </div>
 
         <div className="flex flex-wrap gap-1 mb-2">
+          <Stamp tone="teal" size="sm">
+            {SERVICE_TYPE_LABELS[lead.service_type] || lead.service_type || "Visa"}
+          </Stamp>
           {lead.last_follow_up_outcome && (
             <Stamp tone={OUTCOME_TONE[lead.last_follow_up_outcome] || "muted"} size="sm">
               {lead.last_follow_up_outcome}

@@ -19,7 +19,11 @@ import DocumentMaster from "@/pages/crm/DocumentMaster";
 import FieldMaster from "@/pages/crm/FieldMaster";
 import StaffProfile from "@/pages/crm/StaffProfile";
 import Leads from "@/pages/crm/Leads";
+import LeadCreate from "@/pages/crm/LeadCreate";
 import LeadFollowUps from "@/pages/crm/LeadFollowUps";
+import ServiceOrders from "@/pages/crm/ServiceOrders";
+import PassportProducts from "@/pages/crm/PassportProducts";
+import PassportProductBuilder from "@/pages/crm/PassportProductBuilder";
 import Finance from "@/pages/crm/Finance";
 import Inbox from "@/pages/crm/Inbox";
 import CaseNumberSettings from "@/pages/crm/CaseNumberSettings";
@@ -51,7 +55,9 @@ export default function App() {
                     <Route path="/cases/closed" element={<ClosedCases />} />
                     <Route path="/tasks" element={<Tasks />} />
                     <Route path="/leads" element={<Leads />} />
+                    <Route path="/leads/new" element={<LeadCreate />} />
                     <Route path="/follow-ups" element={<LeadFollowUps />} />
+                    <Route path="/service-orders" element={<ServiceOrders />} />
                     <Route path="/finance" element={<Finance />} />
                     <Route path="/reports/payments" element={<PaymentsReport />} />
                     <Route path="/inbox" element={<Inbox />} />
@@ -59,6 +65,8 @@ export default function App() {
                     <Route path="/offline-case" element={<OfflineCase />} />
                     <Route path="/products" element={<RequireAdmin><Products /></RequireAdmin>} />
                     <Route path="/products/:productId" element={<RequireAdmin><ProductBuilder /></RequireAdmin>} />
+                    <Route path="/passport-products" element={<RequireAdmin><PassportProducts /></RequireAdmin>} />
+                    <Route path="/passport-products/:productId" element={<RequireAdmin><PassportProductBuilder /></RequireAdmin>} />
                     <Route path="/document-master" element={<RequireAdmin><DocumentMaster /></RequireAdmin>} />
                     <Route path="/field-master" element={<RequireAdmin><FieldMaster /></RequireAdmin>} />
                     <Route path="/consultants" element={<RequireAdmin><Consultants /></RequireAdmin>} />
