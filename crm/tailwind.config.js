@@ -1,4 +1,4 @@
-/** Tailwind config — CRM. Editorial Luxe tokens from @passage/ui. */
+/** Tailwind config — CRM. Premium Glass tokens from @passage/ui. */
 const tokens = require("../packages/ui/tokens");
 
 module.exports = {
@@ -17,7 +17,8 @@ module.exports = {
                 "teal-light": "var(--teal-light, #4a8a75)",
                 "gold-light": "var(--gold-light, #c9a96e)",
                 "gold-pale":  "var(--gold-pale, #f5e8c8)",
-                "surface-warm": "var(--surface-warm, #ffffff)",
+                "surface-warm": "var(--surface-warm, #faf8f5)",
+                "surface-hover": "var(--surface-hover, rgba(31, 74, 58, 0.03))",
                 "ink-subtle": "var(--ink-subtle, #9b8e83)",
                 background: tokens.colors.surface,
                 foreground: tokens.colors.ink,
@@ -35,11 +36,12 @@ module.exports = {
                 ...tokens.boxShadow,
                 "glow-navy": "0 0 0 1px rgba(31,74,58,0.2), 0 4px 16px rgba(31,74,58,0.18)",
                 "glow-gold":  "0 0 0 1px rgba(176,141,87,0.18), 0 4px 12px rgba(176,141,87,0.15)",
+                "inner-glow": "inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.05)",
             },
             fontFamily: tokens.fontFamily,
             borderRadius: {
                 ...tokens.borderRadius,
-                "crm": "8px",
+                "crm": "14px",
             },
             keyframes: {
                 "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },

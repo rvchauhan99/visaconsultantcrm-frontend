@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useVisaProduct } from "@/hooks/customer-api";
 import { isCustomer, setNextPath } from "@/lib/session";
 import { INR, formatVisaType, formatValidity, cn } from "@/lib/utils";
+import { computeFeeBreakdown } from "@/lib/productPricing";
 import { track } from "@/lib/telemetry";
 
 export default function VisaDetailPage() {
@@ -47,7 +48,10 @@ export default function VisaDetailPage() {
     );
   }
 
-  const total = (schema.fees?.govt_fee || 0) + (schema.fees?.service_fee || 0);
+  const feeBreakdown = computeFeeBreakdown({
+    govtFee: schema.fees?.govt_fee,
+    serviceFee: schema.fees?.service_fee,
+  });
 
   const startApply = () => {
     track("apply_start_click", { product_id: productId });
@@ -145,11 +149,12 @@ export default function VisaDetailPage() {
         <aside className="md:sticky md:top-24 md:self-start">
           <Card className="p-6 shadow-[var(--shadow-premium)] border-navy/10">
             <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-1">Total fees</div>
-            <div className="font-display text-4xl text-navy mb-4">{INR.format(total)}</div>
+            <div className="font-display text-4xl text-navy mb-4">{INR.format(feeBreakdown.total)}</div>
 
             <div className="space-y-2.5 py-4 border-y border-border text-sm">
-              <FeeRow label="Government fee (incl. GST)" amount={schema.fees?.govt_fee} />
-              <FeeRow label="Service fee (excl. GST)" amount={schema.fees?.service_fee} />
+              <FeeRow label="Government fee (incl. GST)" amount={feeBreakdown.govtFee} />
+              <FeeRow label="Service fee (excl. GST)" amount={feeBreakdown.serviceFee} />
+              <FeeRow label={`GST on service (${feeBreakdown.gstPercent}%)`} amount={feeBreakdown.serviceGst} />
             </div>
 
             <div className="flex items-center gap-2 py-4 text-xs text-ink-muted">

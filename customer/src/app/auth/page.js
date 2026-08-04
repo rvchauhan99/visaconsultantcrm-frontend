@@ -39,8 +39,13 @@ const TRUST_POINTS = [
 
 function authErrorMessage(err, fallback = "Something went wrong") {
   const detail = err?.response?.data?.detail;
-  if (!detail) return fallback;
   if (typeof detail === "string") return detail;
+  if (!detail) {
+    const status = err?.response?.status;
+    if (status === 404) return "Sign-in service unavailable. Please try email and password.";
+    if (status === 503) return "Google sign-in is temporarily unavailable.";
+    return fallback;
+  }
   if (Array.isArray(detail)) {
     return detail.map((item) => item?.msg || item?.message || "Invalid input").join(", ");
   }
@@ -79,7 +84,7 @@ export default function AuthPage() {
   const googleEnabled = isFirebaseAuthConfigured();
 
   useEffect(() => {
-    if (isCustomer()) router.replace("/account");
+    if (isCustomer()) router.replace("/");
   }, [router]);
 
   useEffect(() => {
@@ -106,7 +111,7 @@ export default function AuthPage() {
   const finishAuth = (token, user, successMessage) => {
     saveSession(token, user);
     toast.success(successMessage);
-    router.replace(consumeNextPath("/account"));
+    router.replace(consumeNextPath("/"));
   };
 
   const submitGoogle = async () => {
@@ -118,7 +123,7 @@ export default function AuthPage() {
     setGoogleBusy(true);
     try {
       const idToken = await signInWithGoogle();
-      const r = await api.post("/auth/customer/google", { id_token: idToken });
+      const r = await api.post("/auth/customer/google", { id_token: idToken, mode });
       finishAuth(
         r.data.access_token,
         r.data.user,

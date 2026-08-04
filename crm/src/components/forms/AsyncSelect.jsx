@@ -41,6 +41,8 @@ export function SearchableSelect({
     pageSize = 10,
     clearable = true,
     showChipsInline = false,
+    searchable = true,
+    summaryMode = "count",
     disabled = false,
     className = "",
     contentClassName = "",
@@ -167,6 +169,10 @@ export function SearchableSelect({
         if (multiple) {
             if (selectedOptions.length === 0) return `${values.length} selected`;
             if (selectedOptions.length === 1) return getOptionLabel(selectedOptions[0]);
+            if (summaryMode === "compact" && selectedOptions.length === 2) {
+                return selectedOptions.map(getOptionLabel).join(", ");
+            }
+            if (summaryMode === "compact") return `${selectedOptions.length} selected`;
             return `${selectedOptions.length} selected`;
         }
         return selectedOptions[0] ? getOptionLabel(selectedOptions[0]) : String(values[0]);
@@ -295,13 +301,15 @@ export function SearchableSelect({
                 )}
                 align="start"
             >
-                <Command shouldFilter={isStatic} className="rounded-md bg-surface-elevated">
-                    <CommandInput
-                        placeholder={searchPlaceholder}
-                        value={query}
-                        onValueChange={setQuery}
-                        className="h-9 text-xs"
-                    />
+                <Command shouldFilter={isStatic && searchable} className="rounded-md bg-surface-elevated">
+                    {searchable && (
+                        <CommandInput
+                            placeholder={searchPlaceholder}
+                            value={query}
+                            onValueChange={setQuery}
+                            className="h-9 text-xs"
+                        />
+                    )}
                     <CommandList className="max-h-56">
                         {loading && (
                             <div className="flex items-center gap-2 px-3 py-2 text-xs text-ink-muted">

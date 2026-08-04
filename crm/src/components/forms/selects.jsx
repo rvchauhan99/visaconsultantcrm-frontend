@@ -1,9 +1,10 @@
 import React, { useCallback } from "react";
 import api from "@/lib/api";
 import AsyncSelect, { SearchableSelect } from "./AsyncSelect";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { formatFeeHint } from "@/lib/productPricing";
 
-export { SearchableSelect, AsyncSelect };
+export { SearchableSelect, AsyncSelect, MultiSelect };
 
 function normalizePage(data) {
     if (Array.isArray(data)) return { items: data, has_more: false };

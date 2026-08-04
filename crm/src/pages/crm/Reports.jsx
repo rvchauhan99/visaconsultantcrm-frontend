@@ -8,6 +8,7 @@ import { CrmButton } from "@/components/ui/crm-button";
 import { CrmStatCard, CrmTableCard, CrmCardHeader, CrmEmptyState } from "@/components/ui/crm-card";
 import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";
 import { FilterPanel } from "@/components/ui/filter-panel";
+import { TeamScopeBanner } from "@/components/crm/TeamScopeBanner";
 import { DataTable } from "@/components/ui/data-table";
 import { useListQueryState } from "@/hooks/useListQueryState";
 import Stamp from "@/components/Stamp";
@@ -41,13 +42,17 @@ export default function Reports() {
   const [funnel, setFunnel] = useState(null);
   const [revenue, setRevenue] = useState(null);
   const [reject, setReject] = useState([]);
+  const [reportScope, setReportScope] = useState(null);
   const [exporting, setExporting] = useState(false);
 
   const scopeParams = useMemo(() => ({ ...list.filters }), [list.filters]);
 
   const load = useCallback(() => {
     const params = scopeParams;
-    api.get("/crm/reports/pipeline", { params }).then((r) => setPipeline(r.data)).catch(() => setPipeline(null));
+    api.get("/crm/reports/pipeline", { params }).then((r) => {
+      setPipeline(r.data);
+      if (r.data?.meta?.scope) setReportScope(r.data.meta.scope);
+    }).catch(() => setPipeline(null));
     api.get("/crm/reports/sla", { params }).then((r) => setSla(r.data)).catch(() => setSla(null));
     api.get("/crm/reports/funnel", { params }).then((r) => setFunnel(r.data)).catch(() => setFunnel(null));
     api.get("/crm/reports/revenue", { params }).then((r) => setRevenue(r.data)).catch(() => setRevenue(null));
@@ -165,7 +170,7 @@ export default function Reports() {
     <div className="p-6 space-y-6">
       <PageHeader
         label="Analytics"
-        title="Reports"
+        title="Case reports"
         actions={
           <CrmButton
             variant="solid"
@@ -179,6 +184,8 @@ export default function Reports() {
           </CrmButton>
         }
       />
+
+      <TeamScopeBanner scope={reportScope} entity="cases" testId="reports-scope" />
 
       <FilterPanel
         fields={filterFields}

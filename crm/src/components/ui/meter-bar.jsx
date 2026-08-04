@@ -11,7 +11,7 @@ export function MeterBar({
   className,
   barClassName,
   tone = "navy",
-  height = "h-1.5",
+  height = "h-2",
   showLabel = false,
   label,
 }) {
@@ -19,7 +19,7 @@ export function MeterBar({
   const toneClass = {
     navy: "bg-gradient-to-r from-navy to-teal",
     teal: "bg-teal",
-    gold: "bg-gold",
+    gold: "bg-gradient-to-r from-gold to-gold-light",
     success: "bg-success",
     warning: "bg-warning",
     danger: "bg-danger",
@@ -29,16 +29,16 @@ export function MeterBar({
   return (
     <div className={cn("w-full", className)}>
       {(showLabel || label) && (
-        <div className="flex items-center justify-between text-[10px] text-ink-muted mb-0.5">
+        <div className="flex items-center justify-between text-[10px] text-ink-muted mb-1">
           <span>{label}</span>
-          <span className="font-mono">{pct}%</span>
+          <span className="font-mono font-semibold">{pct}%</span>
         </div>
       )}
-      <div className={cn("rounded-full bg-surface-muted overflow-hidden", height)}>
+      <div className={cn("rounded-full bg-surface-muted overflow-hidden border border-border/30", height)}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className={cn("h-full rounded-full", toneClass, barClassName)}
         />
       </div>
@@ -54,21 +54,21 @@ export function BreakdownRow({
   value,
   max,
   formatValue,
-  color = "bg-navy",
+  color = "bg-gradient-to-r from-navy to-teal",
   className,
 }) {
   const amount = Number(value) || 0;
   const pct = max > 0 ? Math.min(100, (amount / max) * 100) : 0;
   return (
-    <div className={cn("space-y-1", className)}>
+    <div className={cn("space-y-1.5", className)}>
       <div className="flex items-center justify-between gap-2 text-xs">
         <span className="text-ink truncate">{label}</span>
-        <span className="font-mono text-ink-muted shrink-0">
+        <span className="font-mono font-semibold text-ink-muted shrink-0">
           {formatValue ? formatValue(amount) : amount}
         </span>
       </div>
-      <div className="h-1 rounded-full bg-surface-muted overflow-hidden">
-        <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
+      <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden border border-border/20">
+        <div className={cn("h-full rounded-full transition-all duration-500", color)} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

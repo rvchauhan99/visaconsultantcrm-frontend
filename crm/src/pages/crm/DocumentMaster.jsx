@@ -10,11 +10,13 @@ import { FilterPanel } from "@/components/ui/filter-panel";
 import { DataTable } from "@/components/ui/data-table";
 import { CrmField, CrmInput } from "@/components/ui/crm-field";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { useListQueryState } from "@/hooks/useListQueryState";
 import { previewMasterKey } from "@/lib/keys";
 
 const CATEGORIES = ["identity", "financial", "travel", "other"];
 const ALLOWED_FORMATS = ["pdf", "jpg", "png"];
+const FORMAT_OPTIONS = ALLOWED_FORMATS.map((f) => ({ value: f, label: f.toUpperCase() }));
 const FILTER_KEYS = ["active"];
 const LIST_DEFAULTS = {};
 
@@ -25,32 +27,6 @@ const emptyForm = {
   category: "other", active: true,
 };
 
-function toggleFormat(list, fmt) {
-  const set = new Set(list || []);
-  if (set.has(fmt)) set.delete(fmt);
-  else set.add(fmt);
-  return ALLOWED_FORMATS.filter((f) => set.has(f));
-}
-
-function FormatCheckboxes({ value, onChange, testIdPrefix = "doc-fmt" }) {
-  const selected = value || [];
-  return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1" data-testid={`${testIdPrefix}-input`}>
-      {ALLOWED_FORMATS.map((fmt) => (
-        <label key={fmt} className="flex items-center gap-1.5 text-xs text-ink-muted font-mono uppercase">
-          <input
-            type="checkbox"
-            checked={selected.includes(fmt)}
-            onChange={() => onChange(toggleFormat(selected, fmt))}
-            data-testid={`${testIdPrefix}-${fmt}`}
-            className="rounded"
-          />
-          {fmt}
-        </label>
-      ))}
-    </div>
-  );
-}
 
 export default function DocumentMaster() {
   const list = useListQueryState({
@@ -160,10 +136,13 @@ export default function DocumentMaster() {
       sortable: false,
       render: (row) => editing?.id === row.id ? (
         <div className="space-y-1 min-w-[9rem]">
-          <FormatCheckboxes
+          <MultiSelect
+            valueFormat="array"
             value={editing.default_formats_allowed}
             onChange={(next) => setEditing({ ...editing, default_formats_allowed: next })}
-            testIdPrefix="edit-fmt"
+            options={FORMAT_OPTIONS}
+            placeholder="Select formats…"
+            testId="edit-fmt"
           />
           <CrmInput type="number" value={editing.default_max_file_size_mb} onChange={(e) => setEditing({ ...editing, default_max_file_size_mb: e.target.value })} data-testid="edit-size" />
         </div>
@@ -276,10 +255,13 @@ export default function DocumentMaster() {
               />
             </CrmField>
             <CrmField label="Formats" required>
-              <FormatCheckboxes
+              <MultiSelect
+                valueFormat="array"
                 value={form.default_formats_allowed}
                 onChange={(next) => setForm({ ...form, default_formats_allowed: next })}
-                testIdPrefix="doc-fmt"
+                options={FORMAT_OPTIONS}
+                placeholder="Select formats…"
+                testId="doc-fmt"
               />
             </CrmField>
             <CrmField label="Max Size (MB)"><CrmInput type="number" value={form.default_max_file_size_mb} onChange={(e) => setForm({ ...form, default_max_file_size_mb: e.target.value })} data-testid="doc-sz-input" /></CrmField>

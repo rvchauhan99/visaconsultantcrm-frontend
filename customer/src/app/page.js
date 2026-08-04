@@ -28,7 +28,6 @@ export default function LandingPage() {
     travelDate,
     clearFilters,
     hasFilters,
-    headerCompact,
   } = useCatalogSearch();
 
   const params = useMemo(() => {
@@ -57,11 +56,7 @@ export default function LandingPage() {
 
   return (
     <div className="bg-white min-h-[calc(100vh-4rem)]">
-      <div
-        className={`max-w-[1400px] mx-auto px-3 sm:px-4 md:px-8 pb-24 sm:pb-28 transition-[padding] duration-300 ${
-          headerCompact ? "pt-4 sm:pt-5 md:pt-6" : "pt-2 md:pt-3"
-        }`}
-      >
+      <div className="max-w-[1400px] mx-auto px-3 sm:px-4 md:px-8 pb-24 sm:pb-28 pt-2 md:pt-3">
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
             {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
@@ -129,11 +124,6 @@ function VisaCard({ product, index }) {
             }}
           />
           <div className="atlys-destination-overlay" />
-
-          {/* Hover tooltip — Apply for {Country} Visa */}
-          <div className="atlys-destination-tip" aria-hidden="true">
-            Apply for {product.country_name} Visa
-          </div>
 
           <div className="atlys-destination-content">
             <span className="text-2xl md:text-3xl leading-none drop-shadow-sm">{product.country_flag}</span>

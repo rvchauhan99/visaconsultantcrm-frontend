@@ -8,8 +8,7 @@ import { CrmButton } from "@/components/ui/crm-button";
 import { CrmCard } from "@/components/ui/crm-card";
 import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
 import { CrmPhoneField } from "@/components/ui/crm-phone-field";
-import { SearchableSelect } from "@/components/forms/AsyncSelect";
-import { ConsultantSelect } from "@/components/forms/selects";
+import { MultiSelect, SearchableSelect, ConsultantSelect } from "@/components/forms/selects";
 import { isValidPhoneOptional } from "@/lib/phone";
 import ServiceSectionFields from "@/components/crm/ServiceSectionFields";
 import {
@@ -159,8 +158,8 @@ export default function LeadCreate() {
             Service Category
           </h3>
           <CrmField label="Service type" required>
-            <SearchableSelect
-              multiple
+            <MultiSelect
+              valueFormat="array"
               showChipsInline
               value={selectedServices}
               onChange={onServicesChange}

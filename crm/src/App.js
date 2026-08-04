@@ -19,6 +19,7 @@ import DocumentMaster from "@/pages/crm/DocumentMaster";
 import FieldMaster from "@/pages/crm/FieldMaster";
 import StaffProfile from "@/pages/crm/StaffProfile";
 import Leads from "@/pages/crm/Leads";
+import LeadsAnalytics from "@/pages/crm/LeadsAnalytics";
 import LeadCreate from "@/pages/crm/LeadCreate";
 import LeadFollowUps from "@/pages/crm/LeadFollowUps";
 import ServiceOrders from "@/pages/crm/ServiceOrders";
@@ -55,6 +56,7 @@ export default function App() {
                     <Route path="/cases/closed" element={<ClosedCases />} />
                     <Route path="/tasks" element={<Tasks />} />
                     <Route path="/leads" element={<Leads />} />
+                    <Route path="/leads/analysis" element={<LeadsAnalytics />} />
                     <Route path="/leads/new" element={<LeadCreate />} />
                     <Route path="/follow-ups" element={<LeadFollowUps />} />
                     <Route path="/service-orders" element={<ServiceOrders />} />
@@ -71,7 +73,7 @@ export default function App() {
                     <Route path="/field-master" element={<RequireAdmin><FieldMaster /></RequireAdmin>} />
                     <Route path="/consultants" element={<RequireAdmin><Consultants /></RequireAdmin>} />
                     <Route path="/case-number-settings" element={<RequireAdmin><CaseNumberSettings /></RequireAdmin>} />
-                    <Route path="/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
+                    <Route path="/reports" element={<Reports />} />
                     <Route path="/passport-expiry" element={<PassportExpiry />} />
                     <Route path="/profile" element={<StaffProfile />} />
                 </Route>

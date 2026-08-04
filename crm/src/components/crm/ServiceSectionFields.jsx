@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { CountrySelect, ProductSelect, PassportProductSelect } from "@/components/forms/selects";
@@ -82,31 +82,12 @@ function applyPassportProduct(details, product) {
 export default function ServiceSectionFields({ serviceType, details, onChange }) {
   const schema = SERVICE_FIELD_SCHEMAS[serviceType] || [];
 
-  useEffect(() => {
-    if (serviceType === "visa") {
-      const total = computeVisaTotal(details);
-      if (Number(details.total_amount) !== total) {
-        onChange({ ...details, total_amount: total });
-      }
-    }
-    if (serviceType === "passport") {
-      const total = computePassportTotal(details);
-      if (Number(details.total_amount) !== total) {
-        onChange({ ...details, total_amount: total });
-      }
-    }
-  }, [
-    serviceType,
-    details.adults,
-    details.children,
-    details.infants,
-    details.applicants_count,
-    details.govt_fee_per_person,
-    details.service_fee_per_person,
-    details.gst_percent,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const setKey = (key, value) => onChange({ ...details, [key]: value });
+  const setKey = (key, value) => {
+    const next = { ...details, [key]: value };
+    if (serviceType === "visa") next.total_amount = computeVisaTotal(next);
+    if (serviceType === "passport") next.total_amount = computePassportTotal(next);
+    onChange(next);
+  };
 
   return (
     <div className="border border-border rounded-xl p-4 space-y-3 bg-surface-card/50">

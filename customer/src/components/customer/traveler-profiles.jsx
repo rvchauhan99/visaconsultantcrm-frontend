@@ -56,7 +56,7 @@ export default function TravelerProfiles() {
   if (isLoading) return <Skeleton className="h-48" />;
 
   return (
-    <Card className="p-5 md:p-6">
+    <Card variant="glass" className="p-5 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5 text-navy" />
@@ -72,7 +72,7 @@ export default function TravelerProfiles() {
       )}
 
       {list.length === 0 && !editing ? (
-        <div className="text-center py-10 border border-dashed border-border rounded-xl bg-surface">
+        <div className="text-center py-10 border border-dashed border-white/70 rounded-xl bg-white/35 backdrop-blur-sm">
           <Stamp tone="gold" size="sm" className="mx-auto mb-3">
             No travelers yet
           </Stamp>

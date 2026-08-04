@@ -34,11 +34,17 @@
     border-radius: 3px;
   }
 
-  /* Custom scrollbar — slim, themed */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: var(--surface-muted); }
-  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
+  /* Custom scrollbar — refined, themed */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); border: 0; border-radius: 999px; }
+  ::-webkit-scrollbar-corner { background: transparent; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -50,69 +56,72 @@
 }
 
 @layer components {
-  /* ── CRM sidebar dark surface ── */
+  /* ── CRM sidebar gradient surface ── */
   .crm-sidebar {
-    background: var(--navy-deep);
+    background: var(--gradient-sidebar);
     color: rgba(255, 252, 247, 0.75);
   }
 
-  /* ── CRM card — compact density ── */
+  /* ── CRM card — premium density ── */
   .crm-card {
-    background: var(--surface-card);
+    background: linear-gradient(160deg, var(--surface-card) 0%, var(--surface-warm) 100%);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
   }
 
   .crm-card-hover {
-    transition: box-shadow 200ms ease, transform 200ms ease;
+    transition: box-shadow 250ms var(--ease-out-expo), transform 250ms var(--ease-out-expo), border-color 250ms ease;
   }
   .crm-card-hover:hover {
     box-shadow: var(--shadow-premium);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    border-color: var(--border-glow);
   }
 
-  /* ── Compact input ── */
+  /* ── Compact input — elevated ── */
   .crm-input {
     width: 100%;
-    height: 2rem; /* h-8 */
-    padding: 0 0.625rem;
+    height: 2.25rem;
+    padding: 0 0.75rem;
     border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface-elevated);
+    border-radius: 8px;
+    background: var(--surface-card);
     font-family: var(--font-sans);
     font-size: 0.8125rem;
     color: var(--ink);
     outline: none;
-    transition: border-color 160ms ease, box-shadow 160ms ease;
+    transition: border-color 200ms var(--ease-out-expo), box-shadow 200ms var(--ease-out-expo), background 200ms ease;
   }
   .crm-input:hover { border-color: var(--border-strong); }
   .crm-input:focus {
     border-color: var(--navy);
     box-shadow: 0 0 0 3px var(--glow-navy);
+    background: var(--surface-card);
   }
-  .crm-input::placeholder { color: var(--ink-muted); }
+  .crm-input::placeholder { color: var(--ink-subtle); }
 
   /* ── Status dot ── */
   .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
+    box-shadow: 0 0 0 2px var(--surface-card);
   }
   .status-dot-success { background: var(--success); }
   .status-dot-warning { background: var(--warning); }
   .status-dot-danger  { background: var(--danger); }
   .status-dot-muted   { background: var(--ink-muted); }
 
-  /* ── DataTable ── */
+  /* ── DataTable — refined ── */
   .data-table th {
     font-family: var(--font-mono);
-    font-size: 0.625rem;
+    font-size: 0.6875rem;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
     color: var(--ink-muted);
-    padding: 0.5rem 0.75rem;
+    padding: 0.625rem 1rem;
     text-align: left;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
@@ -122,21 +131,31 @@
     white-space: nowrap;
   }
   .data-table td {
-    padding: 0.5rem 0.75rem;
+    padding: 0.625rem 1rem;
     font-size: 0.8125rem;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
   }
   .data-table tbody tr:last-child td { border-bottom: none; }
-  .data-table tbody tr:hover { background: var(--surface-muted); cursor: default; }
-  .data-table tbody tr.clickable:hover { background: var(--surface-muted); cursor: pointer; }
+  .data-table tbody tr {
+    transition: background 150ms ease;
+  }
+  .data-table tbody tr:hover {
+    background: var(--surface-hover);
+    cursor: default;
+  }
+  .data-table tbody tr.clickable:hover {
+    background: var(--surface-hover);
+    cursor: pointer;
+  }
 
   /* ── Pipeline kanban ── */
   .kanban-col {
-    border-radius: 10px;
+    border-radius: var(--radius-card);
     border: 1px solid var(--border);
-    background: var(--surface-card);
+    background: linear-gradient(180deg, var(--surface-card) 0%, var(--surface-warm) 100%);
     flex-shrink: 0;
+    box-shadow: var(--shadow-xs);
   }
   .kanban-col.drag-over {
     border-color: var(--navy);
@@ -157,12 +176,31 @@
   }
   .stage-step:last-child::after { display: none; }
   .stage-step-done::after { background: var(--navy); }
+
+  /* ── Premium glass surfaces ── */
+  .surface-glass {
+    background: var(--glass-premium);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  }
+
+  /* ── Card glow hover ── */
+  .card-glow-hover {
+    transition: box-shadow 300ms var(--ease-out-expo), transform 300ms var(--ease-out-expo), border-color 300ms ease;
+  }
+  .card-glow-hover:hover {
+    box-shadow: var(--shadow-premium);
+    transform: translateY(-2px);
+    border-color: var(--border-glow);
+  }
 }
 
 @layer utilities {
   .text-navy-sidebar { color: rgba(255, 252, 247, 0.75); }
   .text-navy-sidebar-active { color: rgba(255, 252, 247, 0.96); }
-  .bg-navy-sidebar-active { background: rgba(255, 252, 247, 0.07); }
-  .bg-navy-sidebar-hover { background: rgba(255, 252, 247, 0.04); }
+  .bg-navy-sidebar-active { background: rgba(255, 252, 247, 0.08); }
+  .bg-navy-sidebar-hover { background: rgba(255, 252, 247, 0.05); }
   .border-navy-sidebar { border-color: rgba(255, 252, 247, 0.08); }
+  .animate-slide-up { animation: slide-up 350ms var(--ease-out-expo); }
+  .animate-scale-in { animation: scale-in-bounce 400ms var(--ease-spring); }
 }
