@@ -6,6 +6,7 @@ import Stamp from "@/components/Stamp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash2, ArrowUp, ArrowDown, Check, X, Pencil, Upload, Loader2 } from "lucide-react";
 import { CountrySelect, MasterSelect, SearchableSelect } from "@/components/forms/selects";
+import { BannerImageField } from "@/components/crm/BannerImageField";
 import { DEFAULT_GST_PERCENT, FEE_LABELS, computeLineTotal } from "@/lib/productPricing";
 
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
@@ -98,8 +99,6 @@ function BasicTab({ schema, reload }) {
         validity_days: schema.validity_days, processing_time_days: schema.processing_time_days,
         passport_min_validity_months: schema.passport_min_validity_months ?? 6,
     });
-    const [uploadingBanner, setUploadingBanner] = useState(false);
-    const bannerFileRef = useRef(null);
 
     const save = async () => {
         try {
@@ -107,24 +106,6 @@ function BasicTab({ schema, reload }) {
             toast.success("Saved");
             reload();
         } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
-    };
-
-    const uploadBanner = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setUploadingBanner(true);
-        try {
-            const fd = new FormData();
-            fd.append("file", file);
-            const r = await api.post("/documents/staff-upload", fd);
-            setForm((f) => ({ ...f, banner_image_url: r.data.file_url }));
-            toast.success("Banner uploaded — click Save changes to apply");
-        } catch (err) {
-            toast.error(err.response?.data?.detail || "Upload failed");
-        } finally {
-            setUploadingBanner(false);
-            if (bannerFileRef.current) bannerFileRef.current.value = "";
-        }
     };
 
     return (
@@ -153,19 +134,15 @@ function BasicTab({ schema, reload }) {
                 <F label="Validity (days)"><input type="number" className={inp} value={form.validity_days} onChange={(e) => setForm({ ...form, validity_days: Number(e.target.value) })} /></F>
                 <F label="Processing (days)"><input type="number" className={inp} value={form.processing_time_days} onChange={(e) => setForm({ ...form, processing_time_days: Number(e.target.value) })} /></F>
                 <F label="Passport min. validity (months)"><input type="number" className={inp} value={form.passport_min_validity_months} onChange={(e) => setForm({ ...form, passport_min_validity_months: Number(e.target.value) })} data-testid="basic-passport-validity" /></F>
-                <F label="Banner image URL">
-                    <div className="flex items-center gap-1.5">
-                        <input className={inp} value={form.banner_image_url} onChange={(e) => setForm({ ...form, banner_image_url: e.target.value })} data-testid="basic-banner-url" />
-                        <label className="shrink-0 h-8 w-8 flex items-center justify-center border border-border rounded-sm cursor-pointer hover:bg-surface text-ink-muted" title="Upload banner image">
-                            {uploadingBanner ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                            <input ref={bannerFileRef} type="file" accept="image/*" className="hidden" onChange={uploadBanner} data-testid="basic-banner-upload" />
-                        </label>
-                    </div>
-                </F>
+                <div className="col-span-2">
+                    <BannerImageField
+                        value={form.banner_image_url}
+                        onChange={(url) => setForm((f) => ({ ...f, banner_image_url: url }))}
+                        testIdPrefix="basic-banner"
+                        inputClassName="h-8 text-sm rounded-sm"
+                    />
+                </div>
             </div>
-            {form.banner_image_url && (
-                <img src={resolveFileUrl(form.banner_image_url)} alt="Banner preview" className="h-24 rounded-sm border border-border object-cover" />
-            )}
             <div className="flex justify-end"><button onClick={save} className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover" data-testid="basic-save">Save changes</button></div>
         </div>
     );
