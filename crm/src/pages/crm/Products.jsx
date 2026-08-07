@@ -13,6 +13,7 @@ import { CrmField, CrmInput } from "@/components/ui/crm-field";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { DataTable } from "@/components/ui/data-table";
 import { useListQueryState } from "@/hooks/useListQueryState";
+import { BannerImageField } from "@/components/crm/BannerImageField";
 
 const VISA_TYPES = ["tourist", "business", "transit", "other_general"];
 const FILTER_KEYS = [];
@@ -188,9 +189,15 @@ function NewProductForm({ onCancel, onCreate }) {
         <CrmField label="Processing (days)" required>
           <CrmInput type="number" required value={processing} onChange={(e) => setProcessing(e.target.value)} data-testid="np-processing" />
         </CrmField>
-        <CrmField label="Banner URL (optional)">
-          <CrmInput value={banner} onChange={(e) => setBanner(e.target.value)} data-testid="np-banner" />
-        </CrmField>
+        <div className="md:col-span-3">
+          <BannerImageField
+            value={banner}
+            onChange={setBanner}
+            label="Banner (optional)"
+            testIdPrefix="np-banner"
+            compact
+          />
+        </div>
         <div className="md:col-span-3 flex justify-end gap-2">
           <CrmButton type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</CrmButton>
           <CrmButton type="submit" variant="solid" size="sm" data-testid="np-submit">Create product</CrmButton>
