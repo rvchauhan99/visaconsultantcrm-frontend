@@ -216,11 +216,13 @@ export default function CrmLogin() {
             </button>
           </form>
 
-          <div className="mt-8 pt-5 border-t border-border text-[11px] font-mono text-ink-muted space-y-1">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-ink-muted/50 mb-2">Dev credentials</div>
-            <div>admin@visaconsult.demo / Admin@123</div>
-            <div>priya.consultant@visaconsult.demo / Consult@123</div>
-          </div>
+          {process.env.NODE_ENV !== "production" && (
+            <div className="mt-8 pt-5 border-t border-border text-[11px] font-mono text-ink-muted space-y-1">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-ink-muted/50 mb-2">Dev credentials</div>
+              <div>admin@visaconsult.demo / Admin@123</div>
+              <div>priya.consultant@visaconsult.demo / Consult@123</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
