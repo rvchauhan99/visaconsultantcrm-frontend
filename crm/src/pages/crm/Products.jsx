@@ -27,7 +27,9 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [savingOrder, setSavingOrder] = useState(false);
   const nav = useNavigate();
+  const canReorder = !list.q;
 
   const load = useCallback(() => {
     setLoading(true);
@@ -52,10 +54,81 @@ export default function Products() {
     } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
   };
 
+  const persistOrder = async (ordered) => {
+    const prev = products;
+    const withOrder = ordered.map((p, i) => ({ ...p, display_order: i }));
+    setProducts(withOrder);
+    setSavingOrder(true);
+    try {
+      await api.post(
+        "/admin/visa-products/reorder",
+        withOrder.map((p) => ({ id: p.id, display_order: p.display_order })),
+      );
+      toast.success("Sequence updated");
+    } catch (e) {
+      setProducts(prev);
+      toast.error(e.response?.data?.detail || "Failed to update sequence");
+      load();
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  const saveSequence = async (row, value) => {
+    const display_order = Number(value);
+    if (!Number.isFinite(display_order) || display_order < 0) {
+      toast.error("Sequence must be a non-negative number");
+      return;
+    }
+    if (display_order === row.display_order) return;
+    try {
+      await api.patch(`/admin/visa-products/${row.id}`, {
+        country_code: row.country_code,
+        country_name: row.country_name,
+        visa_type: row.visa_type,
+        title: row.title,
+        banner_image_url: row.banner_image_url || null,
+        validity_days: row.validity_days,
+        processing_time_days: row.processing_time_days,
+        passport_min_validity_months: row.passport_min_validity_months ?? 6,
+        display_order,
+      });
+      toast.success("Sequence saved");
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to save sequence");
+    }
+  };
+
   const columns = [
+    {
+      key: "display_order",
+      label: "Sequence",
+      sortable: false,
+      className: "w-28",
+      render: (row) => (
+        <input
+          type="number"
+          min={0}
+          className="w-16 h-8 px-2 text-sm font-mono border border-border rounded-sm bg-surface-card"
+          defaultValue={row.display_order ?? 0}
+          key={`${row.id}-${row.display_order}`}
+          data-testid={`sequence-input-${row.id}`}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.target.blur();
+            }
+          }}
+          onBlur={(e) => saveSequence(row, e.target.value)}
+        />
+      ),
+    },
     {
       key: "country_name",
       label: "Country",
+      sortable: false,
       render: (row) => (
         <span className="flex items-center gap-2">
           <span className="text-base">{row.country_flag}</span>
@@ -63,20 +136,23 @@ export default function Products() {
         </span>
       ),
     },
-    { key: "title", label: "Title" },
+    { key: "title", label: "Title", sortable: false },
     {
       key: "visa_type",
       label: "Type",
+      sortable: false,
       render: (row) => <Stamp tone="ink" size="sm">{row.visa_type}</Stamp>,
     },
     {
       key: "required_documents_count",
       label: "Docs / Fields",
+      sortable: false,
       render: (row) => <span className="font-mono text-xs">{row.required_documents_count} / {row.fields_count}</span>,
     },
     {
       key: "processing_time_days",
       label: "Processing",
+      sortable: false,
       render: (row) => <span className="font-mono text-xs">{row.processing_time_days}d</span>,
     },
     {
@@ -113,11 +189,25 @@ export default function Products() {
         testId="products-filters"
       />
 
+      {!canReorder && (
+        <p className="text-xs text-ink-muted mb-2">
+          Clear search to drag-and-drop reorder the catalog sequence.
+        </p>
+      )}
+      {canReorder && (
+        <p className="text-xs text-ink-muted mb-2">
+          Drag rows to set how products appear on the customer site. You can also edit Sequence directly.
+          {savingOrder ? " Saving…" : ""}
+        </p>
+      )}
+
       <CrmTableCard>
         <DataTable
           columns={columns}
           data={products}
           loading={loading}
+          enableReorder={canReorder && !savingOrder}
+          onReorder={persistOrder}
           onRowClick={(row) => nav(`/products/${row.id}`)}
           rowTestId={(row) => `product-row-${row.country_code}`}
           empty={{

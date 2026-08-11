@@ -98,11 +98,15 @@ function BasicTab({ schema, reload }) {
         banner_image_url: schema.banner_image_url || "",
         validity_days: schema.validity_days, processing_time_days: schema.processing_time_days,
         passport_min_validity_months: schema.passport_min_validity_months ?? 6,
+        display_order: schema.display_order ?? 0,
     });
 
     const save = async () => {
         try {
-            await api.patch(`/admin/visa-products/${schema.visa_product_id}`, form);
+            await api.patch(`/admin/visa-products/${schema.visa_product_id}`, {
+                ...form,
+                display_order: Number(form.display_order),
+            });
             toast.success("Saved");
             reload();
         } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
@@ -129,6 +133,16 @@ function BasicTab({ schema, reload }) {
                         value={form.visa_type}
                         onChange={(v) => setForm({ ...form, visa_type: v || "tourist" })}
                         options={["tourist", "business", "transit", "other_general"].map((v) => ({ value: v, label: v }))}
+                    />
+                </F>
+                <F label="Sequence">
+                    <input
+                        type="number"
+                        min={0}
+                        className={inp}
+                        value={form.display_order}
+                        onChange={(e) => setForm({ ...form, display_order: Number(e.target.value) })}
+                        data-testid="basic-sequence"
                     />
                 </F>
                 <F label="Validity (days)"><input type="number" className={inp} value={form.validity_days} onChange={(e) => setForm({ ...form, validity_days: Number(e.target.value) })} /></F>
