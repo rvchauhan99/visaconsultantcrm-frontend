@@ -33,12 +33,14 @@ export default function Landing() {
     }, [complexity, travelDate]);
 
     const filtered = useMemo(() => {
-        return products.filter((p) => {
-            if (q && !p.country_name.toLowerCase().includes(q.toLowerCase()) && !p.title.toLowerCase().includes(q.toLowerCase())) return false;
-            if (visaType && p.visa_type !== visaType) return false;
-            if (delivery === "fast" && p.processing_time_days > 7) return false;
-            return true;
-        });
+        return products
+            .filter((p) => {
+                if (q && !p.country_name.toLowerCase().includes(q.toLowerCase()) && !p.title.toLowerCase().includes(q.toLowerCase())) return false;
+                if (visaType && p.visa_type !== visaType) return false;
+                if (delivery === "fast" && p.processing_time_days > 7) return false;
+                return true;
+            })
+            .sort((a, b) => (a.display_order ?? 9999) - (b.display_order ?? 9999));
     }, [products, q, visaType, delivery]);
 
     return (
