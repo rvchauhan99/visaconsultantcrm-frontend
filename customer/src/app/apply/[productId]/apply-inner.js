@@ -12,7 +12,6 @@ import {
   FileText,
   Loader2,
   Save,
-  ScanLine,
   Upload,
   User,
 } from "lucide-react";
@@ -32,6 +31,9 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isValidPhone, normalizePhoneValue } from "@/lib/phone";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import PassportScanner from "@/components/passport/PassportScanner";
+import OCRFieldStatus from "@/components/passport/OCRFieldStatus";
+import { buildFieldStatuses } from "@/config/passportFieldMap";
 
 const STEPS = ["Traveler", "Details", "Documents", "Review", "Payment"];
 const STEP_KEYS = ["traveler", "details", "documents", "review", "payment"];
@@ -224,6 +226,7 @@ export default function ApplyPageInner() {
         passport_issue_date: p.passport_issue_date || "",
         passport_expiry_date: p.passport_expiry_date || "",
         gender: p.gender || "",
+        nationality: p.nationality || "",
         phone: normalizePhoneValue(p.phone || ""),
         email: p.email || "",
       });
@@ -324,6 +327,7 @@ export default function ApplyPageInner() {
               passport_issue_date: traveler.passport_issue_date,
               passport_expiry_date: traveler.passport_expiry_date,
               gender: traveler.gender,
+              nationality: traveler.nationality || null,
               phone: traveler.phone,
               email: traveler.email,
             });
@@ -535,48 +539,15 @@ function TravelerStep({
   passportMinMonths,
   passportValid,
 }) {
-  const upd = (k, v) => setTraveler((p) => ({ ...p, [k]: v }));
-  const [scanning, setScanning] = useState(false);
-
-  const handleScan = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const okType =
-      /^image\/(jpeg|png|webp)$/i.test(file.type) ||
-      file.type === "application/pdf" ||
-      /\.(jpe?g|png|webp|pdf)$/i.test(file.name);
-    if (!okType) {
-      toast.error("Please upload a JPG, PNG, WebP, or PDF passport scan.");
-      e.target.value = "";
-      return;
-    }
-    setScanning(true);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const r = await api.post("/documents/scan-passport", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      const d = r.data;
-      setTraveler((prev) => ({
-        ...prev,
-        full_name: d.full_name || prev.full_name || "",
-        passport_number: d.passport_number || prev.passport_number || "",
-        dob: d.date_of_birth || prev.dob || "",
-        passport_issue_date: d.passport_issue_date || prev.passport_issue_date || "",
-        passport_expiry_date: d.passport_expiry_date || prev.passport_expiry_date || "",
-        gender: d.gender || prev.gender || "",
-      }));
-      const filled = ["full_name", "passport_number", "date_of_birth", "passport_expiry_date"].filter((k) => d[k]).length;
-      track("passport_scan_success", { fields: filled });
-      toast.success(`Scanned ${filled} field(s) — please verify accuracy.`);
-    } catch (err) {
-      track("passport_scan_failed");
-      toast.error(err.response?.data?.detail || "Couldn't read this passport. Please fill fields manually.");
-    } finally {
-      setScanning(false);
-      e.target.value = "";
-    }
+  const [ocrStatuses, setOcrStatuses] = useState({});
+  const upd = (k, v) => {
+    setOcrStatuses((s) => {
+      if (!s[k]) return s;
+      const next = { ...s };
+      delete next[k];
+      return next;
+    });
+    setTraveler((p) => ({ ...p, [k]: v }));
   };
 
   return (
@@ -586,24 +557,12 @@ function TravelerStep({
         <p className="text-sm text-ink-muted">As per your passport. We only accept Indian passports.</p>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <label
-          className="group relative inline-flex items-center gap-2 text-sm bg-navy text-white rounded-full px-5 py-2.5 cursor-pointer hover:bg-navy/90 shadow-md transition-all hover:shadow-lg"
-          data-testid="scan-passport-btn"
-        >
-          {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4 group-hover:scale-110 transition-transform" />}
-          <span className="font-medium">{scanning ? "Reading passport…" : "Scan passport to autofill"}</span>
-          <input
-            type="file"
-            hidden
-            accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
-            onChange={handleScan}
-            disabled={scanning}
-            data-testid="scan-passport-input"
-          />
-        </label>
-        <span className="text-xs text-ink-muted self-center">Optional · JPG, PNG, or PDF</span>
-      </div>
+      <PassportScanner
+        traveler={traveler}
+        setTraveler={setTraveler}
+        onStatuses={(data) => setOcrStatuses(buildFieldStatuses(data))}
+        onManual={() => setOcrStatuses({})}
+      />
 
       {profiles.length > 0 && (
         <div className="bg-surface border border-border rounded-xl p-3 mb-4 flex flex-wrap items-center gap-3" data-testid="prefill-panel">
@@ -628,6 +587,7 @@ function TravelerStep({
       <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
         <Field label="Full name (as on passport)" required>
           <Input data-testid="traveler-name" value={traveler.full_name || ""} onChange={(e) => upd("full_name", e.target.value)} />
+          <OCRFieldStatus status={ocrStatuses.full_name} />
         </Field>
         <Field label="Date of birth" required>
           <DatePicker
@@ -638,6 +598,7 @@ function TravelerStep({
             toYear={new Date().getFullYear()}
             clearable={false}
           />
+          <OCRFieldStatus status={ocrStatuses.dob} />
         </Field>
         <Field label="Passport number" required>
           <Input
@@ -645,6 +606,7 @@ function TravelerStep({
             value={traveler.passport_number || ""}
             onChange={(e) => upd("passport_number", e.target.value.toUpperCase())}
           />
+          <OCRFieldStatus status={ocrStatuses.passport_number} />
         </Field>
         <Field label="Passport expiry" required>
           <DatePicker
@@ -655,6 +617,7 @@ function TravelerStep({
             toYear={new Date().getFullYear() + 20}
             clearable={false}
           />
+          <OCRFieldStatus status={ocrStatuses.passport_expiry_date} />
           {traveler.passport_expiry_date && !passportValid ? (
             <p className="text-xs text-danger mt-1" data-testid="passport-validity-error">
               Must be valid at least {passportMinMonths} more month{passportMinMonths === 1 ? "" : "s"} — please renew before applying.
@@ -673,6 +636,7 @@ function TravelerStep({
             fromYear={1990}
             toYear={new Date().getFullYear()}
           />
+          <OCRFieldStatus status={ocrStatuses.passport_issue_date} />
         </Field>
         <Field label="Gender">
           <SearchableSelect
@@ -688,6 +652,25 @@ function TravelerStep({
               { value: "Other", label: "Other" },
             ]}
           />
+          <OCRFieldStatus status={ocrStatuses.gender} />
+        </Field>
+        <Field label="Nationality">
+          <SearchableSelect
+            data-testid="traveler-nationality"
+            clearable
+            placeholder="Select…"
+            searchPlaceholder="Search…"
+            value={traveler.nationality || null}
+            onChange={(v) => upd("nationality", v || "")}
+            options={[
+              { value: "IND", label: "Indian (IND)" },
+              { value: "NPL", label: "Nepalese (NPL)" },
+              { value: "BGD", label: "Bangladeshi (BGD)" },
+              { value: "LKA", label: "Sri Lankan (LKA)" },
+              { value: "OTHER", label: "Other" },
+            ]}
+          />
+          <OCRFieldStatus status={ocrStatuses.nationality} />
         </Field>
         <Field label="Phone" required>
           <PhoneField
