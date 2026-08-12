@@ -1,0 +1,18 @@
+---
+description: AmaraVisa platform KB — read before full repo scan
+alwaysApply: true
+---
+
+# AmaraVisa / Passage platform
+
+Frontend monorepo: CRM (staff), customer portal (Next.js), shared `@passage/ui`.
+
+Before broad codebase exploration for planning or new features:
+
+1. Read `docs/platform-kb/README.md` in this repo
+2. Read only the KB files relevant to the task (modules, ui-patterns, flows, deployment)
+3. For API or data-layer work, also read the backend sibling KB: `visaconsultantcrm-backend/docs/platform-kb/README.md`
+
+When adding pages, routes, nav entries, deploy steps, or major flows — update the matching KB file in the same PR.
+
+Follow patterns in `docs/platform-kb/conventions.md`. Do not re-scan the full tree when KB already covers the area.
