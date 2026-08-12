@@ -7,11 +7,12 @@ Each app has its own axios instance — no shared API package.
 | Item | Value |
 |------|-------|
 | Base URL | `process.env.REACT_APP_BACKEND_URL` + `/api` |
-| Token key | `sessionStorage`: `vc_staff_token` |
-| User key | `sessionStorage`: `vc_staff_user` |
+| Token key | `localStorage`: `vc_staff_token` |
+| User key | `localStorage`: `vc_staff_user` |
 | 401 behavior | Clear session → redirect `/login` |
+| Valid session | JWT `exp` not passed + staff role → skip `/login`, stay on CRM across tabs |
 
-**Helpers:** `getUser()`, `clearSession()`, `resolveFileUrl()`, `viewUrl()`, `downloadUrl()`
+**Helpers:** `getUser()`, `getToken()`, `clearSession()`, `isStaffSessionValid()`, `resolveFileUrl()`, `viewUrl()`, `downloadUrl()`
 
 **Typical prefixes:**
 - `/crm/*` — leads, cases, tasks, finance, reports, communications
@@ -38,7 +39,7 @@ Examples: `useVisaProducts`, `useCustomerMe`, `useTravelerProfiles`
 
 | App | Login | Token storage |
 |-----|-------|---------------|
-| CRM | `CrmLogin.jsx` → `POST /auth/staff/login` | sessionStorage |
+| CRM | `CrmLogin.jsx` → `POST /auth/staff/login`; redirects to `/` if session valid | localStorage |
 | Customer | `customer/src/app/auth/page.js` | Email OTP or Firebase Google → backend `/auth` |
 
 **Firebase (customer):** `customer/src/lib/firebase.js` when `NEXT_PUBLIC_FIREBASE_*` set.

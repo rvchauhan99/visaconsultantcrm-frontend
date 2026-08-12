@@ -4,6 +4,8 @@ Token-efficient reference for the frontend monorepo. Read targeted files only â€
 
 **Sibling backend KB:** `visaconsultantcrm-backend/docs/platform-kb/README.md`
 
+**CRM team (non-technical) menu guide:** [../crm-team-guide.md](../crm-team-guide.md)
+
 ## When to read which file
 
 | Task | Read |
