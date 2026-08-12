@@ -145,8 +145,14 @@ export default function CaseDetail() {
               <span>{c.config_snapshot_json.country_name} · <span className="font-normal text-ink-muted">{c.config_snapshot_json.visa_type}</span></span>
             </h1>
             <div className="text-sm text-ink-muted mt-1">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-ink-muted mr-2">Contact</span>
               {customer?.full_name}
-              {customer?.email && <> · <span className="font-mono text-xs">{customer.email}</span></>}
+              {customer?.email && (
+                <> · <a href={`mailto:${customer.email}`} className="font-mono text-xs text-teal hover:underline">{customer.email}</a></>
+              )}
+              {customer?.phone && (
+                <> · <a href={`tel:${customer.phone}`} className="font-mono text-xs text-teal hover:underline">{customer.phone}</a></>
+              )}
               <span className="mx-2 text-border">·</span>
               <span className="font-mono text-xs uppercase">{c.source}</span>
             </div>

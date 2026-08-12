@@ -671,6 +671,12 @@ export default function Leads() {
                 />
               </CrmField>
             )}
+            {!SIMPLE_SERVICE_TYPES.has(convertModal.service_type) && (
+              <p className="text-[11px] text-ink-muted rounded-lg border border-border bg-surface-muted/40 px-3 py-2">
+                Creates <strong>one case</strong> for the contact person as traveler by default.
+                Additional family travelers should be stored as traveler profiles under the same contact.
+              </p>
+            )}
             {SIMPLE_SERVICE_TYPES.has(convertModal.service_type) && (
               <ServiceSectionFields
                 serviceType={convertModal.service_type}

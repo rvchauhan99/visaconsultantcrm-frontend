@@ -55,6 +55,7 @@ export default function ApplyPageInner() {
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [saveAsProfile, setSaveAsProfile] = useState(false);
+  const [profileRelationship, setProfileRelationship] = useState("self");
   const [draftId, setDraftId] = useState(draftParam || null);
   const [draftLoaded, setDraftLoaded] = useState(!draftParam);
   const [prefilledUser, setPrefilledUser] = useState(false);
@@ -230,6 +231,7 @@ export default function ApplyPageInner() {
         phone: normalizePhoneValue(p.phone || ""),
         email: p.email || "",
       });
+      if (p.relationship) setProfileRelationship(p.relationship);
       track("apply_traveler_prefill", { product_id: productId, profile_id: id });
       toast.success(`Prefilled from ${p.full_name}`);
     } catch {
@@ -321,7 +323,7 @@ export default function ApplyPageInner() {
           try {
             await api.post("/customers/me/traveler-profiles", {
               full_name: traveler.full_name,
-              relationship: "self",
+              relationship: profileRelationship || "self",
               dob: traveler.dob,
               passport_number: traveler.passport_number,
               passport_issue_date: traveler.passport_issue_date,
@@ -436,6 +438,8 @@ export default function ApplyPageInner() {
                     onPrefill={prefillFromProfile}
                     saveAsProfile={saveAsProfile}
                     setSaveAsProfile={setSaveAsProfile}
+                    profileRelationship={profileRelationship}
+                    setProfileRelationship={setProfileRelationship}
                     passportMinMonths={passportMinMonths}
                     passportValid={passportValid}
                   />
@@ -536,6 +540,8 @@ function TravelerStep({
   onPrefill,
   saveAsProfile,
   setSaveAsProfile,
+  profileRelationship,
+  setProfileRelationship,
   passportMinMonths,
   passportValid,
 }) {
@@ -691,6 +697,28 @@ function TravelerStep({
         <Save className="w-4 h-4" />
         Save this traveler to my account for next time
       </label>
+      {saveAsProfile && (
+        <div className="mt-3 max-w-xs" data-testid="profile-relationship-wrap">
+          <Field label="Relationship to account contact">
+            <SearchableSelect
+              data-testid="profile-relationship"
+              clearable={false}
+              value={profileRelationship || "self"}
+              onChange={(v) => setProfileRelationship(v || "self")}
+              options={[
+                { value: "self", label: "Self" },
+                { value: "spouse", label: "Spouse" },
+                { value: "child", label: "Child" },
+                { value: "parent", label: "Parent" },
+                { value: "other", label: "Other" },
+              ]}
+            />
+          </Field>
+          <p className="text-xs text-ink-muted mt-1">
+            Your account stays the contact person; this traveler can be a family member.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

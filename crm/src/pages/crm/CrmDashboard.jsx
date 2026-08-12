@@ -24,6 +24,7 @@ import { TeamScopeBanner } from "@/components/crm/TeamScopeBanner";
 import DashboardCharts from "@/components/crm/dashboard/DashboardCharts";
 import DashboardTeamTable from "@/components/crm/dashboard/DashboardTeamTable";
 import DashboardWarnings, { DashboardQueueSections } from "@/components/crm/dashboard/DashboardWarnings";
+import DashboardPeopleAlerts from "@/components/crm/dashboard/DashboardPeopleAlerts";
 import {
   CrmStatCard,
   CrmTableCard,
@@ -293,6 +294,10 @@ export default function CrmDashboard() {
           </motion.div>
         ))}
       </div>
+
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.45, ease }}>
+        <DashboardPeopleAlerts risk={data?.risk} scope={scopeQuery} loading={loading} />
+      </motion.div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2, duration: 0.5 }}>
         <DashboardWarnings risk={data?.risk} scope={scopeQuery} loading={loading} />

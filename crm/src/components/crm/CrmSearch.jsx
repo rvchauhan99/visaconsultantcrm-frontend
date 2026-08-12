@@ -48,6 +48,13 @@ export default function CrmSearch() {
         nav(`/cases/${caseId}`);
     };
 
+    const goToClient = (customerId) => {
+        setOpen(false);
+        setQ("");
+        setResults(null);
+        nav(`/clients/${customerId}`);
+    };
+
     return (
         <div className="relative w-full max-w-md" ref={anchor}>
             <div className="relative">
@@ -89,12 +96,18 @@ export default function CrmSearch() {
                     )}
                     {results.customers.length > 0 && (
                         <div>
-                            <div className="px-3 py-1.5 text-[10px] uppercase font-mono tracking-widest text-ink-muted bg-surface border-b border-border">Customers</div>
+                            <div className="px-3 py-1.5 text-[10px] uppercase font-mono tracking-widest text-ink-muted bg-surface border-b border-border">Clients</div>
                             {results.customers.map((cust) => (
-                                <div key={cust.id} className="px-3 py-2 text-sm border-b border-border last:border-0" data-testid={`crm-search-customer-${cust.id.slice(0, 8)}`}>
+                                <button
+                                    key={cust.id}
+                                    type="button"
+                                    onClick={() => goToClient(cust.id)}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-surface border-b border-border last:border-0"
+                                    data-testid={`crm-search-customer-${cust.id.slice(0, 8)}`}
+                                >
                                     <div className="font-medium">{cust.full_name}</div>
                                     <div className="text-xs text-ink-muted font-mono break-all sm:break-normal">{cust.email}{cust.phone ? ` · ${cust.phone}` : ""}</div>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     )}

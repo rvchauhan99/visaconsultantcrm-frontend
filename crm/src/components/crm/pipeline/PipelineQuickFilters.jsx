@@ -1,30 +1,23 @@
 import React from "react";
-import { Segmented } from "@/components/ui/segmented";
 import { cn } from "@/lib/utils";
 
-function OpsToggleChip({ label, count, active, onClick, testId, danger }) {
+/**
+ * Pipeline quick-filter chip — unified design.
+ */
+function Chip({ label, count, active, onClick, testId, danger }) {
   return (
     <button
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-medium text-[11px] px-3 py-1.5 border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/50",
-        active
-          ? "bg-navy text-white border-navy shadow-[0_2px_8px_rgba(15,40,32,0.25)]"
-          : "bg-surface-card text-ink-muted border-border hover:text-ink hover:border-navy/30",
-      )}
+      className={cn("pipeline-chip", active && "pipeline-chip--active")}
     >
       <span>{label}</span>
       {count != null && (
         <span
           className={cn(
-            "font-mono text-[10px] px-1.5 py-0.5 leading-none rounded-full min-w-[1.25rem] text-center",
-            active
-              ? "bg-white/20 text-white"
-              : danger && count > 0
-                ? "bg-danger/10 text-danger border border-danger/30"
-                : "bg-surface-muted text-ink-muted border border-border/50",
+            "pipeline-chip__badge",
+            !active && danger && count > 0 && "pipeline-chip__badge--danger",
           )}
         >
           {count}
@@ -34,10 +27,17 @@ function OpsToggleChip({ label, count, active, onClick, testId, danger }) {
   );
 }
 
-function GroupDivider() {
-  return <div className="hidden md:block w-px h-6 bg-border shrink-0" aria-hidden />;
+function Divider() {
+  return <div className="pipeline-controls__divider" aria-hidden />;
 }
 
+/**
+ * PipelineQuickFilters — single unified horizontal control strip.
+ *
+ * Renders: SLA filter chips | Divider | Ops chips | Divider | Case-type toggle | Divider | Stage tabs
+ *
+ * The stage filter is only rendered HERE (not duplicated elsewhere).
+ */
 export function PipelineQuickFilters({
   filters,
   setFilters,
@@ -74,6 +74,7 @@ export function PipelineQuickFilters({
       activeValue: "true",
       count: summary?.unassigned,
       testId: `${testId}-unassigned`,
+      danger: true,
     },
     {
       key: "on_hold",
@@ -91,71 +92,98 @@ export function PipelineQuickFilters({
     },
   ];
 
+  const allStageSegments = [
+    { value: "", label: "All stages", count: stageTotal || summary?.total || 0 },
+    ...activeStages.map((s) => ({
+      value: s,
+      label: stageLabels[s] || s,
+      count: byStage[s] || 0,
+    })),
+  ];
+
   return (
-    <div className="mb-3 space-y-3" data-testid={testId}>
-      <div className="flex flex-wrap items-center gap-3">
-        <Segmented
-          value={slaValue}
-          onChange={onSlaChange}
-          segments={[
-            { value: "", label: "All SLA" },
-            {
-              value: "overdue",
-              label: "Overdue",
-              count: overdueCount,
-              countDanger: true,
-            },
-            {
-              value: "due_soon",
-              label: "Due soon",
-              count: dueSoonCount,
-            },
-          ]}
-          testId={`${testId}-sla`}
-        />
-
-        <GroupDivider />
-
-        <div className="inline-flex flex-wrap items-center gap-1.5" role="group" aria-label="Operations filters">
-          {opsChips.map((chip) => (
-            <OpsToggleChip
-              key={chip.key}
-              label={chip.label}
-              count={chip.count}
-              active={filters[chip.key] === chip.activeValue}
-              onClick={() => toggleFilter(chip.key, chip.activeValue)}
-              testId={chip.testId}
-              danger={chip.key === "unassigned" && (chip.count || 0) > 0}
-            />
-          ))}
-        </div>
-
-        <GroupDivider />
-
-        <Segmented
-          value={filters.case_type || "visa"}
-          onChange={(v) => setFilters({ case_type: v || "visa" })}
-          segments={[
-            { value: "visa", label: "Visa" },
-            { value: "passport", label: "Passport" },
-          ]}
-          testId={`${testId}-case-type`}
-        />
-      </div>
-
-      <Segmented
-        value={stageValue}
-        onChange={onStageChange}
-        segments={[
-          { value: "", label: "All stages", count: stageTotal || summary?.total || 0 },
-          ...activeStages.map((s) => ({
-            value: s,
-            label: stageLabels[s] || s,
-            count: byStage[s] || 0,
-          })),
-        ]}
-        testId={`${testId}-stage`}
+    <div className="pipeline-controls" data-testid={testId}>
+      {/* ── SLA filters ── */}
+      <Chip
+        label="All SLA"
+        active={slaValue === ""}
+        onClick={() => onSlaChange("")}
+        testId={`${testId}-sla-all`}
       />
+      <Chip
+        label="Overdue"
+        count={overdueCount}
+        active={slaValue === "overdue"}
+        onClick={() => onSlaChange("overdue")}
+        testId={`${testId}-sla-overdue`}
+        danger
+      />
+      <Chip
+        label="Due soon"
+        count={dueSoonCount}
+        active={slaValue === "due_soon"}
+        onClick={() => onSlaChange("due_soon")}
+        testId={`${testId}-sla-due-soon`}
+      />
+
+      <Divider />
+
+      {/* ── Ops chips ── */}
+      {opsChips.map((chip) => (
+        <Chip
+          key={chip.key}
+          label={chip.label}
+          count={chip.count}
+          active={filters[chip.key] === chip.activeValue}
+          onClick={() => toggleFilter(chip.key, chip.activeValue)}
+          testId={chip.testId}
+          danger={chip.danger && (chip.count || 0) > 0}
+        />
+      ))}
+
+      <Divider />
+
+      {/* ── Case type toggle ── */}
+      <Chip
+        label="Visa"
+        active={(filters.case_type || "visa") === "visa"}
+        onClick={() => setFilters({ case_type: "visa" })}
+        testId={`${testId}-case-type-visa`}
+      />
+      <Chip
+        label="Passport"
+        active={filters.case_type === "passport"}
+        onClick={() => setFilters({ case_type: "passport" })}
+        testId={`${testId}-case-type-passport`}
+      />
+
+      <Divider />
+
+      {/* ── Stage tabs ── */}
+      <div className="pipeline-stage-bar" data-testid={`${testId}-stage`}>
+        {allStageSegments.map((seg) => {
+          const isActive = stageValue === seg.value;
+          return (
+            <button
+              key={seg.value}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onStageChange(seg.value)}
+              className={cn(
+                "pipeline-stage-tab",
+                isActive && "pipeline-stage-tab--active",
+              )}
+              data-testid={`${testId}-stage-${seg.value}`}
+            >
+              <span className="relative z-10">{seg.label}</span>
+              {seg.count != null && (
+                <span className="pipeline-stage-tab__count">{seg.count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -15,6 +15,9 @@ import Consultants from "@/pages/crm/Consultants";
 import Reports from "@/pages/crm/Reports";
 import OfflineCase from "@/pages/crm/OfflineCase";
 import PassportExpiry from "@/pages/crm/PassportExpiry";
+import Birthdays from "@/pages/crm/Birthdays";
+import Clients from "@/pages/crm/Clients";
+import ClientDetail from "@/pages/crm/ClientDetail";
 import DocumentMaster from "@/pages/crm/DocumentMaster";
 import FieldMaster from "@/pages/crm/FieldMaster";
 import StaffProfile from "@/pages/crm/StaffProfile";
@@ -58,6 +61,8 @@ export default function App() {
                     <Route path="/leads" element={<Leads />} />
                     <Route path="/leads/analysis" element={<LeadsAnalytics />} />
                     <Route path="/leads/new" element={<LeadCreate />} />
+                    <Route path="/clients" element={<Clients />} />
+                    <Route path="/clients/:customerId" element={<ClientDetail />} />
                     <Route path="/follow-ups" element={<LeadFollowUps />} />
                     <Route path="/service-orders" element={<ServiceOrders />} />
                     <Route path="/finance" element={<Finance />} />
@@ -75,6 +80,7 @@ export default function App() {
                     <Route path="/case-number-settings" element={<RequireAdmin><CaseNumberSettings /></RequireAdmin>} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/passport-expiry" element={<PassportExpiry />} />
+                    <Route path="/birthdays" element={<Birthdays />} />
                     <Route path="/profile" element={<StaffProfile />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />

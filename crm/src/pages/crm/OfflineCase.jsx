@@ -64,12 +64,13 @@ export default function OfflineCase() {
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [customer, setCustomer] = useState({ email: "", full_name: "", phone: "" });
   const [traveler, setTraveler] = useState({
-    first_name: "",
-    last_name: "",
-    date_of_birth: "",
+    full_name: "",
+    dob: "",
     passport_number: "",
     passport_expiry_date: "",
     nationality: "Indian",
+    phone: "",
+    email: "",
   });
   const [fields, setFields] = useState({});
   const [uploads, setUploads] = useState({});
@@ -124,7 +125,7 @@ export default function OfflineCase() {
       return "Enter a valid phone number for the selected country";
     }
     const requiredTraveler = [
-      "first_name", "last_name", "date_of_birth",
+      "full_name", "dob",
       "passport_number", "passport_expiry_date", "nationality",
     ];
     for (const k of requiredTraveler) {
@@ -158,7 +159,15 @@ export default function OfflineCase() {
         customer_email: customer.email.trim(),
         customer_full_name: customer.full_name.trim(),
         customer_phone: customer.phone.trim(),
-        traveler,
+        traveler: {
+          ...traveler,
+          full_name: traveler.full_name?.trim(),
+          dob: traveler.dob,
+          // Keep legacy aliases for older readers
+          first_name: (traveler.full_name || "").trim().split(/\s+/)[0] || "",
+          last_name: (traveler.full_name || "").trim().split(/\s+/).slice(1).join(" ") || "",
+          date_of_birth: traveler.dob,
+        },
         field_values: fields,
         document_uploads: Object.entries(uploads).map(([k, v]) => ({
           doc_key: k,
@@ -212,7 +221,10 @@ export default function OfflineCase() {
       {schema && !schemaLoading && (
         <form onSubmit={submit} className="space-y-6" data-testid="offline-form">
           <CrmCard className="p-5">
-            <SectionLabel>Customer</SectionLabel>
+            <SectionLabel>Contact person</SectionLabel>
+            <p className="text-xs text-ink-muted mb-3">
+              Account contact for this case (may manage multiple travelers).
+            </p>
             <div className="grid md:grid-cols-3 gap-4">
               <CrmField label="Full name" required>
                 <CrmInput required value={customer.full_name} onChange={(e) => setCustomer({ ...customer, full_name: e.target.value })} data-testid="oc-name" />
@@ -228,17 +240,17 @@ export default function OfflineCase() {
 
           <CrmCard className="p-5">
             <SectionLabel>Traveler</SectionLabel>
+            <p className="text-xs text-ink-muted mb-3">
+              Passport holder for this case (may differ from the contact person).
+            </p>
             <div className="grid md:grid-cols-3 gap-4">
-              <CrmField label="First name" required>
-                <CrmInput required value={traveler.first_name || ""} onChange={(e) => setTraveler({ ...traveler, first_name: e.target.value })} data-testid="oc-t-first" />
+              <CrmField label="Full name (as on passport)" required>
+                <CrmInput required value={traveler.full_name || ""} onChange={(e) => setTraveler({ ...traveler, full_name: e.target.value })} data-testid="oc-t-full" />
               </CrmField>
-              <CrmField label="Last name" required>
-                <CrmInput required value={traveler.last_name || ""} onChange={(e) => setTraveler({ ...traveler, last_name: e.target.value })} data-testid="oc-t-last" />
-              </CrmField>
-              <CrmField label="DOB" required>
+              <CrmField label="Date of birth" required>
                 <DatePicker
-                  value={traveler.date_of_birth || null}
-                  onChange={(v) => setTraveler({ ...traveler, date_of_birth: v || "" })}
+                  value={traveler.dob || null}
+                  onChange={(v) => setTraveler({ ...traveler, dob: v || "" })}
                   data-testid="oc-t-dob"
                   fromYear={1940}
                   toYear={new Date().getFullYear()}
@@ -260,6 +272,9 @@ export default function OfflineCase() {
               </CrmField>
               <CrmField label="Nationality" required>
                 <CrmInput required value={traveler.nationality || ""} onChange={(e) => setTraveler({ ...traveler, nationality: e.target.value })} data-testid="oc-t-nat" />
+              </CrmField>
+              <CrmField label="Traveler phone (optional)">
+                <CrmPhoneField value={traveler.phone || ""} onChange={(v) => setTraveler({ ...traveler, phone: v })} data-testid="oc-t-phone" />
               </CrmField>
             </div>
           </CrmCard>
