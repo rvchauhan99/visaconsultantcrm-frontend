@@ -2,54 +2,39 @@ import React, { useEffect, useState } from "react";
 import { Outlet, Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { getUser, clearSession } from "@/lib/api";
 import {
-  LogOut, KanbanSquare, Layers, Users2, BarChart3,
-  PlusSquare, LayoutGrid, StampIcon, FileText, FormInput,
-  ListChecks, ChevronDown, User, Menu, X, UserPlus, Wallet, Inbox, Archive, CreditCard, PhoneCall,
-  ChevronsLeft, ChevronsRight, TrendingUp,
+  LogOut, ChevronDown, User, Menu, X,
+  ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import NotificationBell from "@/components/crm/NotificationBell";
 import CrmSearch from "@/components/crm/CrmSearch";
 import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import {
+  NAV_GROUPS,
+  ROUTE_LABELS,
+  isGroupActive,
+  isChildActive,
+  findGroupIdForPath,
+  childNavLabel,
+} from "./crmNavConfig";
 
-const INSIGHTS_ROUTES = ["/", "/reports", "/reports/payments", "/leads/analysis"];
+const GROUPS_STORAGE_KEY = "crm_sidebar_groups";
 
-const INSIGHTS_CHILDREN = [
-  { to: "/", label: "Dashboard", testid: "crm-nav-dashboard", end: true, icon: LayoutGrid },
-  { to: "/reports", label: "Case reports", testid: "crm-nav-case-reports", icon: BarChart3 },
-  { to: "/reports/payments", label: "Payment reports", testid: "crm-nav-payments", icon: CreditCard },
-  { to: "/leads/analysis", label: "Lead analytics", testid: "crm-nav-lead-analytics", icon: TrendingUp },
-];
-
-function isInsightsRoute(pathname) {
-  return INSIGHTS_ROUTES.some((r) => (r === "/" ? pathname === "/" : pathname === r || pathname.startsWith(`${r}/`)));
+function loadOpenGroups(pathname) {
+  let stored = {};
+  try {
+    const raw = localStorage.getItem(GROUPS_STORAGE_KEY);
+    if (raw) stored = JSON.parse(raw) || {};
+  } catch { /* ignore */ }
+  const activeId = findGroupIdForPath(pathname);
+  if (activeId) stored[activeId] = true;
+  return stored;
 }
 
-const ROUTE_LABELS = {
-  "/":               "Dashboard",
-  "/pipeline":       "Pipeline",
-  "/cases/closed":   "Closed cases",
-  "/tasks":          "My tasks",
-  "/leads":          "Leads",
-  "/leads/new":      "Add Lead",
-  "/follow-ups":     "Lead follow-ups",
-  "/service-orders": "Service orders",
-  "/finance":        "Finance",
-  "/reports/payments": "Payment reports",
-  "/leads/analysis": "Lead analytics",
-  "/inbox":          "Communications",
-  "/passport-expiry":"Passport expiry",
-  "/offline-case":   "New offline case",
-  "/reports":        "Case reports",
-  "/products":       "Visa products",
-  "/passport-products": "Passport products",
-  "/document-master":"Document master",
-  "/field-master":   "Field master",
-  "/consultants":    "Consultants",
-  "/case-number-settings": "Case number settings",
-  "/profile":        "Profile",
-};
+function persistOpenGroups(next) {
+  try { localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+}
 
 /**
  * CRM layout — Premium Glass at comfortable density.
@@ -70,10 +55,17 @@ export default function CrmLayout() {
   });
   // Hover-to-expand when collapsed
   const [hoverExpanded, setHoverExpanded] = useState(false);
-  const [insightsOpen, setInsightsOpen] = useState(() => isInsightsRoute(location.pathname));
+  const [openGroups, setOpenGroups] = useState(() => loadOpenGroups(location.pathname));
 
   useEffect(() => {
-    if (isInsightsRoute(location.pathname)) setInsightsOpen(true);
+    const activeId = findGroupIdForPath(location.pathname);
+    if (!activeId) return;
+    setOpenGroups((prev) => {
+      if (prev[activeId]) return prev;
+      const next = { ...prev, [activeId]: true };
+      persistOpenGroups(next);
+      return next;
+    });
   }, [location.pathname]);
 
   const toggleCollapse = () => {
@@ -83,6 +75,14 @@ export default function CrmLayout() {
       return next;
     });
     setHoverExpanded(false);
+  };
+
+  const setGroupOpen = (groupId, open) => {
+    setOpenGroups((prev) => {
+      const next = { ...prev, [groupId]: open };
+      persistOpenGroups(next);
+      return next;
+    });
   };
 
   // Whether sidebar is visually expanded (either not collapsed, or hover-expanded)
@@ -114,17 +114,15 @@ export default function CrmLayout() {
   const breadcrumb = pathParts.length === 0
     ? "Dashboard"
     : ROUTE_LABELS[location.pathname]
-      ?? (location.pathname === "/cases/closed"
-        ? "Closed cases"
-        : location.pathname === "/reports/payments"
-          ? "Payment reports"
-          : pathParts.length === 2 && pathParts[0] === "cases"
-            ? `Case #${pathParts[1].slice(0, 8)}`
-            : pathParts.length === 2 && pathParts[0] === "passport-products"
-              ? "Passport product"
-              : pathParts[0] === "tasks" && user?.role === "admin"
-                ? "Tasks"
-                : ROUTE_LABELS[`/${pathParts[0]}`] ?? pathParts[0]);
+      ?? (pathParts.length === 2 && pathParts[0] === "cases"
+        ? `Case #${pathParts[1].slice(0, 8)}`
+        : pathParts.length === 2 && pathParts[0] === "clients"
+          ? "Client"
+          : pathParts.length === 2 && pathParts[0] === "passport-products"
+          ? "Passport product"
+          : pathParts[0] === "tasks" && user?.role === "admin"
+            ? "Tasks"
+            : ROUTE_LABELS[`/${pathParts[0]}`] ?? pathParts[0]);
 
   let hoverTimeout;
   const onSidebarMouseEnter = () => {
@@ -137,15 +135,16 @@ export default function CrmLayout() {
     setProfileOpen(false);
   };
 
+  const visibleGroups = NAV_GROUPS.filter((group) => !group.adminOnly || user?.role === "admin");
+
   const sidebarContent = (forceFull = false) => {
     const showLabels = forceFull || isExpanded;
-    const insightsActive = isInsightsRoute(location.pathname);
 
     return (
       <>
         {/* Logo area */}
         <div className={cn(
-          "border-b border-[rgba(255,252,247,0.08)] flex items-center gap-3",
+          "shrink-0 border-b border-[rgba(255,252,247,0.08)] flex items-center gap-3",
           showLabels ? "px-4 py-4 justify-between" : "px-2.5 py-4 justify-center"
         )}>
           <Link to="/" className={cn("flex items-center min-w-0", showLabels ? "gap-3" : "gap-0")} data-testid="crm-logo">
@@ -172,66 +171,47 @@ export default function CrmLayout() {
           )}
         </div>
 
-        {/* Navigation */}
+        {/* Navigation — scrolls independently of the page */}
         <nav className={cn(
-          "flex-1 overflow-y-auto",
+          "flex-1 min-h-0 overflow-y-auto overscroll-contain",
+          "[scrollbar-color:rgba(255,252,247,0.22)_transparent]",
           showLabels ? "p-2.5 space-y-0.5" : "p-2 space-y-0.5"
         )}>
-          <NavGroup
-            label="Reports & Dashboard"
-            icon={<BarChart3 className="w-[18px] h-[18px]" />}
-            testId="crm-nav-insights"
-            showLabel={showLabels}
-            open={insightsOpen}
-            onOpenChange={setInsightsOpen}
-            active={insightsActive}
-            collapsedOnly={!showLabels}
-          >
-            {INSIGHTS_CHILDREN.map((child) => (
-              <RailSubLink
-                key={child.to}
-                to={child.to}
-                label={child.label}
-                testid={child.testid}
-                end={child.end}
-                icon={<child.icon className="w-4 h-4" />}
-                showLabel={showLabels}
-              />
-            ))}
-          </NavGroup>
-          <RailLink to="/pipeline" icon={<KanbanSquare className="w-[18px] h-[18px]" />} label="Pipeline" testid="crm-nav-pipeline" showLabel={showLabels} />
-          <RailLink to="/cases/closed" icon={<Archive className="w-[18px] h-[18px]" />} label="Closed cases" testid="crm-nav-closed" showLabel={showLabels} />
-          <RailLink to="/tasks" icon={<ListChecks className="w-[18px] h-[18px]" />} label={user?.role === "admin" ? "Tasks" : "My tasks"} testid="crm-nav-tasks" showLabel={showLabels} />
-          <RailLink to="/leads" icon={<UserPlus className="w-[18px] h-[18px]" />} label="Leads" testid="crm-nav-leads" showLabel={showLabels} />
-          <RailLink to="/service-orders" icon={<Layers className="w-[18px] h-[18px]" />} label="Service orders" testid="crm-nav-service-orders" showLabel={showLabels} />
-          <RailLink to="/follow-ups" icon={<PhoneCall className="w-[18px] h-[18px]" />} label="Follow-ups" testid="crm-nav-follow-ups" showLabel={showLabels} />
-          <RailLink to="/finance" icon={<Wallet className="w-[18px] h-[18px]" />} label="Finance" testid="crm-nav-finance" showLabel={showLabels} />
-          <RailLink to="/inbox" icon={<Inbox className="w-[18px] h-[18px]" />} label="Inbox" testid="crm-nav-inbox" showLabel={showLabels} />
-          <RailLink to="/passport-expiry" icon={<StampIcon className="w-[18px] h-[18px]" />} label="Passport expiry" testid="crm-nav-expiry" showLabel={showLabels} />
-          <RailLink to="/offline-case" icon={<PlusSquare className="w-[18px] h-[18px]" />} label="New offline case" testid="crm-nav-offline" showLabel={showLabels} />
-
-          {user?.role === "admin" && (
-            <>
-              {showLabels ? (
-                <div className="mt-5 mb-1.5 px-3 text-[9px] uppercase font-mono tracking-[0.22em] text-[rgba(255,252,247,0.25)]">
-                  Admin
-                </div>
-              ) : (
-                <div className="mt-4 mb-1.5 mx-auto w-6 border-t border-[rgba(255,252,247,0.1)]" />
-              )}
-              <RailLink to="/products" icon={<Layers className="w-[18px] h-[18px]" />} label="Visa products" testid="crm-nav-products" showLabel={showLabels} />
-              <RailLink to="/passport-products" icon={<StampIcon className="w-[18px] h-[18px]" />} label="Passport products" testid="crm-nav-passport-products" showLabel={showLabels} />
-              <RailLink to="/document-master" icon={<FileText className="w-[18px] h-[18px]" />} label="Document master" testid="crm-nav-doc-master" showLabel={showLabels} />
-              <RailLink to="/field-master" icon={<FormInput className="w-[18px] h-[18px]" />} label="Field master" testid="crm-nav-field-master" showLabel={showLabels} />
-              <RailLink to="/consultants" icon={<Users2 className="w-[18px] h-[18px]" />} label="Consultants" testid="crm-nav-consultants" showLabel={showLabels} />
-              <RailLink to="/case-number-settings" icon={<ListChecks className="w-[18px] h-[18px]" />} label="Case numbers" testid="crm-nav-case-number-settings" showLabel={showLabels} />
-            </>
-          )}
+          {visibleGroups.map((group) => {
+            const GroupIcon = group.icon;
+            const groupActive = isGroupActive(group, location.pathname);
+            return (
+              <NavGroup
+                key={group.id}
+                label={group.label}
+                icon={<GroupIcon className="w-[18px] h-[18px]" />}
+                testId={group.testid}
+                open={!!openGroups[group.id]}
+                onOpenChange={(open) => setGroupOpen(group.id, open)}
+                active={groupActive}
+                collapsedOnly={!showLabels}
+                collapsedTo={group.children[0]?.to || "/"}
+              >
+                {group.children.map((child) => {
+                  const ChildIcon = child.icon;
+                  return (
+                    <RailSubLink
+                      key={child.to}
+                      child={child}
+                      label={childNavLabel(child, user?.role)}
+                      icon={<ChildIcon className="w-4 h-4" />}
+                      showLabel={showLabels}
+                    />
+                  );
+                })}
+              </NavGroup>
+            );
+          })}
         </nav>
 
         {/* Collapse toggle — desktop only */}
         {!forceFull && (
-          <div className="hidden lg:block px-2.5 py-2 border-t border-[rgba(255,252,247,0.08)]">
+          <div className="hidden lg:block shrink-0 px-2.5 py-2 border-t border-[rgba(255,252,247,0.08)]">
             <button
               type="button"
               onClick={toggleCollapse}
@@ -250,7 +230,7 @@ export default function CrmLayout() {
         )}
 
         {/* Profile section */}
-        <div className={cn("border-t border-[rgba(255,252,247,0.08)]", showLabels ? "p-2.5" : "p-2")}>
+        <div className={cn("shrink-0 border-t border-[rgba(255,252,247,0.08)]", showLabels ? "p-2.5" : "p-2")}>
           <div className="relative">
             <button
               onClick={() => setProfileOpen((o) => !o)}
@@ -273,7 +253,7 @@ export default function CrmLayout() {
                 <>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-[rgba(255,252,247,0.95)] truncate">{user?.full_name}</div>
-                    <div className="text-[10px] font-mono uppercase text-[rgba(255,252,247,0.3)] capitalize tracking-wider">{user?.role}</div>
+                    <div className="text-[10px] font-mono uppercase text-[rgba(255,252,247,0.3)] tracking-wider">{user?.role}</div>
                   </div>
                   <ChevronDown className={cn("w-3.5 h-3.5 text-[rgba(255,252,247,0.35)] shrink-0 transition-transform duration-200", profileOpen && "rotate-180")} />
                 </>
@@ -312,11 +292,11 @@ export default function CrmLayout() {
   };
 
   return (
-    <div className="crm-shell min-h-screen text-ink font-sans flex" style={{ background: "var(--surface)" }}>
-      {/* Desktop sidebar — collapsible */}
+    <div className="crm-shell h-full max-h-screen overflow-hidden text-ink font-sans flex" style={{ background: "var(--surface)" }}>
+      {/* Desktop sidebar — collapsible, pinned to viewport */}
       <aside
         className={cn(
-          "hidden lg:flex shrink-0 flex-col transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] relative",
+          "hidden lg:flex shrink-0 flex-col h-full overflow-hidden transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] relative",
           collapsed && !hoverExpanded ? "w-[72px]" : "w-[260px]",
         )}
         style={{ background: "var(--gradient-sidebar)" }}
@@ -330,16 +310,16 @@ export default function CrmLayout() {
         {/* When hover-expanded over a collapsed sidebar, show an elevated overlay */}
         {collapsed && hoverExpanded ? (
           <div
-            className="absolute inset-y-0 left-0 w-[260px] z-50 flex flex-col shadow-[var(--shadow-sidebar)]"
+            className="absolute inset-y-0 left-0 w-[260px] z-50 flex flex-col min-h-0 overflow-hidden shadow-[var(--shadow-sidebar)]"
             style={{ background: "var(--gradient-sidebar)" }}
           >
             <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_20%_20%,rgba(47,107,90,0.15),transparent_60%)]" />
-            <div className="relative flex flex-col h-full">
+            <div className="relative flex flex-col h-full min-h-0">
               {sidebarContent(false)}
             </div>
           </div>
         ) : (
-          <div className="relative flex flex-col h-full">
+          <div className="relative flex flex-col h-full min-h-0">
             {sidebarContent(false)}
           </div>
         )}
@@ -355,23 +335,23 @@ export default function CrmLayout() {
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col overflow-hidden transition-transform duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] lg:hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
         style={{ background: "var(--gradient-sidebar)" }}
         data-testid="crm-sidebar-drawer"
       >
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_20%_20%,rgba(47,107,90,0.15),transparent_60%)]" />
-        <div className="relative flex flex-col h-full">
+        <div className="relative flex flex-col h-full min-h-0">
           {sidebarContent(true)}
         </div>
       </aside>
 
       {/* Main content area */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
         {/* Topbar — glass panel */}
         <div className={cn(
-          "sticky top-0 z-30 h-14 flex items-center justify-between gap-4 px-5",
+          "shrink-0 z-30 h-14 flex items-center justify-between gap-4 px-5",
           "glass-topbar border-b border-border/60",
         )}>
           <div className="flex items-center gap-3 min-w-0">
@@ -398,7 +378,7 @@ export default function CrmLayout() {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden" style={{ background: "var(--gradient-surface)" }}>
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style={{ background: "var(--gradient-surface)" }}>
           <Outlet />
         </main>
       </div>
@@ -407,13 +387,12 @@ export default function CrmLayout() {
 }
 
 function NavGroup({
-  label, icon, children, testId, showLabel, open, onOpenChange, active, collapsedOnly,
+  label, icon, children, testId, open, onOpenChange, active, collapsedOnly, collapsedTo,
 }) {
   if (collapsedOnly) {
     return (
       <NavLink
-        to="/"
-        end
+        to={collapsedTo || "/"}
         data-testid={testId}
         title={label}
         className={() =>
@@ -452,50 +431,23 @@ function NavGroup({
   );
 }
 
-function RailSubLink({ to, icon, label, testid, end, showLabel = true }) {
+function RailSubLink({ child, icon, label, showLabel = true }) {
+  const location = useLocation();
+  const active = isChildActive(child, location.pathname);
   return (
     <NavLink
-      to={to}
-      end={end}
-      data-testid={testid}
-      className={({ isActive }) =>
-        cn(
-          "relative flex items-center rounded-lg text-[12px] font-medium transition-all duration-200",
-          showLabel ? "gap-2.5 pl-8 pr-3 py-2" : "justify-center px-2 py-2.5",
-          isActive
-            ? "bg-[rgba(255,252,247,0.08)] text-[rgba(255,252,247,0.96)] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-full before:bg-gradient-to-b before:from-gold before:to-gold-light"
-            : "text-[rgba(255,252,247,0.5)] hover:bg-[rgba(255,252,247,0.04)] hover:text-[rgba(255,252,247,0.85)]",
-        )
-      }
+      to={child.to}
+      end={child.end}
+      data-testid={child.testid}
+      className={cn(
+        "relative flex items-center rounded-lg text-[12px] font-medium transition-all duration-200",
+        showLabel ? "gap-2.5 pl-8 pr-3 py-2" : "justify-center px-2 py-2.5",
+        active
+          ? "bg-[rgba(255,252,247,0.08)] text-[rgba(255,252,247,0.96)] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-full before:bg-gradient-to-b before:from-gold before:to-gold-light"
+          : "text-[rgba(255,252,247,0.5)] hover:bg-[rgba(255,252,247,0.04)] hover:text-[rgba(255,252,247,0.85)]",
+      )}
     >
       <span className="shrink-0 opacity-80">{icon}</span>
-      {showLabel && <span className="truncate">{label}</span>}
-    </NavLink>
-  );
-}
-
-function RailLink({ to, icon, label, testid, end, showLabel = true }) {
-  return (
-    <NavLink
-      to={to}
-      end={end}
-      data-testid={testid}
-      title={!showLabel ? label : undefined}
-      className={({ isActive }) =>
-        cn(
-          "relative flex items-center rounded-lg text-[13px] font-semibold transition-all duration-200",
-          showLabel ? "gap-3 px-3 py-2.5" : "justify-center px-2 py-3",
-          isActive
-            ? [
-                "bg-[rgba(255,252,247,0.08)] text-[rgba(255,252,247,0.96)]",
-                "before:absolute before:left-0 before:top-2 before:bottom-2",
-                "before:w-[3px] before:rounded-full before:bg-gradient-to-b before:from-gold before:to-gold-light",
-              ].join(" ")
-            : "text-[rgba(255,252,247,0.55)] hover:bg-[rgba(255,252,247,0.05)] hover:text-[rgba(255,252,247,0.85)]",
-        )
-      }
-    >
-      <span className="shrink-0">{icon}</span>
       {showLabel && <span className="truncate">{label}</span>}
     </NavLink>
   );

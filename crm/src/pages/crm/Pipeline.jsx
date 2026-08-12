@@ -14,6 +14,11 @@ import { useListQueryState, unwrapListResponse } from "@/hooks/useListQueryState
 import { RefreshCw, LayoutGrid, List, AlertTriangle } from "lucide-react";
 import { cn, formatCaseNumber } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import "./pipeline.css";
+
+/* ────────────────────────────────────────────
+   Constants
+   ──────────────────────────────────────────── */
 
 const ACTIVE_STAGES = ["new", "docs_pending", "ready_to_submit", "submitted", "decision"];
 const STAGE_LABELS = {
@@ -24,8 +29,12 @@ const STAGE_LABELS = {
   decision: "Decision",
   closed: "Closed",
 };
-const slaStamp = {
-  on_track: "success", due_soon: "warning", overdue: "danger", completed: "muted",
+
+const SLA_TONE = {
+  on_track: "success",
+  due_soon: "warning",
+  overdue: "danger",
+  completed: "muted",
 };
 
 const FILTER_KEYS = [
@@ -40,6 +49,10 @@ function emptyBoardState() {
     ACTIVE_STAGES.map((s) => [s, { items: [], page: 1, has_more: false, loadingMore: false }]),
   );
 }
+
+/* ════════════════════════════════════════════
+   Pipeline — Main Component
+   ════════════════════════════════════════════ */
 
 export default function Pipeline() {
   const list = useListQueryState({
@@ -59,6 +72,7 @@ export default function Pipeline() {
   const [bulkAvailable, setBulkAvailable] = useState(true);
   const [boardByStage, setBoardByStage] = useState(emptyBoardState);
 
+  /* ── Filter params (exclude pagination / stage for board requests) ── */
   const filterParams = useMemo(() => {
     const p = { ...list.apiParams };
     delete p.page;
@@ -67,6 +81,7 @@ export default function Pipeline() {
     return p;
   }, [list.apiParams]);
 
+  /* ── Data loading ── */
   const load = useCallback(() => {
     setLoading(true);
     if (viewMode === "list") {
@@ -89,7 +104,7 @@ export default function Pipeline() {
       return;
     }
 
-    // Board: summary + per-stage pages (no silent 500 cut)
+    // Board: summary + per-stage pages
     const stagesToLoad = list.filters.stage
       ? list.filters.stage.split(",").map((s) => s.trim()).filter((s) => ACTIVE_STAGES.includes(s))
       : ACTIVE_STAGES;
@@ -147,6 +162,7 @@ export default function Pipeline() {
 
   useEffect(() => { load(); }, [load]);
 
+  /* ── Load more for board columns ── */
   const loadMoreStage = useCallback((stage) => {
     setBoardByStage((prev) => ({
       ...prev,
@@ -193,6 +209,7 @@ export default function Pipeline() {
       });
   }, [boardByStage, filterParams]);
 
+  /* ── Derived data ── */
   const byStage = useMemo(() => {
     if (viewMode === "board") {
       return Object.fromEntries(ACTIVE_STAGES.map((s) => [s, boardByStage[s]?.items || []]));
@@ -208,6 +225,7 @@ export default function Pipeline() {
     (s) => (boardByStage[s]?.items?.length || 0) < (stageCounts[s] || 0) || boardByStage[s]?.has_more,
   );
 
+  /* ── Filter fields (for advanced panel) ── */
   const filterFields = useMemo(() => [
     {
       key: "country",
@@ -264,6 +282,7 @@ export default function Pipeline() {
     { key: "created", label: "Created", type: "daterange", fromKey: "from_date", toKey: "to_date" },
   ], []);
 
+  /* ── Drag & drop ── */
   const moveCard = async (caseId, targetStage) => {
     const prevCases = cases;
     const idx = cases.findIndex((c) => c.id === caseId);
@@ -291,6 +310,7 @@ export default function Pipeline() {
     if (id) moveCard(id, stage);
   };
 
+  /* ── Bulk operations ── */
   const bulkReassign = async () => {
     if (!bulkConsultant || selected.size === 0 || !bulkAvailable) return;
     setBulkBusy(true);
@@ -312,6 +332,7 @@ export default function Pipeline() {
     }
   };
 
+  /* ── List columns ── */
   const listColumns = [
     {
       key: "customer",
@@ -363,7 +384,7 @@ export default function Pipeline() {
     {
       key: "sla_due_date",
       label: "SLA",
-      render: (c) => <Stamp tone={slaStamp[c.sla_status] || "muted"} size="sm">{c.sla_status?.replace("_", " ") || "—"}</Stamp>,
+      render: (c) => <Stamp tone={SLA_TONE[c.sla_status] || "muted"} size="sm">{c.sla_status?.replace("_", " ") || "—"}</Stamp>,
     },
     {
       key: "assigned_consultant",
@@ -373,46 +394,69 @@ export default function Pipeline() {
     },
   ];
 
+  /* ════════════════════════════════════════════
+     RENDER
+     ════════════════════════════════════════════ */
+
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)] p-3 lg:p-4 overflow-hidden">
-      <PageHeader
-        label="Cases"
-        title="Active pipeline"
-        subtitle="Running cases — closed archive is under Closed cases"
-        actions={
-          <>
-            <span className="text-xs font-mono text-ink-muted">{meta.total ?? cases.length} cases</span>
-            <div className="flex p-1 rounded-full bg-surface-muted/50 border border-border backdrop-blur-sm gap-1">
+    <div className="flex flex-col h-[calc(100vh-56px)] overflow-hidden">
+
+      {/* ─────── ZONE 1: Compact Toolbar ─────── */}
+      <div className="px-4 lg:px-5">
+        {/* Row 1: Title + Actions */}
+        <div className="pipeline-toolbar">
+          <div className="pipeline-toolbar__title">
+            <h1>Pipeline</h1>
+            <span className="pipeline-toolbar__count" data-testid="pipeline-total-count">
+              {meta.total ?? cases.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex p-0.5 rounded-lg bg-surface-muted border border-border gap-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("board")}
-                className={cn("relative px-3 py-1.5 rounded-full transition-colors", viewMode === "board" ? "text-white" : "text-ink-muted hover:text-ink hover:bg-surface-card/50")}
+                className={cn(
+                  "relative p-1.5 rounded-md transition-all duration-200",
+                  viewMode === "board"
+                    ? "bg-navy text-white shadow-sm"
+                    : "text-ink-muted hover:text-ink hover:bg-surface-card",
+                )}
                 data-testid="pipeline-view-board"
-                title="Board"
+                title="Board view"
               >
-                {viewMode === "board" && <motion.div layoutId="pipelineViewMode" className="absolute inset-0 bg-navy rounded-full shadow-[0_2px_8px_rgba(15,40,32,0.25)]" initial={false} transition={{ type: "spring", stiffness: 500, damping: 35 }} />}
-                <LayoutGrid className="w-4 h-4 relative z-10" />
+                <LayoutGrid className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={cn("relative px-3 py-1.5 rounded-full transition-colors", viewMode === "list" ? "text-white" : "text-ink-muted hover:text-ink hover:bg-surface-card/50")}
+                className={cn(
+                  "relative p-1.5 rounded-md transition-all duration-200",
+                  viewMode === "list"
+                    ? "bg-navy text-white shadow-sm"
+                    : "text-ink-muted hover:text-ink hover:bg-surface-card",
+                )}
                 data-testid="pipeline-view-list"
-                title="List"
+                title="List view"
               >
-                {viewMode === "list" && <motion.div layoutId="pipelineViewMode" className="absolute inset-0 bg-navy rounded-full shadow-[0_2px_8px_rgba(15,40,32,0.25)]" initial={false} transition={{ type: "spring", stiffness: 500, damping: 35 }} />}
-                <List className="w-4 h-4 relative z-10" />
+                <List className="w-3.5 h-3.5" />
               </button>
             </div>
-            <CrmButton variant="outline" size="sm" onClick={load} data-testid="pipeline-refresh" className="rounded-full shadow-sm hover:shadow-glow-navy transition-shadow">
+            <CrmButton
+              variant="outline"
+              size="sm"
+              onClick={load}
+              data-testid="pipeline-refresh"
+              className="rounded-lg h-8"
+            >
               <RefreshCw className="w-3.5 h-3.5" />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </CrmButton>
-          </>
-        }
-      />
+          </div>
+        </div>
 
-      <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-3">
+        {/* Row 2: Full-width Filter Panel */}
         <FilterPanel
           fields={filterFields}
           values={list.filters}
@@ -423,117 +467,109 @@ export default function Pipeline() {
           onClear={list.clearFilters}
           searchPlaceholder="Search case #, customer, country…"
           testId="pipeline-filters"
-          className="mb-0 flex-1 max-w-full xl:max-w-xs shrink-0"
+          className="mb-0 rounded-xl"
         />
-        <div className="flex flex-wrap items-center gap-2 pt-0.5">
-          <PipelineQuickFilters
-            filters={list.filters}
-            setFilters={list.setFilters}
-            summary={summary}
-            activeStages={ACTIVE_STAGES}
-            stageLabels={STAGE_LABELS}
-            stageTotal={stageTotal}
-          />
-          <Segmented
-            value={list.filters.stage || ""}
-            onChange={(v) => list.setFilters({ stage: v === list.filters.stage ? "" : v })}
-            segments={[
-              { value: "", label: "All stages", count: stageTotal || meta.total || 0 },
-              ...ACTIVE_STAGES.map((s) => ({
-                value: s,
-                label: STAGE_LABELS[s],
-                count: stageCounts[s] || 0,
-              })),
-            ]}
-            testId="pipeline-stage-pills"
-          />
-        </div>
       </div>
 
+      {/* ─────── ZONE 2: Unified Controls Strip ─────── */}
+      <div className="px-4 lg:px-5 border-b border-border">
+        <PipelineQuickFilters
+          filters={list.filters}
+          setFilters={list.setFilters}
+          summary={summary}
+          activeStages={ACTIVE_STAGES}
+          stageLabels={STAGE_LABELS}
+          stageTotal={stageTotal}
+        />
+      </div>
+
+      {/* ─────── Board truncation warning ─────── */}
       {boardTruncated && viewMode === "board" && (
-        <div className="mb-3 flex items-center gap-2 rounded-[10px] border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-ink" data-testid="pipeline-board-cap">
-          <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0" />
-          Some columns show a page of cases — use Load more in each column, or switch to list view for full pagination.
-          <CrmButton variant="outline" size="xs" onClick={() => setViewMode("list")}>List view</CrmButton>
+        <div className="px-4 lg:px-5 pt-2">
+          <div className="pipeline-board-cap" data-testid="pipeline-board-cap">
+            <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0" />
+            <span className="flex-1">Some columns show a page of cases — use Load more in each column, or switch to list view for full pagination.</span>
+            <CrmButton variant="outline" size="xs" onClick={() => setViewMode("list")}>List view</CrmButton>
+          </div>
         </div>
       )}
 
+      {/* ─────── ZONE 3: Content Area ─────── */}
       {viewMode === "list" ? (
-        <div className="flex-1 overflow-auto bg-surface-card rounded-lg border border-border">
-          <PaginatedTable
-            columns={listColumns}
-            data={cases}
-            loading={loading}
-            empty={{ title: "No active cases match filters" }}
-            page={list.page}
-            limit={list.limit}
-            total={meta.total || 0}
-            onPageChange={list.setPage}
-            onLimitChange={list.setLimit}
-            sortKey={list.sortBy}
-            sortDir={list.sortOrder}
-            onSortChange={list.setSort}
-            serverSort
-            selectable={bulkAvailable}
-            selectedIds={selected}
-            onSelectionChange={setSelected}
-            bulkActions={
-              <>
-                <div className="w-52">
-                  <ConsultantSelect
-                    value={bulkConsultant || null}
-                    onChange={(v) => setBulkConsultant(v || "")}
-                    placeholder="Reassign to…"
-                    testId="pipeline-bulk-consultant"
-                  />
-                </div>
-                <CrmButton variant="solid" size="sm" disabled={!bulkConsultant} loading={bulkBusy} onClick={bulkReassign} data-testid="pipeline-bulk-reassign">
-                  Bulk reassign
-                </CrmButton>
-                <CrmButton variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</CrmButton>
-              </>
-            }
-            testId="pipeline-list"
-          />
+        /* ── List View ── */
+        <div className="flex-1 overflow-auto px-4 lg:px-5 py-3">
+          <div className="bg-surface-card rounded-xl border border-border shadow-sm">
+            <PaginatedTable
+              columns={listColumns}
+              data={cases}
+              loading={loading}
+              empty={{ title: "No active cases match filters" }}
+              page={list.page}
+              limit={list.limit}
+              total={meta.total || 0}
+              onPageChange={list.setPage}
+              onLimitChange={list.setLimit}
+              sortKey={list.sortBy}
+              sortDir={list.sortOrder}
+              onSortChange={list.setSort}
+              serverSort
+              selectable={bulkAvailable}
+              selectedIds={selected}
+              onSelectionChange={setSelected}
+              bulkActions={
+                <>
+                  <div className="w-52">
+                    <ConsultantSelect
+                      value={bulkConsultant || null}
+                      onChange={(v) => setBulkConsultant(v || "")}
+                      placeholder="Reassign to…"
+                      testId="pipeline-bulk-consultant"
+                    />
+                  </div>
+                  <CrmButton variant="solid" size="sm" disabled={!bulkConsultant} loading={bulkBusy} onClick={bulkReassign} data-testid="pipeline-bulk-reassign">
+                    Bulk reassign
+                  </CrmButton>
+                  <CrmButton variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</CrmButton>
+                </>
+              }
+              testId="pipeline-list"
+            />
+          </div>
         </div>
       ) : loading ? (
-        <div className="flex gap-4 min-w-max flex-1 overflow-hidden px-1">
+        /* ── Board Skeleton ── */
+        <div className="flex gap-3 flex-1 overflow-hidden px-4 lg:px-5 py-3">
           {ACTIVE_STAGES.map((s) => (
-            <div key={s} className="kanban-col w-[320px] h-full rounded-2xl bg-gradient-to-b from-surface-muted/50 to-surface-card/30 animate-[shimmer_1.6s_linear_infinite] border border-border/40" />
+            <div key={s} className="pipeline-skeleton-col h-full" />
           ))}
         </div>
       ) : (
-        <div className="flex gap-3 xl:gap-4 min-w-max flex-1 overflow-x-auto overflow-y-hidden pb-4 pt-1 px-1 custom-scrollbar" data-testid="pipeline-board">
+        /* ── Board View ── */
+        <div className="pipeline-board flex-1 px-4 lg:px-5 py-2" data-testid="pipeline-board">
           {ACTIVE_STAGES.map((s) => (
             <div
               key={s}
               className={cn(
-                "kanban-col w-[260px] 2xl:flex-1 2xl:min-w-[250px] 2xl:max-w-[320px] h-full rounded-2xl flex flex-col shrink-0 transition-colors duration-200",
-                "bg-gradient-to-b from-surface-card to-surface-warm border border-border shadow-[var(--shadow-card)]",
-                dragOverStage === s && "border-navy/40 bg-navy/5 shadow-[var(--shadow-premium)]"
+                "pipeline-column",
+                dragOverStage === s && "pipeline-column--drag-over",
               )}
               data-testid={`pipeline-col-${s}`}
               onDragOver={(e) => onDragOverCol(e, s)}
               onDragLeave={() => setDragOverStage((cur) => (cur === s ? "" : cur))}
               onDrop={(e) => onDropCol(e, s)}
             >
-              <div className="px-4 py-3.5 border-b border-border/50 flex items-center justify-between bg-surface-card/40 rounded-t-2xl">
-                <div className="flex items-center gap-2">
-                  <span className={cn("w-2 h-2 rounded-full shadow-sm", {
-                    "bg-ink-muted": s === "new",
-                    "bg-warning": s === "docs_pending",
-                    "bg-teal": s === "ready_to_submit",
-                    "bg-navy": s === "submitted",
-                    "bg-gold-light": s === "decision",
-                  })} />
-                  <span className="text-xs font-semibold text-ink uppercase tracking-wider">
-                    {STAGE_LABELS[s]}
-                  </span>
+              {/* Column header */}
+              <div className="pipeline-column__header">
+                <div className="pipeline-column__stage-info">
+                  <span className={`pipeline-column__dot pipeline-column__dot--${s}`} />
+                  <span className="pipeline-column__label">{STAGE_LABELS[s]}</span>
                 </div>
                 <span
                   className={cn(
-                    "text-[11px] font-mono font-medium px-2 py-0.5 rounded-full shadow-sm transition-colors",
-                    (stageCounts[s] || byStage[s].length) > 0 ? "bg-navy text-white" : "bg-surface text-ink-muted border border-border/50",
+                    "pipeline-column__count-badge",
+                    (stageCounts[s] || byStage[s].length) > 0
+                      ? "pipeline-column__count-badge--filled"
+                      : "pipeline-column__count-badge--empty",
                   )}
                   data-testid={`pipeline-col-count-${s}`}
                 >
@@ -541,7 +577,8 @@ export default function Pipeline() {
                 </span>
               </div>
 
-              <div className="p-3 flex-1 flex flex-col gap-3 min-h-[150px] overflow-y-auto">
+              {/* Column body */}
+              <div className="pipeline-column__body">
                 <AnimatePresence mode="popLayout">
                   {byStage[s].map((c) => (
                     <PipelineCard
@@ -561,20 +598,24 @@ export default function Pipeline() {
                     />
                   ))}
                 </AnimatePresence>
+
+                {/* Drop zone indicator */}
                 {byStage[s].length === 0 && dragOverStage === s && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="h-20 rounded-xl border-2 border-dashed border-navy/40 bg-navy/5 flex items-center justify-center text-xs font-medium text-navy/70"
+                    className="pipeline-drop-zone"
                   >
                     Drop case here
                   </motion.div>
                 )}
+
+                {/* Load more */}
                 {(boardByStage[s]?.has_more || (byStage[s].length < (stageCounts[s] || 0))) && (
                   <CrmButton
                     variant="outline"
                     size="sm"
-                    className="w-full rounded-xl border-border/50 text-ink-muted hover:text-ink hover:border-border mt-2 shadow-sm bg-surface/50"
+                    className="w-full rounded-lg text-ink-muted hover:text-ink mt-1 text-[11px]"
                     loading={boardByStage[s]?.loadingMore}
                     onClick={() => loadMoreStage(s)}
                     data-testid={`pipeline-load-more-${s}`}
@@ -588,9 +629,10 @@ export default function Pipeline() {
         </div>
       )}
 
+      {/* ─────── Bulk action bar (board mode) ─────── */}
       {viewMode === "board" && bulkAvailable && selected.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-wrap items-center gap-3 bg-surface-card border border-navy/30 rounded-[10px] p-3 shadow-[var(--shadow-premium)]" data-testid="pipeline-bulk-bar">
-          <span className="text-xs font-medium text-ink">{selected.size} selected</span>
+        <div className="pipeline-bulk-bar" data-testid="pipeline-bulk-bar">
+          <span className="text-xs font-semibold text-ink">{selected.size} selected</span>
           <div className="w-52">
             <ConsultantSelect
               value={bulkConsultant || null}
@@ -609,38 +651,29 @@ export default function Pipeline() {
   );
 }
 
-function PipelineCard({ c, onDragStart, selected, onToggleSelect, showSelect }) {
-  const sla = slaStamp[c.sla_status] || "muted";
-  
-  const slaStyles = {
-    success: "bg-teal/5 text-teal border-teal/20",
-    warning: "bg-warning/10 text-warning-dark border-warning/30",
-    danger: "bg-danger/10 text-danger border-danger/20",
-    muted: "bg-surface-muted text-ink-muted border-border",
-  }[sla];
+/* ════════════════════════════════════════════
+   PipelineCard — Redesigned Kanban Card
+   ════════════════════════════════════════════ */
 
-  const slaBorder = {
-    success: "border-teal",
-    warning: "border-warning",
-    danger: "border-danger",
-    muted: "border-transparent",
-  }[sla];
+function PipelineCard({ c, onDragStart, selected, onToggleSelect, showSelect }) {
+  const slaTone = SLA_TONE[c.sla_status] || "muted";
 
   return (
     <motion.div
       layout
       layoutId={c.id}
-      initial={{ opacity: 0, y: 15, scale: 0.98 }}
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
+      transition={{ type: "spring", stiffness: 420, damping: 32 }}
       draggable
       onDragStart={(e) => onDragStart(e, c.id)}
       className="cursor-grab active:cursor-grabbing relative group"
     >
+      {/* Checkbox */}
       {showSelect && (
         <label
-          className="absolute top-3 right-3 z-20 cursor-pointer"
+          className="pipeline-card__checkbox-wrap"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
@@ -648,58 +681,58 @@ function PipelineCard({ c, onDragStart, selected, onToggleSelect, showSelect }) 
             type="checkbox"
             checked={selected}
             onChange={onToggleSelect}
-            className="w-4 h-4 rounded border-border text-navy focus:ring-navy/50 bg-surface/50 shadow-sm transition-all"
+            className="pipeline-card__checkbox"
             data-testid={`pipeline-card-select-${c.id.slice(0, 8)}`}
           />
         </label>
       )}
+
       <Link
         to={`/cases/${c.id}`}
         data-testid={`pipeline-card-${c.id.slice(0, 8)}`}
         className={cn(
-          "block bg-surface border border-border rounded-[12px] p-3",
-          "relative overflow-hidden shadow-[var(--shadow-xs)]",
-          selected ? "ring-2 ring-navy/50 border-navy/50 bg-navy/5 shadow-[var(--shadow-premium)]" : "hover:border-navy/30 hover:shadow-[var(--shadow-premium)] hover:-translate-y-px",
-          "transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)]"
+          "pipeline-card",
+          selected && "pipeline-card--selected",
         )}
       >
-        <div className={cn("absolute top-0 left-0 bottom-0 w-1 opacity-80", "bg-gradient-to-b from-transparent to-transparent", sla === "muted" ? "" : `via-${slaBorder.split('-')[1]}`)} />
-        
-        <div className="flex items-center gap-2 text-xs mb-2.5 pr-6">
-          <span className="text-lg leading-none drop-shadow-sm">{c.config_snapshot_json?.country_flag}</span>
-          <span className="font-semibold text-ink truncate flex-1">{c.customer?.full_name || "—"}</span>
-          {c.on_hold && <Stamp tone="warning" size="xs" className="shadow-sm">On Hold</Stamp>}
+        {/* SLA left-edge color indicator — hardcoded classes */}
+        <div className={`pipeline-card__sla-edge pipeline-card__sla-edge--${slaTone}`} />
+
+        {/* Top: Flag + Name + On Hold badge */}
+        <div className="pipeline-card__top">
+          <span className="pipeline-card__flag">{c.config_snapshot_json?.country_flag}</span>
+          <span className="pipeline-card__name">{c.customer?.full_name || "—"}</span>
+          {c.on_hold && <Stamp tone="warning" size="xs">On Hold</Stamp>}
         </div>
 
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] text-ink-subtle font-mono uppercase tracking-widest bg-surface-muted px-1.5 py-0.5 rounded border border-border/50">
-            {formatCaseNumber(c)}
-          </span>
-          <span className="text-[10px] text-ink-muted capitalize">
-            • {c.source}
-          </span>
+        {/* Meta: Case number + Source */}
+        <div className="pipeline-card__meta">
+          <span className="pipeline-card__case-num">{formatCaseNumber(c)}</span>
+          <span className="pipeline-card__source">• {c.source}</span>
         </div>
 
-        <div className="mb-3.5">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-[9px] font-semibold text-ink-subtle uppercase tracking-wider">Docs</span>
-            <span className="text-[9px] font-mono text-ink-muted">{c.docs_verified || 0}/{c.docs_required || 1}</span>
+        {/* Docs progress */}
+        <div className="pipeline-card__docs">
+          <div className="pipeline-card__docs-header">
+            <span className="pipeline-card__docs-label">Docs</span>
+            <span className="pipeline-card__docs-ratio">{c.docs_verified || 0}/{c.docs_required || 1}</span>
           </div>
           <MeterBar
             value={c.docs_verified || 0}
             max={c.docs_required || 1}
             tone={(c.docs_progress || 0) >= 100 ? "success" : "teal"}
-            height="h-1.5"
+            height="h-1"
             className="rounded-full overflow-hidden"
           />
         </div>
 
-        <div className="flex items-center justify-between mt-auto">
-          <div className={cn("text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded border", slaStyles)}>
+        {/* Footer: SLA badge + Avatar */}
+        <div className="pipeline-card__footer">
+          <div className={`pipeline-card__sla-badge pipeline-card__sla-badge--${slaTone}`}>
             {c.sla_status?.replace("_", " ") || "No SLA"}
           </div>
-          <div 
-            className="w-7 h-7 rounded-full flex items-center justify-center bg-surface-card border border-border shadow-sm text-ink font-mono text-[10px] font-bold"
+          <div
+            className="pipeline-card__avatar"
             title={c.assigned_consultant?.full_name || "Unassigned"}
           >
             {c.assigned_consultant?.full_name?.split(" ").map((x) => x[0]).join("") || "?"}

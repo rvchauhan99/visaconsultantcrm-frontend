@@ -172,8 +172,11 @@ export default function LeadCreate() {
 
         <CrmCard className="p-4 space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted border-b border-border pb-2">
-            Client Information
+            Contact person
           </h3>
+          <p className="text-[11px] text-ink-muted -mt-1 mb-1">
+            Primary contact for this inquiry (family may share one contact across travelers).
+          </p>
           <div className="grid md:grid-cols-3 gap-3">
             <CrmField label="Name" required>
               <CrmInput

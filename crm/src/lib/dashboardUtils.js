@@ -159,7 +159,7 @@ export const RISK_ITEMS = [
   { key: "on_hold_14d", label: "On hold 14+ days", to: "/pipeline?on_hold=true", tone: "warning" },
   { key: "docs_stuck_received", label: "Docs stuck in review", to: "/pipeline?stage=docs_pending", tone: "warning" },
   { key: "pending_payment_7d", label: "Pending payment 7+ days", to: "/pipeline?payment_status=pending", tone: "warning" },
-  { key: "passport_expiry_30d", label: "Passport expiry (30d)", to: "/passport-expiry?days=30", tone: "default" },
+  { key: "passport_expiry_180d", label: "Passport expiry (180d)", to: "/passport-expiry?days=180", tone: "warning" },
   { key: "leads_overdue", label: "Leads overdue", to: "/follow-ups?due=overdue", tone: "danger" },
   { key: "tasks_overdue", label: "Tasks overdue", to: "/tasks?status=open&due=overdue", tone: "danger" },
   { key: "stale_in_progress", label: "Stale service orders", to: "/service-orders?status=in_progress", tone: "warning" },

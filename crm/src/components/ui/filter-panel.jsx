@@ -111,7 +111,7 @@ export function FilterPanel({
   return (
     <div className={cn("bg-gradient-to-br from-surface-card to-surface-warm border border-border rounded-[14px] shadow-[var(--shadow-card)] mb-2.5", className)} data-testid={testId}>
       <div className="flex flex-wrap items-center gap-2 p-2.5">
-        <div className="relative flex-1 min-w-[180px] max-w-[300px]">
+        <div className="relative flex-1 min-w-[180px] max-w-md">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-muted" />
           <CrmInput
             value={draftQ}
