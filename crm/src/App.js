@@ -34,11 +34,10 @@ import CaseNumberSettings from "@/pages/crm/CaseNumberSettings";
 import ClosedCases from "@/pages/crm/ClosedCases";
 import PaymentsReport from "@/pages/crm/PaymentsReport";
 
-import { getUser } from "@/lib/api";
+import { getUser, isStaffSessionValid } from "@/lib/api";
 
 function RequireStaff({ children }) {
-    const u = getUser();
-    if (!u || (u.role !== "consultant" && u.role !== "admin")) return <Navigate to="/login" replace />;
+    if (!isStaffSessionValid()) return <Navigate to="/login" replace />;
     return children;
 }
 function RequireAdmin({ children }) {

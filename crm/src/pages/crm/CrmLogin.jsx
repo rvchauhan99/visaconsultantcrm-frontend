@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import api, { saveSession } from "@/lib/api";
+import api, { saveSession, isStaffSessionValid } from "@/lib/api";
 import { Loader2, Mail, Lock, ShieldCheck, Clock, BarChart3 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
@@ -20,6 +20,12 @@ export default function CrmLogin() {
   const [busy, setBusy] = useState(false);
   const [tempToken, setTempToken] = useState("");
   const [otp, setOtp] = useState("");
+
+  useEffect(() => {
+    if (isStaffSessionValid()) nav("/", { replace: true });
+  }, [nav]);
+
+  if (isStaffSessionValid()) return null;
 
   const finishLogin = (data) => {
     saveSession(data.access_token, data.user);

@@ -30,8 +30,8 @@ async function staffLogin(page) {
   expect(r.ok()).toBeTruthy();
   const { access_token } = await r.json();
   await page.addInitScript((token) => {
-    sessionStorage.setItem("vc_staff_token", token);
-    sessionStorage.setItem(
+    localStorage.setItem("vc_staff_token", token);
+    localStorage.setItem(
       "vc_staff_user",
       JSON.stringify({ email: "admin@visaconsult.demo", role: "admin", full_name: "Admin" }),
     );

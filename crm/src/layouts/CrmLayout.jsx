@@ -3,7 +3,6 @@ import { Outlet, Link, NavLink, useNavigate, useLocation } from "react-router-do
 import { getUser, clearSession } from "@/lib/api";
 import {
   LogOut, ChevronDown, User, Menu, X,
-  ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import NotificationBell from "@/components/crm/NotificationBell";
 import CrmSearch from "@/components/crm/CrmSearch";
@@ -40,7 +39,7 @@ function persistOpenGroups(next) {
  * CRM layout — Premium Glass at comfortable density.
  * Gradient navy sidebar, warm ivory content area.
  * Collapsible drawer on narrow screens.
- * Collapsible sidebar on desktop (icon-only ↔ full).
+ * Hover-to-expand sidebar on desktop (icon rail ↔ full drawer overlay).
  */
 export default function CrmLayout() {
   const user = getUser();
@@ -49,11 +48,7 @@ export default function CrmLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Collapsible sidebar state — persisted to localStorage
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem("crm_sidebar_collapsed") === "true"; } catch { return false; }
-  });
-  // Hover-to-expand when collapsed
+  // Sidebar is always collapsed (icon rail) — expands as an overlay on hover
   const [hoverExpanded, setHoverExpanded] = useState(false);
   const [openGroups, setOpenGroups] = useState(() => loadOpenGroups(location.pathname));
 
@@ -68,14 +63,8 @@ export default function CrmLayout() {
     });
   }, [location.pathname]);
 
-  const toggleCollapse = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try { localStorage.setItem("crm_sidebar_collapsed", String(next)); } catch {}
-      return next;
-    });
-    setHoverExpanded(false);
-  };
+  // collapsed is always true — sidebar is always in icon-rail mode
+  const collapsed = true;
 
   const setGroupOpen = (groupId, open) => {
     setOpenGroups((prev) => {
@@ -85,8 +74,8 @@ export default function CrmLayout() {
     });
   };
 
-  // Whether sidebar is visually expanded (either not collapsed, or hover-expanded)
-  const isExpanded = !collapsed || hoverExpanded;
+  // Whether sidebar is visually expanded (only via hover)
+  const isExpanded = hoverExpanded;
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -126,8 +115,7 @@ export default function CrmLayout() {
 
   let hoverTimeout;
   const onSidebarMouseEnter = () => {
-    if (!collapsed) return;
-    hoverTimeout = setTimeout(() => setHoverExpanded(true), 150);
+    hoverTimeout = setTimeout(() => setHoverExpanded(true), 120);
   };
   const onSidebarMouseLeave = () => {
     clearTimeout(hoverTimeout);
@@ -209,25 +197,7 @@ export default function CrmLayout() {
           })}
         </nav>
 
-        {/* Collapse toggle — desktop only */}
-        {!forceFull && (
-          <div className="hidden lg:block shrink-0 px-2.5 py-2 border-t border-[rgba(255,252,247,0.08)]">
-            <button
-              type="button"
-              onClick={toggleCollapse}
-              className={cn(
-                "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs",
-                "text-[rgba(255,252,247,0.45)] hover:text-[rgba(255,252,247,0.8)] hover:bg-[rgba(255,252,247,0.05)] transition-all duration-200",
-                !showLabels && "justify-center"
-              )}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              data-testid="crm-sidebar-collapse-toggle"
-            >
-              {collapsed ? <ChevronsRight className="w-[18px] h-[18px] shrink-0" /> : <ChevronsLeft className="w-[18px] h-[18px] shrink-0" />}
-              {showLabels && <span className="font-medium">{collapsed ? "Expand" : "Collapse"}</span>}
-            </button>
-          </div>
-        )}
+        {/* No collapse toggle needed — sidebar is always in drawer mode */}
 
         {/* Profile section */}
         <div className={cn("shrink-0 border-t border-[rgba(255,252,247,0.08)]", showLabels ? "p-2.5" : "p-2")}>
@@ -293,37 +263,39 @@ export default function CrmLayout() {
 
   return (
     <div className="crm-shell h-full max-h-screen overflow-hidden text-ink font-sans flex" style={{ background: "var(--surface)" }}>
-      {/* Desktop sidebar — collapsible, pinned to viewport */}
-      <aside
-        className={cn(
-          "hidden lg:flex shrink-0 flex-col h-full overflow-hidden transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] relative",
-          collapsed && !hoverExpanded ? "w-[72px]" : "w-[260px]",
-        )}
-        style={{ background: "var(--gradient-sidebar)" }}
+      {/* Desktop sidebar — icon rail (always visible) + hover overlay drawer */}
+      <div
+        className="hidden lg:block shrink-0 relative"
         onMouseEnter={onSidebarMouseEnter}
         onMouseLeave={onSidebarMouseLeave}
       >
-        {/* Glossy overlay for depth */}
-        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_20%_20%,rgba(47,107,90,0.15),transparent_60%)]" />
-        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_40%_40%_at_80%_90%,rgba(176,141,87,0.05),transparent_50%)]" />
-
-        {/* When hover-expanded over a collapsed sidebar, show an elevated overlay */}
-        {collapsed && hoverExpanded ? (
-          <div
-            className="absolute inset-y-0 left-0 w-[260px] z-50 flex flex-col min-h-0 overflow-hidden shadow-[var(--shadow-sidebar)]"
-            style={{ background: "var(--gradient-sidebar)" }}
-          >
-            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_20%_20%,rgba(47,107,90,0.15),transparent_60%)]" />
-            <div className="relative flex flex-col h-full min-h-0">
-              {sidebarContent(false)}
-            </div>
-          </div>
-        ) : (
+        {/* Permanent icon rail */}
+        <aside
+          className="w-[52px] h-full flex flex-col overflow-hidden"
+          style={{ background: "var(--gradient-sidebar)" }}
+        >
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_20%_20%,rgba(47,107,90,0.15),transparent_60%)]" />
           <div className="relative flex flex-col h-full min-h-0">
             {sidebarContent(false)}
           </div>
-        )}
-      </aside>
+        </aside>
+
+        {/* Hover-expanded full drawer overlay */}
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col min-h-0 overflow-hidden transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)]",
+            hoverExpanded
+              ? "translate-x-0 opacity-100 pointer-events-auto"
+              : "-translate-x-full opacity-0 pointer-events-none",
+          )}
+          style={{ background: "var(--gradient-sidebar)", boxShadow: hoverExpanded ? "var(--shadow-sidebar), 8px 0 40px rgba(15, 40, 32, 0.3)" : "none" }}
+        >
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_20%_20%,rgba(47,107,90,0.15),transparent_60%)]" />
+          <div className="relative flex flex-col h-full min-h-0">
+            {sidebarContent(false)}
+          </div>
+        </aside>
+      </div>
 
       {/* Mobile drawer overlay */}
       {sidebarOpen && (
