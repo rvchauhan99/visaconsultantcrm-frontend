@@ -127,7 +127,7 @@ export default function AuthPage() {
       finishAuth(
         r.data.access_token,
         r.data.user,
-        "Welcome",
+        r.data.is_new_user ? "Welcome to AmaraVisa" : "Welcome back",
       );
       track("google_auth_success");
     } catch (err) {
