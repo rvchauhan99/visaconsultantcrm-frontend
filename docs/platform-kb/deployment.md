@@ -24,6 +24,8 @@ cd customer && npm run build  # next build
 | Customer | `NEXT_PUBLIC_BACKEND_URL` |
 | Customer | `NEXT_PUBLIC_FIREBASE_*` (if Google auth) |
 | Customer | `NEXT_PUBLIC_ALLOW_MOCK_PAYMENT` (optional dev) |
+| Customer | `NEXT_PUBLIC_GA_MEASUREMENT_ID` (GA4; default `G-TJBJQ9HER2`) |
+| Customer | `NEXT_PUBLIC_OFFICE_MAPS_URL` (Google Maps place URL for Find us) |
 
 ## Local dev
 
