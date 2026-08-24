@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, Home, LogOut, UserRound, X, Menu, ChevronRight,
-  Search, ShieldCheck, Mail, Phone, MessageCircle,
+  Search, ShieldCheck, Mail, Phone, MessageCircle, MapPin, Navigation,
 } from "lucide-react";
 import { clearSession, getUser } from "@/lib/session";
 import { signOutCustomer } from "@/lib/firebase";
@@ -140,7 +140,7 @@ export default function CustomerShell({ children }) {
             compact ? "catalog-header-grid--compact" : "catalog-header-grid--expanded",
           )}
         >
-          {/* Left: logo + guarantee — keep full size on scroll */}
+          {/* Left: logo + Get directions + guarantee — keep full size on scroll */}
           <div className="catalog-header-left flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
             <Link href="/" data-testid="brand-logo" className="flex items-center group shrink-0 max-w-[46vw] xs:max-w-none sm:max-w-none">
               <AmaraVisaLogo
@@ -166,6 +166,26 @@ export default function CustomerShell({ children }) {
                 </div>
               </div>
             </div>
+            {SUPPORT.mapsUrl ? (
+              <a
+                href={SUPPORT.mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track("support_click", { channel: "maps", source: "header" })}
+                className={cn(
+                  "shrink-0 inline-flex items-center justify-center gap-1.5",
+                  "h-9 rounded-full px-3.5",
+                  "bg-[#1a73e8] hover:bg-[#1765cc] active:bg-[#1557b0]",
+                  "text-white text-sm font-medium shadow-[0_1px_2px_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]",
+                  "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40 focus-visible:ring-offset-2",
+                )}
+                data-testid="nav-get-directions"
+                aria-label="Get directions"
+              >
+                <Navigation className="w-4 h-4 shrink-0 fill-current" strokeWidth={2} />
+                <span className="hidden sm:inline whitespace-nowrap">Get directions</span>
+              </a>
+            ) : null}
           </div>
 
           {/* Center: Explore fades out → filters float in */}
@@ -409,6 +429,23 @@ export default function CustomerShell({ children }) {
                 {customer && (
                   <MobileNavLink href="/account" label="My Applications" icon={<Briefcase className="w-4 h-4" />} active={isActive("/account")} />
                 )}
+                {SUPPORT.mapsUrl ? (
+                  <a
+                    href={SUPPORT.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      track("support_click", { channel: "maps", source: "mobile_menu" });
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-3 rounded-2xl text-sm text-navy font-medium hover:bg-navy/6 transition-colors"
+                    data-testid="mobile-get-directions"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    Get directions
+                    <ChevronRight className="w-3.5 h-3.5 ml-auto text-ink-muted" />
+                  </a>
+                ) : null}
                 {customer ? (
                   <button
                     type="button"
@@ -588,6 +625,22 @@ function FooterContent() {
                   WhatsApp support
                 </a>
               </li>
+              {SUPPORT.mapsUrl ? (
+                <li>
+                  <a
+                    href={SUPPORT.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-2.5 text-[15px] text-ink/80 hover:text-ink transition-colors"
+                    data-testid="footer-get-directions"
+                  >
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-muted text-ink-muted">
+                      <MapPin className="w-3.5 h-3.5" />
+                    </span>
+                    Get directions
+                  </a>
+                </li>
+              ) : null}
             </ul>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import Providers from "@/components/providers";
 import CustomerShell from "@/components/layout/customer-shell";
+import GoogleAnalytics from "@/components/analytics/google-analytics";
 import "./globals.css";
 
 export const metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="antialiased">
+        <GoogleAnalytics />
         <Providers>
           <CustomerShell>{children}</CustomerShell>
         </Providers>

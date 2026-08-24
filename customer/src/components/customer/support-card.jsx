@@ -1,6 +1,6 @@
 "use client";
 
-import { Headphones, Mail, MessageCircle, Phone } from "lucide-react";
+import { Headphones, Mail, MessageCircle, Phone, MapPin } from "lucide-react";
 import { SUPPORT } from "@/lib/utils";
 import { track } from "@/lib/telemetry";
 import { Card } from "@/components/ui/card";
@@ -43,6 +43,18 @@ export default function SupportCard({ source = "generic", caseId, caseNumber, co
             >
               <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
             </a>
+            {SUPPORT.mapsUrl ? (
+              <a
+                href={SUPPORT.mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => click("maps")}
+                className="inline-flex items-center gap-1.5 text-sm border border-border rounded-full px-3 py-1.5 hover:border-navy hover:text-navy"
+                data-testid="support-get-directions"
+              >
+                <MapPin className="w-3.5 h-3.5" /> Get directions
+              </a>
+            ) : null}
           </div>
         </div>
       </div>

@@ -63,6 +63,8 @@ Documents and media resolved through backend signed URLs — use `resolveFileUrl
 | Customer | `NEXT_PUBLIC_FIREBASE_*` | Optional Google sign-in |
 | Customer | `NEXT_PUBLIC_ALLOW_MOCK_PAYMENT` | Dev checkout |
 | Customer | `NEXT_PUBLIC_SUPPORT_*`, `NEXT_PUBLIC_CRM_URL` | Branding links |
+| Customer | `NEXT_PUBLIC_OFFICE_MAPS_URL` | Single-office Google Maps place URL (Find us) |
+| Customer | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | GA4 (`G-TJBJQ9HER2` default; empty disables) |
 
 ## CORS
 
