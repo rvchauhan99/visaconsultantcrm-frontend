@@ -17,6 +17,8 @@ import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
 import CatalogFilters from "@/components/catalog/catalog-filters";
 import { useCatalogSearch } from "@/context/catalog-search";
 import { track } from "@/lib/telemetry";
+import FooterPopularDestinations from "@/components/seo/footer-popular-destinations";
+import { OFFICE } from "@/lib/seo";
 
 const COMPACT_ENTER_PX = 72;
 const COMPACT_EXIT_PX = 24;
@@ -533,6 +535,12 @@ function FooterContent() {
             <p className="text-sm sm:text-[15px] text-ink-muted leading-relaxed max-w-[280px]">
               AmaraVisa helps you plan, apply, and track visas seamlessly — with transparent fees and expert review.
             </p>
+            <p className="mt-3 text-xs text-ink-muted leading-relaxed max-w-[280px]">
+              {OFFICE.legalName}
+              <br />
+              {OFFICE.streetAddress}, {OFFICE.addressLocality}, {OFFICE.addressRegion}{" "}
+              {OFFICE.postalCode}
+            </p>
             <div className="mt-5 sm:mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-muted/60 px-3.5 py-2">
               <ShieldCheck className="w-4 h-4 text-navy shrink-0" />
               <span className="text-xs font-semibold text-ink">Visas On Time Guaranteed</span>
@@ -577,13 +585,7 @@ function FooterContent() {
           {/* Popular destinations */}
           <div className="lg:col-span-3">
             <FooterHeading>Popular destinations</FooterHeading>
-            <ul className="space-y-3">
-              {["Singapore", "United Arab Emirates", "United Kingdom", "Australia", "Thailand"].map((c) => (
-                <li key={c}>
-                  <FooterLink href="/">{c}</FooterLink>
-                </li>
-              ))}
-            </ul>
+            <FooterPopularDestinations />
           </div>
 
           {/* Support / contact */}

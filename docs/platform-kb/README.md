@@ -16,6 +16,7 @@ Token-efficient reference for the frontend monorepo. Read targeted files only â€
 | API calls / auth | `api-client.md` |
 | Customer portal flow | `flows.md`, `modules.md` |
 | Vercel deploy | `deployment.md` |
+| Customer SEO / GEO | `seo.md` |
 | Onboarding / overview | `architecture.md` |
 
 ## Monorepo map
