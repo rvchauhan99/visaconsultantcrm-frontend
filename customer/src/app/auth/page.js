@@ -127,7 +127,7 @@ export default function AuthPage() {
       finishAuth(
         r.data.access_token,
         r.data.user,
-        mode === "signup" ? "Account ready" : "Welcome back",
+        "Welcome",
       );
       track("google_auth_success");
     } catch (err) {
