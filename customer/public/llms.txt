@@ -1,0 +1,26 @@
+# AmaraVisa
+
+> Premium visa consultancy for Indian passport holders. Transparent fees, human consultants, on-time filing.
+
+## Site
+
+- Home: /
+- Visa catalog and applications: /visa/{productId}
+- Sign in: /auth (not for indexing)
+- Account & case tracking: /account, /status/{caseId} (private)
+
+## Office (NAP)
+
+- Legal name: AmaraVisa India Private Limited
+- Address: RADHE Times Square, 408, Kudasan, Gandhinagar, Gujarat 382421, India
+- Email: hello@amaravisa.com
+
+## Key facts
+
+- Audience: Indian passport holders applying for tourist, business, and other visas
+- Service: document guidance, consultant review, embassy filing support
+- Location: Gandhinagar, Gujarat (serves applicants across India)
+
+## Contact
+
+Prefer site Get directions / Support links for maps, email, phone, and WhatsApp.

@@ -53,12 +53,12 @@ Open state persisted: `crm_sidebar_groups`, collapse: `crm_sidebar_collapsed`
 
 | Path | Page |
 |------|------|
-| `/` | Landing |
-| `/visa/[productId]` | Visa detail |
-| `/auth` | Login (email OTP / Google) |
-| `/apply/[productId]` | 5-step apply wizard |
-| `/status/[caseId]` | Case status tracking |
-| `/account` | Customer account |
+| `/` | Landing (SSR H1 + catalog client + FAQs) |
+| `/visa/[productId]` | Visa detail (generateMetadata + JSON-LD) |
+| `/auth` | Login (email OTP / Google) — noindex |
+| `/apply/[productId]` | 5-step apply wizard — noindex |
+| `/status/[caseId]` | Case status tracking — noindex |
+| `/account` | Customer account — noindex |
 
 ## Domain components (`crm/src/components/crm/`)
 
