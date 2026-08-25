@@ -70,6 +70,8 @@ Open state persisted: `crm_sidebar_groups`, collapse: `crm_sidebar_collapsed`
 | `ServiceSectionFields` | Multi-service lead forms |
 | `AddLeadFollowUpForm` | Follow-up capture |
 | `dashboard/*` | Dashboard charts/tables |
+
+Dashboard `/` metrics block: **Workflow Operations** (label: Critical status by category), KPIs grouped as Status and SLA · Queue and blockers · Outcomes · Collections.
 | `pipeline/PipelineQuickFilters.jsx` | Pipeline filters |
 
 ## Admin configuration (enables all flows)

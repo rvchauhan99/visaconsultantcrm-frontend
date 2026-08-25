@@ -215,19 +215,39 @@ export default function CrmDashboard() {
   const payments = data?.payments || {};
   const recent = data?.recent_cases || [];
 
-  const kpiCards = [
-    { label: "Open", value: kpis.open ?? "—", icon: Briefcase, to: "/pipeline", tone: "default" },
-    { label: "Overdue SLA", value: kpis.overdue_sla ?? "—", icon: AlertTriangle, to: "/pipeline?sla=overdue", tone: kpis.overdue_sla > 0 ? "danger" : "default" },
-    { label: "Due soon", value: kpis.due_soon ?? "—", icon: Clock, to: "/pipeline?sla=due_soon", tone: kpis.due_soon > 0 ? "warning" : "default" },
-    { label: "Unassigned", value: kpis.unassigned ?? "—", icon: UserX, to: "/pipeline?unassigned=true", tone: "default" },
-    { label: "On hold", value: kpis.on_hold ?? "—", icon: PauseCircle, to: "/pipeline?on_hold=true", tone: "warning" },
-    { label: "Docs review", value: kpis.docs_pending_review ?? "—", icon: FileCheck, to: "/pipeline?stage=docs_pending", tone: "default" },
-    { label: "Closed", value: kpis.closed ?? "—", icon: CheckCircle2, to: "/cases/closed", tone: "default", delta: "in range" },
-    { label: "Approval rate", value: kpis.approval_rate != null ? `${kpis.approval_rate}%` : "—", icon: Target, tone: "success" },
-    { label: "Avg days to close", value: kpis.avg_days_to_close ?? "—", icon: TrendingUp, tone: "default" },
-    { label: "Collected", value: payments.total_collected != null ? inr(payments.total_collected) : "—", icon: Wallet, to: "/reports/payments", tone: "success" },
-    { label: "Refunds", value: payments.total_refunded != null ? inr(payments.total_refunded) : "—", icon: CreditCard, tone: "default" },
-    { label: "Net", value: payments.net != null ? inr(payments.net) : "—", icon: Wallet, to: "/reports/payments", tone: "default" },
+  const kpiGroups = [
+    {
+      category: "Status and SLA",
+      cards: [
+        { label: "Open", value: kpis.open ?? "—", icon: Briefcase, to: "/pipeline", tone: "default" },
+        { label: "Overdue SLA", value: kpis.overdue_sla ?? "—", icon: AlertTriangle, to: "/pipeline?sla=overdue", tone: kpis.overdue_sla > 0 ? "danger" : "default" },
+        { label: "Due soon", value: kpis.due_soon ?? "—", icon: Clock, to: "/pipeline?sla=due_soon", tone: kpis.due_soon > 0 ? "warning" : "default" },
+      ],
+    },
+    {
+      category: "Queue and blockers",
+      cards: [
+        { label: "Unassigned", value: kpis.unassigned ?? "—", icon: UserX, to: "/pipeline?unassigned=true", tone: "default" },
+        { label: "On hold", value: kpis.on_hold ?? "—", icon: PauseCircle, to: "/pipeline?on_hold=true", tone: "warning" },
+        { label: "Docs review", value: kpis.docs_pending_review ?? "—", icon: FileCheck, to: "/pipeline?stage=docs_pending", tone: "default" },
+      ],
+    },
+    {
+      category: "Outcomes",
+      cards: [
+        { label: "Closed", value: kpis.closed ?? "—", icon: CheckCircle2, to: "/cases/closed", tone: "default", delta: "in range" },
+        { label: "Approval rate", value: kpis.approval_rate != null ? `${kpis.approval_rate}%` : "—", icon: Target, tone: "success" },
+        { label: "Avg days to close", value: kpis.avg_days_to_close ?? "—", icon: TrendingUp, tone: "default" },
+      ],
+    },
+    {
+      category: "Collections",
+      cards: [
+        { label: "Collected", value: payments.total_collected != null ? inr(payments.total_collected) : "—", icon: Wallet, to: "/reports/payments", tone: "success" },
+        { label: "Refunds", value: payments.total_refunded != null ? inr(payments.total_refunded) : "—", icon: CreditCard, tone: "default" },
+        { label: "Net", value: payments.net != null ? inr(payments.net) : "—", icon: Wallet, to: "/reports/payments", tone: "default" },
+      ],
+    },
   ];
 
   return (
@@ -272,26 +292,46 @@ export default function CrmDashboard() {
         testId="dashboard-filters"
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3" data-testid="dashboard-metrics">
-        {kpiCards.map((card, i) => (
-          <motion.div
-            key={card.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04, duration: 0.45, ease }}
-          >
-            {card.to ? (
-              <Link to={appendScope(card.to, scopeQuery)} className="block">
-                {loading ? <CrmSkeleton className="h-[100px]" /> : (
-                  <CrmStatCard label={card.label} value={card.value} icon={card.icon} tone={card.tone} delta={card.delta} />
-                )}
-              </Link>
-            ) : (
-              loading ? <CrmSkeleton className="h-[100px]" /> : (
-                <CrmStatCard label={card.label} value={card.value} icon={card.icon} tone={card.tone} delta={card.delta} />
-              )
-            )}
-          </motion.div>
+      <div className="space-y-3" data-testid="dashboard-metrics">
+        <div className="px-0.5">
+          <div className="text-[10px] uppercase font-mono tracking-[0.14em] text-ink-muted mb-0.5">
+            Critical status by category
+          </div>
+          <div className="text-sm font-semibold text-ink">Workflow Operations</div>
+        </div>
+
+        {kpiGroups.map((group, groupIndex) => (
+          <div key={group.category} className="space-y-2">
+            <div className="text-[10px] uppercase font-mono tracking-[0.14em] text-ink-muted px-0.5">
+              {group.category}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {group.cards.map((card, cardIndex) => (
+                <motion.div
+                  key={card.label}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: (groupIndex * 3 + cardIndex) * 0.04,
+                    duration: 0.45,
+                    ease,
+                  }}
+                >
+                  {card.to ? (
+                    <Link to={appendScope(card.to, scopeQuery)} className="block">
+                      {loading ? <CrmSkeleton className="h-[100px]" /> : (
+                        <CrmStatCard label={card.label} value={card.value} icon={card.icon} tone={card.tone} delta={card.delta} />
+                      )}
+                    </Link>
+                  ) : (
+                    loading ? <CrmSkeleton className="h-[100px]" /> : (
+                      <CrmStatCard label={card.label} value={card.value} icon={card.icon} tone={card.tone} delta={card.delta} />
+                    )
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
