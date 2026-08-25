@@ -67,6 +67,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1, "liga" 1;
   }
 
   img,
@@ -96,7 +98,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--navy);
+    outline: 2.5px solid var(--navy);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -203,7 +205,7 @@
   }
 
   .visa-card-compact:hover {
-    border-color: rgba(31, 74, 58, 0.25);
+    border-color: rgba(31, 74, 58, 0.32);
     box-shadow: var(--shadow-premium);
     transform: translateY(-2px);
   }
@@ -215,14 +217,14 @@
     gap: 0.625rem;
     padding: 0.625rem 1.125rem;
     border-radius: 999px;
-    border: 1.5px solid rgba(0, 0, 0, 0.18);
+    border: 1.5px solid rgba(0, 0, 0, 0.22);
     background: #fff;
-    box-shadow: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   }
 
   .atlys-search:focus-within {
-    border-color: rgba(0, 0, 0, 0.35);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.40);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   }
 
   /* Atlys unified filter bar — horizontal pill with scroller */
@@ -233,9 +235,9 @@
     gap: 0.75rem 1rem;
     padding: 0.75rem 1.25rem;
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.12);
     background: #fff;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
     margin-left: auto;
     margin-right: auto;
     width: max-content;
@@ -383,16 +385,16 @@
     position: sticky;
     top: 0;
     z-index: 50;
-    background-color: rgba(255, 255, 255, 0.94);
+    background-color: rgba(255, 255, 255, 0.96);
     background-image: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.98) 0%,
-      rgba(255, 255, 255, 0.92) 100%
+      rgba(255, 255, 255, 0.99) 0%,
+      rgba(255, 255, 255, 0.94) 100%
     );
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.09);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.04);
     transition:
       background-color 280ms cubic-bezier(0.16, 1, 0.3, 1),
       box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -400,16 +402,16 @@
   }
 
   .catalog-sticky-header.is-compact {
-    background-color: rgba(255, 255, 255, 0.97);
+    background-color: rgba(255, 255, 255, 0.98);
     background-image: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.99) 0%,
-      rgba(255, 255, 255, 0.95) 100%
+      rgba(255, 255, 255, 1) 0%,
+      rgba(255, 255, 255, 0.97) 100%
     );
-    border-bottom-color: rgba(0, 0, 0, 0.08);
+    border-bottom-color: rgba(0, 0, 0, 0.10);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.9),
-      0 8px 28px rgba(28, 20, 16, 0.07);
+      0 8px 28px rgba(28, 20, 16, 0.09);
   }
 
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -423,13 +425,13 @@
   /* Light glass — footer */
   .amara-footer-glass {
     position: relative;
-    background: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(32px) saturate(1.5);
-    -webkit-backdrop-filter: blur(32px) saturate(1.5);
-    border-top: 1px solid rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.52);
+    backdrop-filter: blur(36px) saturate(1.6);
+    -webkit-backdrop-filter: blur(36px) saturate(1.6);
+    border-top: 1px solid rgba(200, 195, 188, 0.55);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      0 -12px 48px rgba(28, 20, 16, 0.05);
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      0 -12px 48px rgba(28, 20, 16, 0.06);
   }
 
   .amara-footer-glass::before {
@@ -460,25 +462,25 @@
   }
 
   .auth-glass-panel {
-    background: rgba(255, 255, 255, 0.28);
-    backdrop-filter: blur(40px) saturate(1.7);
-    -webkit-backdrop-filter: blur(40px) saturate(1.7);
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.36);
+    backdrop-filter: blur(44px) saturate(1.8);
+    -webkit-backdrop-filter: blur(44px) saturate(1.8);
+    border: 1.5px solid rgba(210, 206, 200, 0.45);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.85),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.25),
-      0 24px 64px rgba(28, 20, 16, 0.08);
+      inset 0 1px 0 rgba(255, 255, 255, 0.88),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.28),
+      0 24px 64px rgba(28, 20, 16, 0.10);
   }
 
   .auth-glass-card {
-    background: rgba(255, 255, 255, 0.32);
-    backdrop-filter: blur(36px) saturate(1.6);
-    -webkit-backdrop-filter: blur(36px) saturate(1.6);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.40);
+    backdrop-filter: blur(40px) saturate(1.7);
+    -webkit-backdrop-filter: blur(40px) saturate(1.7);
+    border: 1.5px solid rgba(210, 206, 200, 0.50);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.9),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.2),
-      0 20px 56px rgba(28, 20, 16, 0.08);
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.24),
+      0 20px 56px rgba(28, 20, 16, 0.10);
   }
 
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -516,19 +518,19 @@
   }
 
   .account-glass-panel {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(18px) saturate(1.35);
-    -webkit-backdrop-filter: blur(18px) saturate(1.35);
-    border: 1px solid rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    border: 1.5px solid rgba(210, 206, 200, 0.55);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.9),
-      0 8px 28px rgba(28, 20, 16, 0.05);
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      0 8px 28px rgba(28, 20, 16, 0.07);
     border-radius: 24px;
   }
 
   .account-glass-panel--soft {
-    background: rgba(255, 255, 255, 0.55);
-    border-color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.62);
+    border-color: rgba(210, 206, 200, 0.48);
   }
 
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -604,7 +606,7 @@
     border-radius: clamp(16px, 4vw, 28px);
     overflow: hidden;
     background: #e8e8e8;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
     transition:
       box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1),
       transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);

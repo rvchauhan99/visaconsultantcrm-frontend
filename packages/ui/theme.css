@@ -7,14 +7,14 @@
 
 :root {
   /* ── Surfaces & text ── */
-  --ink: #1c1410;
-  --ink-muted: #6b5e52;
-  --ink-subtle: #9b8e83;
+  --ink: #1a120d;
+  --ink-muted: #5c5045;
+  --ink-subtle: #877b70;
   --surface: #faf9f7;
   --surface-card: #ffffff;
   --surface-elevated: #ffffff;
-  --surface-muted: #f3f2ef;
-  --surface-warm: #faf8f5;
+  --surface-muted: #f2f0ec;
+  --surface-warm: #f9f7f4;
   --surface-hover: rgba(31, 74, 58, 0.03);
 
   /* ── Brand ── */
@@ -33,15 +33,15 @@
   --glow-brand: rgba(43, 92, 255, 0.18);
 
   /* ── Glass & glow ── */
-  --glass: rgba(255, 255, 255, 0.82);
-  --glass-dark: rgba(15, 40, 32, 0.88);
-  --glass-border: rgba(255, 255, 255, 0.25);
-  --glass-premium: rgba(255, 255, 255, 0.72);
-  --glass-sidebar: rgba(15, 40, 32, 0.92);
-  --glass-topbar: rgba(250, 249, 247, 0.88);
-  --glow-navy: rgba(31, 74, 58, 0.2);
-  --glow-gold: rgba(176, 141, 87, 0.18);
-  --glow-teal: rgba(47, 107, 90, 0.16);
+  --glass: rgba(255, 255, 255, 0.86);
+  --glass-dark: rgba(15, 40, 32, 0.91);
+  --glass-border: rgba(200, 195, 188, 0.45);
+  --glass-premium: rgba(255, 255, 255, 0.78);
+  --glass-sidebar: rgba(15, 40, 32, 0.94);
+  --glass-topbar: rgba(250, 249, 247, 0.92);
+  --glow-navy: rgba(31, 74, 58, 0.24);
+  --glow-gold: rgba(176, 141, 87, 0.22);
+  --glow-teal: rgba(47, 107, 90, 0.20);
 
   /* ── Semantic ── */
   --success: #3d6b4f;
@@ -50,10 +50,10 @@
   --warning-light: rgba(166, 124, 45, 0.08);
   --danger: #9b3d32;
   --danger-light: rgba(155, 61, 50, 0.08);
-  --border: #e6e3de;
-  --border-strong: #d1cdc6;
-  --border-glass: rgba(232, 232, 232, 0.5);
-  --border-glow: rgba(31, 74, 58, 0.12);
+  --border: #ddd9d3;
+  --border-strong: #c5c0b8;
+  --border-glass: rgba(210, 206, 200, 0.6);
+  --border-glow: rgba(31, 74, 58, 0.16);
 
   /* ── Radii ── */
   --radius: 12px;
@@ -64,17 +64,17 @@
   --radius-pill: 999px;
 
   /* ── Shadows ── */
-  --shadow-xs: 0 1px 2px rgba(28, 20, 16, 0.04);
-  --shadow-card: 0 1px 3px rgba(28, 20, 16, 0.04), 0 4px 16px rgba(28, 20, 16, 0.05);
-  --shadow-premium: 0 8px 32px rgba(28, 20, 16, 0.08), 0 2px 8px rgba(28, 20, 16, 0.04);
-  --shadow-lift: 0 20px 56px rgba(28, 20, 16, 0.12), 0 4px 12px rgba(28, 20, 16, 0.05);
-  --shadow-dialog: 0 24px 80px rgba(28, 20, 16, 0.18), 0 8px 24px rgba(28, 20, 16, 0.08);
-  --shadow-float: 0 12px 48px rgba(28, 20, 16, 0.12), 0 2px 6px rgba(28, 20, 16, 0.04);
-  --shadow-sidebar: 4px 0 32px rgba(15, 40, 32, 0.25);
+  --shadow-xs: 0 1px 2px rgba(28, 20, 16, 0.06);
+  --shadow-card: 0 1px 3px rgba(28, 20, 16, 0.06), 0 4px 16px rgba(28, 20, 16, 0.07);
+  --shadow-premium: 0 8px 32px rgba(28, 20, 16, 0.11), 0 2px 8px rgba(28, 20, 16, 0.06);
+  --shadow-lift: 0 20px 56px rgba(28, 20, 16, 0.15), 0 4px 12px rgba(28, 20, 16, 0.07);
+  --shadow-dialog: 0 24px 80px rgba(28, 20, 16, 0.22), 0 8px 24px rgba(28, 20, 16, 0.10);
+  --shadow-float: 0 12px 48px rgba(28, 20, 16, 0.15), 0 2px 6px rgba(28, 20, 16, 0.06);
+  --shadow-sidebar: 4px 0 32px rgba(15, 40, 32, 0.30);
   --shadow-glow-navy: 0 0 0 1px var(--glow-navy), 0 8px 32px var(--glow-navy);
   --shadow-glow-gold: 0 0 0 1px var(--glow-gold), 0 4px 16px var(--glow-gold);
-  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.06);
 
   /* ── Gradients ── */
   --gradient-hero: linear-gradient(145deg, #1f4a3a 0%, #2f6b5a 55%, #1f4a3a 100%);
@@ -230,30 +230,30 @@
 
 .glass-panel {
   background: var(--glass);
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(24px) saturate(1.7);
+  -webkit-backdrop-filter: blur(24px) saturate(1.7);
+  border: 1.5px solid var(--glass-border);
 }
 
 .glass-panel-dark {
   background: var(--glass-dark);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .glass-panel-premium {
   background: var(--glass-premium);
-  backdrop-filter: blur(24px) saturate(1.8);
-  -webkit-backdrop-filter: blur(24px) saturate(1.8);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(28px) saturate(1.9);
+  -webkit-backdrop-filter: blur(28px) saturate(1.9);
+  border: 1.5px solid rgba(210, 206, 200, 0.40);
   box-shadow: var(--shadow-float);
 }
 
 .glass-topbar {
   background: var(--glass-topbar);
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
 }
 
 .surface-gradient {
@@ -266,14 +266,14 @@
 
 .card-base {
   background: var(--surface-card);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
 
 .card-premium {
   background: linear-gradient(160deg, var(--surface-card) 0%, var(--surface-warm) 100%);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-premium);
   transition: box-shadow var(--duration-base) var(--ease-out-expo),
@@ -287,9 +287,9 @@
 
 .card-glass {
   background: var(--glass);
-  backdrop-filter: blur(16px) saturate(1.5);
-  -webkit-backdrop-filter: blur(16px) saturate(1.5);
-  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border: 1.5px solid var(--border-glass);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
@@ -328,7 +328,7 @@
   color: var(--ink);
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-weight: 500;
+  font-weight: 600;
   transition: all var(--duration-base) var(--ease-out-expo);
 }
 

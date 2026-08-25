@@ -53,7 +53,7 @@ export default function PassportScanner({ traveler, setTraveler, onStatuses, onM
           data-testid="scan-passport-camera-btn"
         >
           <Camera className="w-4 h-4" />
-          Scan with camera
+          Scan passport
         </Button>
         <Button
           type="button"
@@ -64,7 +64,7 @@ export default function PassportScanner({ traveler, setTraveler, onStatuses, onM
           data-testid="scan-passport-btn"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          Upload image / PDF
+          Upload passport
         </Button>
         <button
           type="button"
@@ -106,10 +106,13 @@ export default function PassportScanner({ traveler, setTraveler, onStatuses, onM
       {mode === "upload" && !loading && <FileDropZone onFile={runScan} disabled={loading} />}
 
       {mode === "idle" && !loading && (
-        <p className="text-xs text-ink-muted flex items-center gap-1.5">
-          <ScanLine className="w-3.5 h-3.5" />
-          Optional · we read the MRZ from your Indian passport bio-data page
-        </p>
+        <div className="bg-surface-muted/50 rounded-lg p-3 border border-border flex items-start gap-2.5 mt-2 mb-1">
+          <ScanLine className="w-4 h-4 text-teal shrink-0 mt-0.5" />
+          <div className="text-xs text-ink-muted leading-relaxed">
+            <span className="font-semibold text-ink block mb-0.5">Autofill with your passport (Optional)</span>
+            Scan or upload your Indian passport's bio-data page to automatically fill in your details and save time.
+          </div>
+        </div>
       )}
     </div>
   );

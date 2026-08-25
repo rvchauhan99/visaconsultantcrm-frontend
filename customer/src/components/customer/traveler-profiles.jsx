@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, User, Users, X } from "lucide-react";
+import { Pencil, Plus, Trash2, User, Users } from "lucide-react";
 import api from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { useTravelerProfiles } from "@/hooks/customer-api";
@@ -14,6 +14,14 @@ import { PhoneField } from "@/components/ui/phone-field";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { isValidPhoneOptional, normalizePhoneValue } from "@/lib/phone";
 import PassportScanner from "@/components/passport/PassportScanner";
 import OCRFieldStatus from "@/components/passport/OCRFieldStatus";
@@ -89,14 +97,18 @@ export default function TravelerProfiles() {
         </Button>
       </div>
 
-      {editing && (
-        <TravelerEditor
-          profile={editing === "new" ? null : list.find((p) => p.id === editing)}
-          onCancel={() => setEditing(null)}
-          onSave={(form) => save(form, editing)}
-          busy={busy}
-        />
-      )}
+      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
+          {editing && (
+            <TravelerEditor
+              profile={editing === "new" ? null : list.find((p) => p.id === editing)}
+              onCancel={() => setEditing(null)}
+              onSave={(form) => save(form, editing)}
+              busy={busy}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {list.length === 0 && !editing ? (
         <div className="text-center py-10 border border-dashed border-white/70 rounded-xl bg-white/35 backdrop-blur-sm">
@@ -165,114 +177,114 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
   };
 
   return (
-    <div className="mb-4 p-4 border border-border rounded-xl bg-surface space-y-3" data-testid="traveler-editor">
-      <div className="flex items-center justify-between">
-        <div className="font-medium text-sm">{profile ? "Edit traveler" : "New traveler"}</div>
-        <button type="button" onClick={onCancel} className="text-ink-muted hover:text-ink">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+    <div data-testid="traveler-editor">
+      <DialogHeader>
+        <DialogTitle>{profile ? "Edit traveler" : "New traveler"}</DialogTitle>
+      </DialogHeader>
 
-      <PassportScanner
-        traveler={form}
-        setTraveler={(updater) => {
-          setForm((prev) => {
-            const next = typeof updater === "function" ? updater(prev) : updater;
-            return { ...prev, ...next };
-          });
-        }}
-        onStatuses={(data) => setOcrStatuses(buildFieldStatuses(data))}
-        onManual={() => setOcrStatuses({})}
-      />
+      <DialogBody className="space-y-4">
+        <PassportScanner
+          traveler={form}
+          setTraveler={(updater) => {
+            setForm((prev) => {
+              const next = typeof updater === "function" ? updater(prev) : updater;
+              return { ...prev, ...next };
+            });
+          }}
+          onStatuses={(data) => setOcrStatuses(buildFieldStatuses(data))}
+          onManual={() => setOcrStatuses({})}
+        />
 
-      <div className="grid md:grid-cols-2 gap-3">
-        <Field label="Full name" required>
-          <Input value={form.full_name} onChange={(e) => upd("full_name", e.target.value)} data-testid="traveler-profile-name" />
-          <OCRFieldStatus status={ocrStatuses.full_name} />
-        </Field>
-        <Field label="Relationship">
-          <SearchableSelect
-            clearable={false}
-            value={form.relationship}
-            onChange={(v) => upd("relationship", v || "self")}
-            options={RELATIONSHIPS.map((r) => ({ value: r, label: r }))}
-            searchPlaceholder="Search…"
-          />
-        </Field>
-        <Field label="Date of birth">
-          <DatePicker
-            value={form.dob || null}
-            onChange={(v) => upd("dob", v || "")}
-            fromYear={1940}
-            toYear={new Date().getFullYear()}
-          />
-          <OCRFieldStatus status={ocrStatuses.dob} />
-        </Field>
-        <Field label="Passport number" hint={profile ? "Leave blank to keep existing" : undefined}>
-          <Input
-            value={form.passport_number}
-            onChange={(e) => upd("passport_number", e.target.value.toUpperCase())}
-            data-testid="traveler-profile-passport"
-          />
-          <OCRFieldStatus status={ocrStatuses.passport_number} />
-        </Field>
-        <Field label="Passport issue">
-          <DatePicker
-            value={form.passport_issue_date || null}
-            onChange={(v) => upd("passport_issue_date", v || "")}
-            fromYear={1990}
-            toYear={new Date().getFullYear()}
-          />
-          <OCRFieldStatus status={ocrStatuses.passport_issue_date} />
-        </Field>
-        <Field label="Passport expiry">
-          <DatePicker
-            value={form.passport_expiry_date || null}
-            onChange={(v) => upd("passport_expiry_date", v || "")}
-            fromYear={new Date().getFullYear() - 1}
-            toYear={new Date().getFullYear() + 20}
-          />
-          <OCRFieldStatus status={ocrStatuses.passport_expiry_date} />
-        </Field>
-        <Field label="Gender">
-          <SearchableSelect
-            clearable
-            placeholder="Select…"
-            value={form.gender || null}
-            onChange={(v) => upd("gender", v || "")}
-            options={[
-              { value: "Male", label: "Male" },
-              { value: "Female", label: "Female" },
-              { value: "Other", label: "Other" },
-            ]}
-            searchPlaceholder="Search…"
-          />
-          <OCRFieldStatus status={ocrStatuses.gender} />
-        </Field>
-        <Field label="Nationality">
-          <SearchableSelect
-            clearable
-            placeholder="Select…"
-            value={form.nationality || null}
-            onChange={(v) => upd("nationality", v || "")}
-            options={NATIONALITY_OPTIONS}
-            searchPlaceholder="Search…"
-          />
-          <OCRFieldStatus status={ocrStatuses.nationality} />
-        </Field>
-        <Field label="Phone">
-          <PhoneField
-            variant="static"
-            value={form.phone}
-            onChange={(v) => upd("phone", v)}
-            error={(form.phone || "").trim() && !isValidPhoneOptional(form.phone) ? "Invalid for selected country" : undefined}
-          />
-        </Field>
-        <Field label="Email">
-          <Input type="email" value={form.email} onChange={(e) => upd("email", e.target.value)} />
-        </Field>
-      </div>
-      <div className="flex justify-end gap-2">
+        <div className="grid md:grid-cols-2 gap-4">
+          <Field label="Full name" required>
+            <Input value={form.full_name} onChange={(e) => upd("full_name", e.target.value)} data-testid="traveler-profile-name" />
+            <OCRFieldStatus status={ocrStatuses.full_name} />
+          </Field>
+          <Field label="Relationship">
+            <SearchableSelect
+              clearable={false}
+              value={form.relationship}
+              onChange={(v) => upd("relationship", v || "self")}
+              options={RELATIONSHIPS.map((r) => ({ value: r, label: r }))}
+              searchPlaceholder="Search…"
+            />
+          </Field>
+          <Field label="Date of birth">
+            <DatePicker
+              value={form.dob || null}
+              onChange={(v) => upd("dob", v || "")}
+              fromYear={1940}
+              toYear={new Date().getFullYear()}
+            />
+            <OCRFieldStatus status={ocrStatuses.dob} />
+          </Field>
+          <Field label="Passport number" hint={profile ? "Leave blank to keep existing" : undefined}>
+            <Input
+              value={form.passport_number}
+              onChange={(e) => upd("passport_number", e.target.value.toUpperCase())}
+              data-testid="traveler-profile-passport"
+            />
+            <OCRFieldStatus status={ocrStatuses.passport_number} />
+          </Field>
+          <Field label="Passport issue">
+            <DatePicker
+              value={form.passport_issue_date || null}
+              onChange={(v) => upd("passport_issue_date", v || "")}
+              fromYear={1990}
+              toYear={new Date().getFullYear()}
+            />
+            <OCRFieldStatus status={ocrStatuses.passport_issue_date} />
+          </Field>
+          <Field label="Passport expiry">
+            <DatePicker
+              value={form.passport_expiry_date || null}
+              onChange={(v) => upd("passport_expiry_date", v || "")}
+              fromYear={new Date().getFullYear() - 1}
+              toYear={new Date().getFullYear() + 20}
+            />
+            <OCRFieldStatus status={ocrStatuses.passport_expiry_date} />
+          </Field>
+          <Field label="Gender">
+            <SearchableSelect
+              clearable
+              placeholder="Select…"
+              value={form.gender || null}
+              onChange={(v) => upd("gender", v || "")}
+              options={[
+                { value: "Male", label: "Male" },
+                { value: "Female", label: "Female" },
+                { value: "Other", label: "Other" },
+              ]}
+              searchPlaceholder="Search…"
+            />
+            <OCRFieldStatus status={ocrStatuses.gender} />
+          </Field>
+          <Field label="Nationality">
+            <SearchableSelect
+              clearable
+              placeholder="Select…"
+              value={form.nationality || null}
+              onChange={(v) => upd("nationality", v || "")}
+              options={NATIONALITY_OPTIONS}
+              searchPlaceholder="Search…"
+            />
+            <OCRFieldStatus status={ocrStatuses.nationality} />
+          </Field>
+          <Field label="Phone">
+            <PhoneField
+              variant="static"
+              value={form.phone}
+              onChange={(v) => upd("phone", v)}
+              error={(form.phone || "").trim() && !isValidPhoneOptional(form.phone) ? "Invalid for selected country" : undefined}
+            />
+          </Field>
+          <Field label="Email">
+            <Input type="email" value={form.email} onChange={(e) => upd("email", e.target.value)} />
+          </Field>
+        </div>
+      </DialogBody>
+
+      <DialogFooter>
         <Button variant="secondary" onClick={onCancel} type="button">
           Cancel
         </Button>
@@ -284,7 +296,7 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
         >
           Save traveler
         </Button>
-      </div>
+      </DialogFooter>
     </div>
   );
 }
