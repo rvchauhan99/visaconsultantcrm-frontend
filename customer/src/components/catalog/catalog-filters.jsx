@@ -1,9 +1,19 @@
 "use client";
 
+import { useMemo } from "react";
 import { CalendarHeart, Files, PlaneTakeoff, Rocket } from "lucide-react";
-import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DeliveryFilterSelect } from "@/components/catalog/delivery-filter-select";
+import { VisaFormatFilterSelect } from "@/components/catalog/visa-format-filter-select";
+import { DocumentsProfileFilterSelect } from "@/components/catalog/documents-profile-filter-select";
 import { useCatalogSearch } from "@/context/catalog-search";
+import { useVisaProducts } from "@/hooks/customer-api";
+import { countDeliveryBuckets, matchesDelivery } from "@/lib/delivery-filter";
+import { countVisaFormatBuckets, matchesVisaFormat } from "@/lib/visa-format-filter";
+import {
+  countDocumentsProfileBuckets,
+  matchesDocumentsProfile,
+} from "@/lib/documents-profile-filter";
 import { cn } from "@/lib/utils";
 
 const FILTER_TRIGGER =
@@ -11,41 +21,66 @@ const FILTER_TRIGGER =
 
 const FILTER_DATE_TRIGGER = `${FILTER_TRIGGER} [&_span:first-child>svg]:hidden`;
 
-const DELIVERY_OPTIONS = [
-  { value: "any", label: "Any Time" },
-  { value: "fast", label: "Fast (≤7 days)" },
-];
-
-const VISA_TYPE_OPTIONS = [
-  { value: "", label: "All Visa Types" },
-  { value: "tourist", label: "Tourist" },
-  { value: "business", label: "Business" },
-  { value: "transit", label: "Transit" },
-];
-
-const COMPLEXITY_OPTIONS = [
-  { value: "", label: "Any Documents" },
-  { value: "simple", label: "Simple (≤3)" },
-  { value: "medium", label: "Medium (4–6)" },
-  { value: "complex", label: "Complex (7+)" },
-];
-
 /**
  * Single filter bar instance — used in the sticky header for both expanded and compact layouts.
  */
 export default function CatalogFilters({ compact = false, className }) {
   const {
-    visaType,
-    setVisaType,
+    q,
+    visaFormat,
+    setVisaFormat,
     delivery,
     setDelivery,
-    complexity,
-    setComplexity,
+    documentsProfile,
+    setDocumentsProfile,
     travelDate,
     setTravelDate,
     clearFilters,
     hasFilters,
   } = useCatalogSearch();
+
+  const params = useMemo(() => {
+    const p = {};
+    if (travelDate) p.travel_date = travelDate;
+    return p;
+  }, [travelDate]);
+
+  const { data: rawProducts } = useVisaProducts(params);
+
+  const catalogBase = useMemo(() => {
+    const products = Array.isArray(rawProducts) ? rawProducts : [];
+    return products.filter((p) => {
+      if (
+        q &&
+        !p.country_name?.toLowerCase().includes(q.toLowerCase()) &&
+        !p.title?.toLowerCase().includes(q.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [rawProducts, q]);
+
+  const deliveryCounts = useMemo(() => {
+    const base = catalogBase
+      .filter((p) => matchesVisaFormat(p, visaFormat))
+      .filter((p) => matchesDocumentsProfile(p, documentsProfile));
+    return countDeliveryBuckets(base);
+  }, [catalogBase, visaFormat, documentsProfile]);
+
+  const visaFormatCounts = useMemo(() => {
+    const base = catalogBase
+      .filter((p) => matchesDelivery(p, delivery))
+      .filter((p) => matchesDocumentsProfile(p, documentsProfile));
+    return countVisaFormatBuckets(base);
+  }, [catalogBase, delivery, documentsProfile]);
+
+  const documentsProfileCounts = useMemo(() => {
+    const base = catalogBase
+      .filter((p) => matchesDelivery(p, delivery))
+      .filter((p) => matchesVisaFormat(p, visaFormat));
+    return countDocumentsProfileBuckets(base);
+  }, [catalogBase, delivery, visaFormat]);
 
   return (
     <div
@@ -62,16 +97,13 @@ export default function CatalogFilters({ compact = false, className }) {
         iconTone="emerald"
         label="Visa delivery"
       >
-        <SearchableSelect
+        <DeliveryFilterSelect
           data-testid="filter-delivery"
-          searchable={false}
-          clearable={false}
           value={delivery}
           onChange={(v) => setDelivery(typeof v === "string" ? v : "any")}
-          options={DELIVERY_OPTIONS}
+          counts={deliveryCounts}
           className="w-full min-w-0"
           triggerClassName={FILTER_TRIGGER}
-          contentClassName="min-w-[200px]"
         />
       </FilterSection>
 
@@ -82,16 +114,13 @@ export default function CatalogFilters({ compact = false, className }) {
         iconTone="sky"
         label="Type"
       >
-        <SearchableSelect
+        <VisaFormatFilterSelect
           data-testid="filter-type"
-          searchable={false}
-          clearable={false}
-          value={visaType}
-          onChange={(v) => setVisaType(typeof v === "string" ? v : "")}
-          options={VISA_TYPE_OPTIONS}
+          value={visaFormat}
+          onChange={(v) => setVisaFormat(typeof v === "string" ? v : "any")}
+          counts={visaFormatCounts}
           className="w-full min-w-0"
           triggerClassName={FILTER_TRIGGER}
-          contentClassName="min-w-[200px]"
         />
       </FilterSection>
 
@@ -102,16 +131,13 @@ export default function CatalogFilters({ compact = false, className }) {
         iconTone="amber"
         label="Documents"
       >
-        <SearchableSelect
-          data-testid="filter-complexity"
-          searchable={false}
-          clearable={false}
-          value={complexity}
-          onChange={(v) => setComplexity(typeof v === "string" ? v : "")}
-          options={COMPLEXITY_OPTIONS}
+        <DocumentsProfileFilterSelect
+          data-testid="filter-documents"
+          value={documentsProfile}
+          onChange={(v) => setDocumentsProfile(typeof v === "string" ? v : "any")}
+          counts={documentsProfileCounts}
           className="w-full min-w-0"
           triggerClassName={FILTER_TRIGGER}
-          contentClassName="min-w-[200px]"
         />
       </FilterSection>
 

@@ -8,6 +8,15 @@ import { Plus, Trash2, ArrowUp, ArrowDown, Check, X, Pencil, Upload, Loader2 } f
 import { CountrySelect, MasterSelect, SearchableSelect } from "@/components/forms/selects";
 import { BannerImageField } from "@/components/crm/BannerImageField";
 import { DEFAULT_GST_PERCENT, FEE_LABELS, computeLineTotal } from "@/lib/productPricing";
+import {
+  DEFAULT_VISA_FORMAT,
+  VISA_FORMAT_OPTIONS,
+  formatVisaFormatLabel,
+} from "@/lib/visaFormats";
+import {
+  formatDocumentsProfileLabel,
+  profileFromSchemaDocuments,
+} from "@/lib/documentsProfile";
 
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
@@ -49,7 +58,7 @@ export default function ProductBuilder() {
             <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
                 <div>
                     <h1 className="text-xl font-semibold">{schema.title}</h1>
-                    <div className="text-xs font-mono uppercase tracking-widest text-ink-muted">{schema.country_flag} {schema.country_name} · {schema.visa_type}</div>
+                    <div className="text-xs font-mono uppercase tracking-widest text-ink-muted">{schema.country_flag} {schema.country_name} · {schema.visa_type} · {formatVisaFormatLabel(schema.visa_format || DEFAULT_VISA_FORMAT)}</div>
                 </div>
                 <div className="flex items-center gap-2">
                     <Stamp tone={schema.status === "published" ? "success" : "muted"} size="sm">{schema.status}</Stamp>
@@ -94,7 +103,9 @@ export default function ProductBuilder() {
 function BasicTab({ schema, reload }) {
     const [form, setForm] = useState({
         country_code: schema.country_code, country_name: schema.country_name,
-        visa_type: schema.visa_type, title: schema.title,
+        visa_type: schema.visa_type,
+        visa_format: schema.visa_format || DEFAULT_VISA_FORMAT,
+        title: schema.title,
         banner_image_url: schema.banner_image_url || "",
         validity_days: schema.validity_days, processing_time_days: schema.processing_time_days,
         passport_min_validity_months: schema.passport_min_validity_months ?? 6,
@@ -127,12 +138,21 @@ function BasicTab({ schema, reload }) {
                         testId="basic-country"
                     />
                 </F>
-                <F label="Visa type">
+                <F label="Purpose (visa type)">
                     <SearchableSelect
                         clearable={false}
                         value={form.visa_type}
                         onChange={(v) => setForm({ ...form, visa_type: v || "tourist" })}
                         options={["tourist", "business", "transit", "other_general"].map((v) => ({ value: v, label: v }))}
+                    />
+                </F>
+                <F label="Issuance">
+                    <SearchableSelect
+                        clearable={false}
+                        value={form.visa_format}
+                        onChange={(v) => setForm({ ...form, visa_format: v || DEFAULT_VISA_FORMAT })}
+                        options={VISA_FORMAT_OPTIONS}
+                        data-testid="basic-visa-format"
                     />
                 </F>
                 <F label="Sequence">
@@ -240,6 +260,20 @@ function DocsTab({ schema, reload }) {
 
     return (
         <div className="bg-surface-card border border-border rounded-sm p-4 mt-3" data-testid="docs-tab">
+            <div
+              className="mb-3 flex flex-wrap items-center gap-2 rounded-sm border border-border bg-surface px-3 py-2"
+              data-testid="docs-catalog-filter-badge"
+            >
+              <span className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">
+                Catalog filter
+              </span>
+              <Stamp tone="ink" size="sm">
+                {formatDocumentsProfileLabel(profileFromSchemaDocuments(schema.documents))}
+              </Stamp>
+              <span className="text-[11px] text-ink-muted">
+                Derived from required documents (customer Documents dropdown). Attach passport / bank / ITR / US-UK-Schengen copy to change.
+              </span>
+            </div>
             <table className="w-full text-sm mb-4">
                 <thead className="bg-surface border-b border-border">
                     <tr>

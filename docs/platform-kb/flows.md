@@ -25,6 +25,12 @@ flowchart LR
 - `customer/src/app/apply/[productId]/apply-inner.js` — wizard
 - `customer/src/app/status/[caseId]/page.js`
 
+**Landing catalog filters:** sticky header `CatalogFilters`.
+- **Delivery:** `DeliveryFilterSelect` — exact `processing_time_days` buckets with facet counts (`customer/src/lib/delivery-filter.js`).
+- **Type:** `VisaFormatFilterSelect` — issuance `visa_format` buckets (All Visa Types, Visa Free, Visa on Arrival, e-Visa, Sticker Visa) with facet counts (`customer/src/lib/visa-format-filter.js`). Purpose `visa_type` (tourist/business/…) stays CRM/leads-only.
+- **Documents:** `DocumentsProfileFilterSelect` — content buckets from required `doc_key`s / `documents_profile` (Only Passport; Passport & Bank; Passport, Bank & ITR; With US/UK/Schengen visa). Helpers: `customer/src/lib/documents-profile-filter.js`. Staff change buckets by linking required docs in Product Builder (prior-visa master: `prior_visa_us_uk_schengen`).
+- Grid filter in `home-inner.js` via `matchesDelivery` + `matchesVisaFormat` + `matchesDocumentsProfile`.
+
 Drafts: `?draft=` param, `api.get(/cases/drafts/:id)`
 
 ## B. CRM: lead → case → finance

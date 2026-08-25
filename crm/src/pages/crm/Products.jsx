@@ -14,6 +14,11 @@ import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { DataTable } from "@/components/ui/data-table";
 import { useListQueryState } from "@/hooks/useListQueryState";
 import { BannerImageField } from "@/components/crm/BannerImageField";
+import {
+  DEFAULT_VISA_FORMAT,
+  VISA_FORMAT_OPTIONS,
+  formatVisaFormatLabel,
+} from "@/lib/visaFormats";
 
 const VISA_TYPES = ["tourist", "business", "transit", "other_general"];
 const FILTER_KEYS = [];
@@ -86,6 +91,7 @@ export default function Products() {
         country_code: row.country_code,
         country_name: row.country_name,
         visa_type: row.visa_type,
+        visa_format: row.visa_format || DEFAULT_VISA_FORMAT,
         title: row.title,
         banner_image_url: row.banner_image_url || null,
         validity_days: row.validity_days,
@@ -139,9 +145,19 @@ export default function Products() {
     { key: "title", label: "Title", sortable: false },
     {
       key: "visa_type",
-      label: "Type",
+      label: "Purpose",
       sortable: false,
       render: (row) => <Stamp tone="ink" size="sm">{row.visa_type}</Stamp>,
+    },
+    {
+      key: "visa_format",
+      label: "Issuance",
+      sortable: false,
+      render: (row) => (
+        <Stamp tone="ink" size="sm">
+          {formatVisaFormatLabel(row.visa_format || DEFAULT_VISA_FORMAT)}
+        </Stamp>
+      ),
     },
     {
       key: "required_documents_count",
@@ -225,6 +241,7 @@ function NewProductForm({ onCancel, onCreate }) {
   const [country, setCountry] = useState(null);
   const [countryOpt, setCountryOpt] = useState(null);
   const [visaType, setVisaType] = useState("tourist");
+  const [visaFormat, setVisaFormat] = useState(DEFAULT_VISA_FORMAT);
   const [title, setTitle] = useState("");
   const [validity, setValidity] = useState(60);
   const [processing, setProcessing] = useState(7);
@@ -237,6 +254,7 @@ function NewProductForm({ onCancel, onCreate }) {
       country_code: country,
       country_name: countryOpt.name,
       visa_type: visaType,
+      visa_format: visaFormat,
       title,
       validity_days: Number(validity),
       processing_time_days: Number(processing),
@@ -260,7 +278,7 @@ function NewProductForm({ onCancel, onCreate }) {
             testId="np-country"
           />
         </CrmField>
-        <CrmField label="Visa type">
+        <CrmField label="Purpose (visa type)">
           <SearchableSelect
             clearable={false}
             value={visaType}
@@ -269,6 +287,15 @@ function NewProductForm({ onCancel, onCreate }) {
             options={VISA_TYPES.map((v) => ({ value: v, label: v }))}
           />
           <span className="text-[10px] text-ink-muted mt-0.5 block">Student visas excluded platform-wide.</span>
+        </CrmField>
+        <CrmField label="Issuance">
+          <SearchableSelect
+            clearable={false}
+            value={visaFormat}
+            onChange={(v) => setVisaFormat(v || DEFAULT_VISA_FORMAT)}
+            data-testid="np-format"
+            options={VISA_FORMAT_OPTIONS}
+          />
         </CrmField>
         <CrmField label="Title" required>
           <CrmInput required value={title} onChange={(e) => setTitle(e.target.value)} data-testid="np-title" placeholder="e.g. USA Tourist Visa" />

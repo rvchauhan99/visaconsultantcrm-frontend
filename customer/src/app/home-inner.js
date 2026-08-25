@@ -17,14 +17,17 @@ import {
   formatValidityShort,
   guaranteedByDateTime,
 } from "@/lib/utils";
+import { matchesDelivery } from "@/lib/delivery-filter";
+import { matchesVisaFormat } from "@/lib/visa-format-filter";
+import { matchesDocumentsProfile } from "@/lib/documents-profile-filter";
 import { track } from "@/lib/telemetry";
 
 export default function HomeCatalog() {
   const {
     q,
-    visaType,
+    visaFormat,
     delivery,
-    complexity,
+    documentsProfile,
     travelDate,
     clearFilters,
     hasFilters,
@@ -32,10 +35,9 @@ export default function HomeCatalog() {
 
   const params = useMemo(() => {
     const p = {};
-    if (complexity) p.complexity = complexity;
     if (travelDate) p.travel_date = travelDate;
     return p;
-  }, [complexity, travelDate]);
+  }, [travelDate]);
 
   const { data: rawProducts, isLoading, isError, refetch } = useVisaProducts(params);
   const products = useMemo(
@@ -49,12 +51,13 @@ export default function HomeCatalog() {
         if (q && !p.country_name.toLowerCase().includes(q.toLowerCase()) && !p.title.toLowerCase().includes(q.toLowerCase())) {
           return false;
         }
-        if (visaType && p.visa_type !== visaType) return false;
-        if (delivery === "fast" && p.processing_time_days > 7) return false;
+        if (!matchesVisaFormat(p, visaFormat)) return false;
+        if (!matchesDelivery(p, delivery)) return false;
+        if (!matchesDocumentsProfile(p, documentsProfile)) return false;
         return true;
       })
       .sort((a, b) => (a.display_order ?? 9999) - (b.display_order ?? 9999));
-  }, [products, q, visaType, delivery]);
+  }, [products, q, visaFormat, delivery, documentsProfile]);
 
   return (
     <div className="bg-white min-h-[calc(100vh-4rem)]">
@@ -136,7 +139,7 @@ function VisaCard({ product, index }) {
             <div className="atlys-destination-divider" aria-hidden="true" />
 
             <div className="grid grid-cols-3 gap-1 sm:gap-2 w-full px-0.5 sm:px-1">
-              <CardMeta label="Type" value={formatVisaTypeShort(product.visa_type)} />
+              <CardMeta label="Type" value={formatVisaTypeShort(product)} />
               <CardMeta label="Valid" value={formatValidityShort(product.validity_days)} />
               <CardMeta label="Fees" value={INR.format(totalFee)} />
             </div>

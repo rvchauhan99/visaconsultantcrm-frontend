@@ -37,18 +37,31 @@ export function formatVisaTypeLabel(type = "") {
   return map[type] || String(type).replace(/_/g, " ")
 }
 
+const ISSUANCE_LABELS = {
+  visa_free: "Visa Free",
+  visa_on_arrival: "Visa on Arrival",
+  e_visa: "e-Visa",
+  sticker_visa: "Sticker Visa",
+}
+
+export function formatVisaFormatLabel(format = "") {
+  return ISSUANCE_LABELS[format] || formatVisaTypeLabel(format)
+}
+
 export function visaPageTitle(product) {
   const country = product?.country_name || "Visa"
-  const kind = formatVisaTypeLabel(product?.visa_type)
-  return `${country} ${kind} Visa | ${SITE_NAME}`
+  const issuance = formatVisaFormatLabel(product?.visa_format || "e_visa")
+  const purpose = formatVisaTypeLabel(product?.visa_type)
+  return `${country} ${purpose} ${issuance} | ${SITE_NAME}`
 }
 
 export function visaPageDescription(product) {
   if (!product) return DEFAULT_DESCRIPTION
   const days = product.processing_time_days
   const country = product.country_name
-  const kind = formatVisaTypeLabel(product.visa_type).toLowerCase()
-  return `Apply for a ${country} ${kind} visa with ${SITE_NAME}. Transparent fees, dedicated consultant, typical processing ${days} days. For Indian passport holders.`
+  const purpose = formatVisaTypeLabel(product.visa_type).toLowerCase()
+  const issuance = formatVisaFormatLabel(product.visa_format || "e_visa").toLowerCase()
+  return `Apply for a ${country} ${purpose} ${issuance} with ${SITE_NAME}. Transparent fees, dedicated consultant, typical processing ${days} days. For Indian passport holders.`
 }
 
 export function buildLocalBusinessJsonLd() {
@@ -122,7 +135,7 @@ export function buildVisaServiceJsonLd(product) {
       "@type": "Country",
       name: "India",
     },
-    serviceType: `${formatVisaTypeLabel(product.visa_type)} visa`,
+    serviceType: `${formatVisaFormatLabel(product.visa_format || "e_visa")} (${formatVisaTypeLabel(product.visa_type)})`,
     offers: {
       "@type": "Offer",
       priceCurrency: "INR",

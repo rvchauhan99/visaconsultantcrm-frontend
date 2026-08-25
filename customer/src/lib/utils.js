@@ -1,5 +1,10 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import {
+  formatVisaFormatLabel,
+  formatVisaFormatShort,
+  getVisaFormat,
+} from "@/lib/visa-format-filter";
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -53,14 +58,22 @@ export function countryCoverUrl(product) {
   return "https://images.unsplash.com/photo-1488646953014-85cb44e25828?crop=entropy&cs=srgb&fm=jpg&q=80&w=900";
 }
 
-export function formatVisaTypeShort(type = "") {
+/** Card badge: prefers product.visa_format (issuance); falls back to purpose visa_type. */
+export function formatVisaTypeShort(typeOrProduct = "") {
+  if (typeOrProduct && typeof typeOrProduct === "object") {
+    return formatVisaFormatShort(getVisaFormat(typeOrProduct));
+  }
+  const formatKeys = ["visa_free", "visa_on_arrival", "e_visa", "sticker_visa"];
+  if (formatKeys.includes(typeOrProduct)) {
+    return formatVisaFormatShort(typeOrProduct);
+  }
   const map = {
     tourist: "E-VISA",
     business: "BUSINESS",
     transit: "TRANSIT",
     other_general: "VISA",
   };
-  return map[type] || type.replace(/_/g, " ").toUpperCase();
+  return map[typeOrProduct] || String(typeOrProduct).replace(/_/g, " ").toUpperCase();
 }
 
 export function formatValidityShort(days = 0) {
@@ -89,9 +102,19 @@ export const SUPPORT = {
   playStoreUrl: process.env.NEXT_PUBLIC_PLAY_STORE_URL || "/coming-soon",
 };
 
-export function formatVisaType(type = "") {
+export function formatVisaType(typeOrProduct = "") {
+  if (typeOrProduct && typeof typeOrProduct === "object") {
+    return formatVisaFormatLabel(getVisaFormat(typeOrProduct));
+  }
+  const formatMap = {
+    visa_free: "Visa Free",
+    visa_on_arrival: "Visa on Arrival",
+    e_visa: "e-Visa",
+    sticker_visa: "Sticker Visa",
+  };
+  if (formatMap[typeOrProduct]) return formatMap[typeOrProduct];
   const map = { tourist: "Tourist", business: "Business", transit: "Transit", other_general: "General" };
-  return map[type] || type.replace(/_/g, " ");
+  return map[typeOrProduct] || String(typeOrProduct).replace(/_/g, " ");
 }
 
 export function formatValidity(days = 0) {

@@ -80,7 +80,7 @@ export default function VisaDetailInner({ initialProduct = null }) {
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-muted px-2.5 py-1 rounded-full bg-surface-muted border border-border">
-              {formatVisaType(product.visa_type)}
+              {formatVisaType(product)}
             </span>
             <Stamp tone="gold" size="sm">Guaranteed on time</Stamp>
           </div>
@@ -98,7 +98,7 @@ export default function VisaDetailInner({ initialProduct = null }) {
           <div className="grid grid-cols-3 gap-3">
             <Metric label="Processing" value={`${product.processing_time_days} days`} icon={<Clock className="w-4 h-4" />} />
             <Metric label="Validity" value={formatValidity(product.validity_days)} icon={<Shield className="w-4 h-4" />} />
-            <Metric label="Visa type" value={formatVisaType(product.visa_type)} icon={<FileText className="w-4 h-4" />} />
+            <Metric label="Visa type" value={formatVisaType(product)} icon={<FileText className="w-4 h-4" />} />
           </div>
 
           {/* Banner */}

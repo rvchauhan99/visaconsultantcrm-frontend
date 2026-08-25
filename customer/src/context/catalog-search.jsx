@@ -6,33 +6,39 @@ const CatalogSearchContext = createContext(null);
 
 export function CatalogSearchProvider({ children }) {
   const [q, setQ] = useState("");
-  const [visaType, setVisaType] = useState("");
+  const [visaFormat, setVisaFormat] = useState("any");
   const [delivery, setDelivery] = useState("any");
-  const [complexity, setComplexity] = useState("");
+  const [documentsProfile, setDocumentsProfile] = useState("any");
   const [travelDate, setTravelDate] = useState("");
   const [headerCompact, setHeaderCompact] = useState(false);
   const [searchExpanded, setSearchExpanded] = useState(false);
 
   const clearFilters = useCallback(() => {
     setQ("");
-    setVisaType("");
+    setVisaFormat("any");
     setDelivery("any");
-    setComplexity("");
+    setDocumentsProfile("any");
     setTravelDate("");
   }, []);
 
-  const hasFilters = Boolean(q || visaType || delivery !== "any" || complexity || travelDate);
+  const hasFilters = Boolean(
+    q ||
+      visaFormat !== "any" ||
+      delivery !== "any" ||
+      documentsProfile !== "any" ||
+      travelDate,
+  );
 
   const value = useMemo(
     () => ({
       q,
       setQ,
-      visaType,
-      setVisaType,
+      visaFormat,
+      setVisaFormat,
       delivery,
       setDelivery,
-      complexity,
-      setComplexity,
+      documentsProfile,
+      setDocumentsProfile,
       travelDate,
       setTravelDate,
       clearFilters,
@@ -44,9 +50,9 @@ export function CatalogSearchProvider({ children }) {
     }),
     [
       q,
-      visaType,
+      visaFormat,
       delivery,
-      complexity,
+      documentsProfile,
       travelDate,
       clearFilters,
       hasFilters,
