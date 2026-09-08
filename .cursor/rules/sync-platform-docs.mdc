@@ -1,0 +1,44 @@
+---
+description: Keep platform-docs in sync with CRM, customer, and API changes
+alwaysApply: true
+---
+
+# Sync platform-docs with every platform change
+
+Partner docs live in `platform-docs/` (sibling of the CRM and backend repos; GitHub `rvchauhan99/amaravisa-platform-docs`). They are **not** the frontend/backend remotes.
+
+After any feature, bugfix, route, payload, auth, menu, env, or stack change — **update platform-docs in the same task**. Do not mark the work done while those files are stale.
+
+## What to update
+
+| Change | Files |
+|--------|--------|
+| Stack, hosting, libraries | `01-technology-stack.md` |
+| Screens, nav, who calls which API | `02-architecture-and-integration.md` |
+| JWT, 2FA, Role Master `menu_keys` | `03-authentication-and-rbac.md` |
+| New/changed HTTP endpoints | `04` / `05` / `06` catalogs |
+| Request/response fields | `07-payloads-and-models.md` |
+| Env, CORS, hosts | `08-environment-and-hosts.md` |
+| Any API change | `openapi/openapi.json` and `openapi/api-examples.json` |
+
+Dummy `request_body` / `response_body` in `api-examples.json` must include **every** new or changed operation.
+
+## Refresh snapshots (API on :8000)
+
+```bash
+curl -sS -o platform-docs/openapi/openapi.json http://127.0.0.1:8000/openapi.json
+python3 platform-docs/scripts/generate_catalogs.py
+python3 platform-docs/scripts/generate_examples.py
+```
+
+If you opened only a child repo, use `../platform-docs/...`. If the API is down, edit markdown and example overrides from the code — do not skip docs.
+
+## Example
+
+Adding `POST /api/crm/foo` → update `05-api-catalog-crm.md`, `07-payloads-and-models.md`, regenerate OpenAPI + `api-examples.json` (dummy payload and 200 body), mention the CRM page in `02` if it has a screen.
+
+## Do not
+
+- Commit `platform-docs` into the CRM or backend Git remotes
+- Leave catalogs or examples missing the new route
+- Push `amaravisa-platform-docs` unless the user asks
