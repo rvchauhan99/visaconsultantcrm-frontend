@@ -489,19 +489,21 @@ function UserForm({ mode, user, onCancel, onSubmit }) {
     { value: "admin", label: "Admin" },
   ]);
   const [roleMeta, setRoleMeta] = useState({});
+  const currentRole = user?.role;
+  const currentRoleName = user?.role_name;
 
   useEffect(() => {
     api.get("/admin/roles", { params: { active: true } }).then((r) => {
       const items = Array.isArray(r.data) ? r.data : [];
       if (!items.length) return;
       const options = items.map((item) => ({ value: item.slug, label: item.name }));
-      if (user?.role && !options.some((opt) => opt.value === user.role)) {
-        options.push({ value: user.role, label: user.role_name || user.role });
+      if (currentRole && !options.some((opt) => opt.value === currentRole)) {
+        options.push({ value: currentRole, label: currentRoleName || currentRole });
       }
       setRoleOptions(options);
       setRoleMeta(Object.fromEntries(items.map((item) => [item.slug, item])));
     }).catch(() => {});
-  }, []);
+  }, [currentRole, currentRoleName]);
 
   const selectedRole = roleMeta[role] || {};
   const needsCountries = !selectedRole.unrestricted_scope && role !== "admin";
