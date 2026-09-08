@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api, { clearSession, getUser } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/utils";
 import Stamp from "@/components/Stamp";
-import { Users2, UserX, Plus } from "lucide-react";
+import { Users2, UserX, UserCheck, Pencil, Plus } from "lucide-react";
 import { CountrySelect, ConsultantSelect } from "@/components/forms/selects";
 import { PageHeader } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
-import { CrmTableCard } from "@/components/ui/crm-card";
+import { CrmTableCard, CrmCardHeader } from "@/components/ui/crm-card";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { CrmField, CrmInput } from "@/components/ui/crm-field";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
@@ -17,9 +18,33 @@ import { useListQueryState } from "@/hooks/useListQueryState";
 const FILTER_KEYS = [];
 const LIST_DEFAULTS = {};
 
+const AUDIT_ACTION_LABELS = {
+  staff_created: "Created",
+  staff_updated: "Updated",
+  staff_deactivated: "Deactivated",
+  staff_activated: "Activated",
+};
+
 function isConsultantActive(row) {
   if (typeof row?.is_active === "boolean") return row.is_active;
   return row?.active !== false;
+}
+
+function formatAuditValue(value) {
+  if (value == null || value === "") return "—";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
+}
+
+function formatAuditDiff(row) {
+  const before = row?.before && typeof row.before === "object" ? row.before : {};
+  const after = row?.after && typeof row.after === "object" ? row.after : {};
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+  if (!keys.length) return "—";
+  return keys
+    .map((key) => `${key}: ${formatAuditValue(before[key])} → ${formatAuditValue(after[key])}`)
+    .join("; ");
 }
 
 export default function Consultants() {
@@ -27,10 +52,16 @@ export default function Consultants() {
     filterKeys: FILTER_KEYS,
     defaults: LIST_DEFAULTS,
   });
+  const nav = useNavigate();
+  const me = getUser();
+  const myId = me?.id;
   const [rows, setRows] = useState([]);
-  const [showNew, setShowNew] = useState(false);
-  const [reassignCtx, setReassignCtx] = useState(null); // { mode, cid, name, message, blocked, codes? }
+  const [formMode, setFormMode] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [reassignCtx, setReassignCtx] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [auditRows, setAuditRows] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(true);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -42,16 +73,63 @@ export default function Consultants() {
     }).catch(() => { setRows([]); setLoading(false); });
   }, [list.q]);
 
+  const loadAudit = useCallback(() => {
+    setAuditLoading(true);
+    api.get("/admin/consultants/audit", { params: { limit: 40 } }).then((r) => {
+      setAuditRows(Array.isArray(r.data) ? r.data : []);
+      setAuditLoading(false);
+    }).catch(() => { setAuditRows([]); setAuditLoading(false); });
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadAudit(); }, [loadAudit]);
+
+  const refresh = () => {
+    load();
+    loadAudit();
+  };
+
+  const handleCloseForm = () => {
+    setFormMode(null);
+    setEditingUser(null);
+  };
 
   const create = async (form) => {
     try {
       await api.post("/admin/consultants", form);
-      toast.success("Consultant created");
-      setShowNew(false);
-      load();
+      toast.success("User created");
+      handleCloseForm();
+      refresh();
     } catch (e) {
-      toast.error(apiErrorMessage(e, "Failed to create consultant"));
+      toast.error(apiErrorMessage(e, "Failed to create user"));
+    }
+  };
+
+  const update = async (form) => {
+    if (!editingUser?.id) return;
+    try {
+      const r = await api.patch(`/admin/consultants/${editingUser.id}`, form);
+      if (r.data?.requires_reassignment) {
+        setReassignCtx({
+          mode: "edit-countries",
+          cid: editingUser.id,
+          codes: form.country_codes,
+          message: r.data.message,
+          blocked: r.data.blocked_countries || [],
+        });
+        return;
+      }
+      toast.success("User updated");
+      const roleChanged = form.role && form.role !== editingUser.role;
+      handleCloseForm();
+      refresh();
+      if (roleChanged && editingUser.id === myId) {
+        toast.message("Your role changed. Please sign in again.");
+        clearSession();
+        nav("/login");
+      }
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Failed to update user"));
     }
   };
 
@@ -64,7 +142,8 @@ export default function Consultants() {
         });
         return;
       }
-      toast.success("Countries updated"); load();
+      toast.success("Countries updated");
+      refresh();
     } catch (e) {
       toast.error(apiErrorMessage(e, "Failed to update countries"));
     }
@@ -80,9 +159,21 @@ export default function Consultants() {
         });
         return;
       }
-      toast.success("Consultant deactivated"); load();
+      toast.success("User deactivated");
+      refresh();
     } catch (e) {
       toast.error(apiErrorMessage(e, "Failed to deactivate"));
+    }
+  };
+
+  const activate = async (cid, name) => {
+    if (!window.confirm(`Activate ${name}?`)) return;
+    try {
+      await api.patch(`/admin/consultants/${cid}/activate`);
+      toast.success("User activated");
+      refresh();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Failed to activate"));
     }
   };
 
@@ -100,7 +191,8 @@ export default function Consultants() {
         });
         toast.success("Reassigned & countries updated");
       }
-      setReassignCtx(null); load();
+      setReassignCtx(null);
+      refresh();
     } catch (e) {
       toast.error(apiErrorMessage(e, "Reassignment failed"));
     }
@@ -110,16 +202,31 @@ export default function Consultants() {
     try {
       await api.patch(`/admin/consultants/${cid}/manager`, { manager_id: managerId || null });
       toast.success("Manager updated");
-      load();
+      refresh();
     } catch (e) {
       toast.error(apiErrorMessage(e, "Failed to update manager"));
     }
   };
 
+  const activeAdminCount = rows.filter((row) => isConsultantActive(row) && row.role === "admin").length;
+
+  const canDeactivate = (row) => {
+    if (!isConsultantActive(row)) return false;
+    if (row.id === myId) return false;
+    if (row.role === "admin" && activeAdminCount <= 1) return false;
+    return true;
+  };
+
+  const deactivateTitle = (row) => {
+    if (row.id === myId) return "You cannot deactivate your own account";
+    if (row.role === "admin" && activeAdminCount <= 1) return "Cannot deactivate the last remaining admin";
+    return "Deactivate";
+  };
+
   const columns = [
     {
       key: "full_name",
-      label: "Consultant",
+      label: "User",
       render: (row) => (
         <div className="flex items-center gap-3">
           <span className="w-8 h-8 rounded-full bg-surface-muted border border-border flex items-center justify-center text-xs font-bold text-ink-muted shrink-0">
@@ -184,30 +291,116 @@ export default function Consultants() {
       sortable: false,
       headerClassName: "text-right",
       className: "text-right",
-      render: (row) => isConsultantActive(row) && row.role !== "admin" ? (
-        <div className="inline-flex gap-2 items-center flex-wrap justify-end">
-          <ConsultantSelect
-            value={row.manager_id || null}
-            onChange={(v) => updateManager(row.id, v)}
-            admin
-            excludeId={row.id}
-            placeholder="Manager…"
-            testId={`edit-manager-${row.id.slice(0, 4)}`}
-            className="w-36"
-          />
-          <CountrySelect
-            value={row.country_codes || []}
-            onChange={(codes) => updateCountries(row.id, codes)}
-            multiple
-            placeholder="Edit…"
-            testId={`edit-countries-${row.id.slice(0, 4)}`}
-            className="w-32"
-          />
-          <CrmButton variant="danger" size="icon-sm" onClick={() => deactivate(row.id, row.full_name)} data-testid={`deactivate-${row.id.slice(0, 4)}`} title="Deactivate">
-            <UserX className="w-3.5 h-3.5" />
-          </CrmButton>
+      render: (row) => {
+        const active = isConsultantActive(row);
+        const allowInline = active && row.role !== "admin";
+        return (
+          <div className="inline-flex gap-2 items-center flex-wrap justify-end">
+            {allowInline && (
+              <>
+                <ConsultantSelect
+                  value={row.manager_id || null}
+                  onChange={(v) => updateManager(row.id, v)}
+                  admin
+                  excludeId={row.id}
+                  placeholder="Manager…"
+                  testId={`edit-manager-${row.id.slice(0, 4)}`}
+                  className="w-36"
+                />
+                <CountrySelect
+                  value={row.country_codes || []}
+                  onChange={(codes) => updateCountries(row.id, codes)}
+                  multiple
+                  placeholder="Edit…"
+                  testId={`edit-countries-${row.id.slice(0, 4)}`}
+                  className="w-32"
+                />
+              </>
+            )}
+            <CrmButton
+              variant="outline"
+              size="icon-sm"
+              onClick={() => { setFormMode("edit"); setEditingUser(row); }}
+              data-testid={`edit-user-${row.id.slice(0, 4)}`}
+              title="Edit user"
+              aria-label={`Edit ${row.full_name || "user"}`}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </CrmButton>
+            {active ? (
+              <span title={deactivateTitle(row)}>
+                <CrmButton
+                  variant="danger"
+                  size="icon-sm"
+                  disabled={!canDeactivate(row)}
+                  onClick={() => deactivate(row.id, row.full_name)}
+                  data-testid={`deactivate-${row.id.slice(0, 4)}`}
+                  title={deactivateTitle(row)}
+                  aria-label={`Deactivate ${row.full_name || "user"}`}
+                >
+                  <UserX className="w-3.5 h-3.5" />
+                </CrmButton>
+              </span>
+            ) : (
+              <CrmButton
+                variant="success"
+                size="icon-sm"
+                onClick={() => activate(row.id, row.full_name)}
+                data-testid={`activate-${row.id.slice(0, 4)}`}
+                title="Activate"
+                aria-label={`Activate ${row.full_name || "user"}`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+              </CrmButton>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  const auditColumns = [
+    {
+      key: "created_at",
+      label: "When",
+      render: (row) => (
+        <span className="text-xs text-ink-muted">
+          {row.created_at ? new Date(row.created_at).toLocaleString() : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "actor_id",
+      label: "Changed by",
+      render: (row) => (
+        <div>
+          <div className="text-xs font-medium text-ink">{row.actor_name || "Unknown"}</div>
+          <div className="text-[10px] font-mono text-ink-muted">{row.actor_id || "—"}</div>
         </div>
-      ) : null,
+      ),
+    },
+    {
+      key: "entity_id",
+      label: "User",
+      render: (row) => (
+        <div>
+          <div className="text-xs font-medium text-ink">{row.entity_name || "—"}</div>
+          <div className="text-[10px] font-mono text-ink-muted">{row.entity_id || "—"}</div>
+        </div>
+      ),
+    },
+    {
+      key: "action",
+      label: "Action",
+      render: (row) => (
+        <Stamp tone="muted" size="sm">{AUDIT_ACTION_LABELS[row.action] || row.action}</Stamp>
+      ),
+    },
+    {
+      key: "after",
+      label: "Settings changed",
+      sortable: false,
+      render: (row) => <span className="text-xs text-ink-muted">{formatAuditDiff(row)}</span>,
     },
   ];
 
@@ -215,15 +408,28 @@ export default function Consultants() {
     <div className="p-6 relative">
       <PageHeader
         label="Admin"
-        title="Consultants"
+        title="User Master"
         actions={
-          <CrmButton variant="solid" size="sm" onClick={() => setShowNew(true)} data-testid="new-consultant-btn">
-            <Plus className="w-3.5 h-3.5" /> New consultant
+          <CrmButton
+            variant="solid"
+            size="sm"
+            onClick={() => { setFormMode("create"); setEditingUser(null); }}
+            data-testid="new-consultant-btn"
+            aria-label="Create new user"
+          >
+            <Plus className="w-3.5 h-3.5" /> New user
           </CrmButton>
         }
       />
 
-      {showNew && <NewConsultantForm onCancel={() => setShowNew(false)} onCreate={create} />}
+      {formMode && (
+        <UserForm
+          mode={formMode}
+          user={editingUser}
+          onCancel={handleCloseForm}
+          onSubmit={formMode === "edit" ? update : create}
+        />
+      )}
 
       <FilterPanel
         fields={[]}
@@ -233,7 +439,7 @@ export default function Consultants() {
         onQChange={list.setQ}
         onApply={list.setFilters}
         onClear={list.clearFilters}
-        searchPlaceholder="Search consultants…"
+        searchPlaceholder="Search users…"
         testId="consultants-filters"
       />
 
@@ -243,7 +449,17 @@ export default function Consultants() {
           data={rows}
           loading={loading}
           rowTestId={(row) => `consultant-row-${row.id.slice(0, 4)}`}
-          empty={{ icon: Users2, title: "No consultants found" }}
+          empty={{ icon: Users2, title: "No users found" }}
+        />
+      </CrmTableCard>
+
+      <CrmTableCard className="mt-6">
+        <CrmCardHeader label="Audit" title="Change history" />
+        <DataTable
+          columns={auditColumns}
+          data={auditRows}
+          loading={auditLoading}
+          empty={{ icon: Users2, title: "No user setting changes recorded yet" }}
         />
       </CrmTableCard>
 
@@ -258,13 +474,14 @@ export default function Consultants() {
   );
 }
 
-function NewConsultantForm({ onCancel, onCreate }) {
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+function UserForm({ mode, user, onCancel, onSubmit }) {
+  const isEdit = mode === "edit";
+  const [email, setEmail] = useState(user?.email || "");
+  const [name, setName] = useState(user?.full_name || "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("consultant");
-  const [countryCodes, setCountryCodes] = useState([]);
-  const [managerId, setManagerId] = useState(null);
+  const [role, setRole] = useState(user?.role || "consultant");
+  const [countryCodes, setCountryCodes] = useState(user?.country_codes || []);
+  const [managerId, setManagerId] = useState(user?.manager_id || null);
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async (e) => {
@@ -273,28 +490,35 @@ function NewConsultantForm({ onCancel, onCreate }) {
       toast.error("Select at least one country for a consultant");
       return;
     }
-    if (!password || password.length < 6) {
+    if (!isEdit && (!password || password.length < 6)) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (isEdit && password && password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
     }
     setSubmitting(true);
     try {
-      await onCreate({
+      const payload = {
         email: email.trim(),
         full_name: name.trim(),
-        password,
         role,
         country_codes: role === "admin" ? [] : countryCodes,
         manager_id: managerId || null,
-      });
+      };
+      if (!isEdit || password) payload.password = password;
+      await onSubmit(payload);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={submit} className="bg-surface-card border border-border rounded-[10px] p-5 mb-5 shadow-[var(--shadow-card)]" data-testid="new-consultant-form">
-      <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-4">New staff account</div>
+    <form onSubmit={submit} className="bg-surface-card border border-border rounded-[10px] p-5 mb-5 shadow-[var(--shadow-card)]" data-testid={isEdit ? "edit-user-form" : "new-consultant-form"}>
+      <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-4">
+        {isEdit ? "Edit staff account" : "New staff account"}
+      </div>
       <div className="grid md:grid-cols-2 gap-3">
         <CrmField label="Email" required>
           <CrmInput type="email" required value={email} onChange={(e) => setEmail(e.target.value)} data-testid="nc-email" placeholder="staff@amaravisa.com" autoComplete="off" />
@@ -302,8 +526,21 @@ function NewConsultantForm({ onCancel, onCreate }) {
         <CrmField label="Full name" required>
           <CrmInput required value={name} onChange={(e) => setName(e.target.value)} data-testid="nc-name" placeholder="Priya Sharma" />
         </CrmField>
-        <CrmField label="Temporary password" required hint="Min. 6 characters — share securely with the staff member">
-          <CrmInput type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} data-testid="nc-password" placeholder="••••••••" autoComplete="new-password" />
+        <CrmField
+          label={isEdit ? "New password" : "Temporary password"}
+          required={!isEdit}
+          hint={isEdit ? "Leave blank to keep the current password" : "Min. 6 characters — share securely with the staff member"}
+        >
+          <CrmInput
+            type="password"
+            required={!isEdit}
+            minLength={isEdit ? undefined : 6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            data-testid="nc-password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+          />
         </CrmField>
         <CrmField label="Role">
           <SearchableSelect
@@ -327,25 +564,26 @@ function NewConsultantForm({ onCancel, onCreate }) {
                 value={managerId}
                 onChange={setManagerId}
                 admin
+                excludeId={user?.id}
                 placeholder="Select manager…"
                 testId="nc-manager"
               />
             </CrmField>
             <CrmField label="Countries managed" required className="md:col-span-2" hint="Consultants only see cases for these destinations">
-            <CountrySelect
-              value={countryCodes}
-              onChange={setCountryCodes}
-              multiple
-              placeholder="Select countries…"
-              testId="nc-countries"
-            />
-          </CrmField>
+              <CountrySelect
+                value={countryCodes}
+                onChange={setCountryCodes}
+                multiple
+                placeholder="Select countries…"
+                testId="nc-countries"
+              />
+            </CrmField>
           </>
         )}
         <div className="md:col-span-2 flex justify-end gap-2 mt-2">
           <CrmButton type="button" variant="outline" size="sm" onClick={onCancel} disabled={submitting}>Cancel</CrmButton>
           <CrmButton type="submit" variant="solid" size="sm" data-testid="nc-submit" disabled={submitting}>
-            {submitting ? "Creating…" : "Create consultant"}
+            {submitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save user" : "Create user")}
           </CrmButton>
         </div>
       </div>

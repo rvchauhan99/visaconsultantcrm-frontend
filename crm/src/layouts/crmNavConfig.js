@@ -98,7 +98,7 @@ export const NAV_GROUPS = [
       { to: "/passport-products", label: "Passport products", testid: "crm-nav-passport-products", icon: StampIcon },
       { to: "/document-master", label: "Document master", testid: "crm-nav-doc-master", icon: FileText },
       { to: "/field-master", label: "Field master", testid: "crm-nav-field-master", icon: FormInput },
-      { to: "/consultants", label: "Consultants", testid: "crm-nav-consultants", icon: Users2 },
+      { to: "/consultants", label: "User Master", testid: "crm-nav-consultants", icon: Users2 },
       { to: "/case-number-settings", label: "Case numbers", testid: "crm-nav-case-number-settings", icon: ListChecks },
     ],
   },
