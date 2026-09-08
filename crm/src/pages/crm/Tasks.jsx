@@ -24,7 +24,7 @@ const LIST_DEFAULTS = { status: "open", limit: "25", sort_by: "due_date", sort_o
 
 export default function Tasks() {
   const user = getUser();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = Boolean(user?.unrestricted_scope);
   const list = useListQueryState({
     filterKeys: FILTER_KEYS,
     defaults: LIST_DEFAULTS,

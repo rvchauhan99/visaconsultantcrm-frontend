@@ -30,6 +30,9 @@ export default function StaffProfile() {
           email: r.data.email,
           full_name: r.data.full_name,
           role: r.data.role,
+          role_name: r.data.role_name,
+          menu_keys: r.data.menu_keys || [],
+          unrestricted_scope: !!r.data.unrestricted_scope,
           country_codes: r.data.country_codes || [],
           two_factor_enabled: !!r.data.two_factor_enabled,
         });
@@ -67,7 +70,7 @@ export default function StaffProfile() {
           </div>
           <h2 className="text-base font-semibold text-ink leading-tight">{profile.full_name}</h2>
           <p className="text-xs font-mono text-ink-muted mt-1 mb-4">{profile.email}</p>
-          <Stamp tone={profile.role === "admin" ? "gold" : "ink"} size="sm">{profile.role}</Stamp>
+          <Stamp tone={profile.unrestricted_scope ? "gold" : "ink"} size="sm">{profile.role_name || profile.role}</Stamp>
           <div className="mt-6 pt-6 border-t border-border">
             <CrmButton variant="outline" className="w-full" onClick={() => { clearSession(); nav("/login"); }} data-testid="logout-btn">
               Sign out
@@ -97,10 +100,10 @@ export default function StaffProfile() {
             <CrmCard className="p-6">
               <SectionLabel>Managed countries</SectionLabel>
               <p className="text-sm text-ink-muted mb-4">
-                {profile.role === "admin" ? "As an admin, you have access to all countries automatically." : "You can only view and manage cases for the countries assigned below."}
+                {profile.unrestricted_scope ? "You have access to all countries automatically." : "You can only view and manage cases for the countries assigned below."}
               </p>
-              {profile.role === "admin" ? (
-                <Stamp tone="gold" size="sm">All countries (Admin)</Stamp>
+              {profile.unrestricted_scope ? (
+                <Stamp tone="gold" size="sm">All countries</Stamp>
               ) : profile.country_codes?.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {profile.country_codes.map((c) => <Stamp key={c} tone="navy" size="sm">{c}</Stamp>)}

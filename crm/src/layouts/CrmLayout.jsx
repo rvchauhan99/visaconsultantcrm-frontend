@@ -10,7 +10,7 @@ import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
-  NAV_GROUPS,
+  filterNavGroups,
   ROUTE_LABELS,
   isGroupActive,
   isChildActive,
@@ -109,7 +109,7 @@ export default function CrmLayout() {
           ? "Client"
           : pathParts.length === 2 && pathParts[0] === "passport-products"
           ? "Passport product"
-          : pathParts[0] === "tasks" && user?.role === "admin"
+          : pathParts[0] === "tasks" && user?.unrestricted_scope
             ? "Tasks"
             : ROUTE_LABELS[`/${pathParts[0]}`] ?? pathParts[0]);
 
@@ -123,7 +123,7 @@ export default function CrmLayout() {
     setProfileOpen(false);
   };
 
-  const visibleGroups = NAV_GROUPS.filter((group) => !group.adminOnly || user?.role === "admin");
+  const visibleGroups = filterNavGroups(user);
 
   const sidebarContent = (forceFull = false) => {
     const showLabels = forceFull || isExpanded;
@@ -186,7 +186,7 @@ export default function CrmLayout() {
                     <RailSubLink
                       key={child.to}
                       child={child}
-                      label={childNavLabel(child, user?.role)}
+                      label={childNavLabel(child, user?.role, user?.unrestricted_scope)}
                       icon={<ChildIcon className="w-4 h-4" />}
                       showLabel={showLabels}
                     />

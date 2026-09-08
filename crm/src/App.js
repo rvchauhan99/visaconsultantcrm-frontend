@@ -12,6 +12,7 @@ import Tasks from "@/pages/crm/Tasks";
 import Products from "@/pages/crm/Products";
 import ProductBuilder from "@/pages/crm/ProductBuilder";
 import Consultants from "@/pages/crm/Consultants";
+import RoleMaster from "@/pages/crm/RoleMaster";
 import Reports from "@/pages/crm/Reports";
 import OfflineCase from "@/pages/crm/OfflineCase";
 import PassportExpiry from "@/pages/crm/PassportExpiry";
@@ -35,14 +36,15 @@ import ClosedCases from "@/pages/crm/ClosedCases";
 import PaymentsReport from "@/pages/crm/PaymentsReport";
 
 import { getUser, isStaffSessionValid } from "@/lib/api";
+import { firstAllowedPath, userHasMenu } from "@/layouts/crmNavConfig";
 
 function RequireStaff({ children }) {
     if (!isStaffSessionValid()) return <Navigate to="/login" replace />;
     return children;
 }
-function RequireAdmin({ children }) {
+function RequireMenu({ menuKey, children }) {
     const u = getUser();
-    if (!u || u.role !== "admin") return <Navigate to="/" replace />;
+    if (!u || !userHasMenu(u, menuKey)) return <Navigate to={firstAllowedPath(u)} replace />;
     return children;
 }
 
@@ -53,33 +55,34 @@ export default function App() {
             <Routes>
                 <Route path="/login" element={<CrmLogin />} />
                 <Route element={<RequireStaff><CrmLayout /></RequireStaff>}>
-                    <Route path="/" element={<CrmDashboard />} />
-                    <Route path="/pipeline" element={<Pipeline />} />
-                    <Route path="/cases/closed" element={<ClosedCases />} />
-                    <Route path="/tasks" element={<Tasks />} />
-                    <Route path="/leads" element={<Leads />} />
-                    <Route path="/leads/analysis" element={<LeadsAnalytics />} />
-                    <Route path="/leads/new" element={<LeadCreate />} />
-                    <Route path="/clients" element={<Clients />} />
-                    <Route path="/clients/:customerId" element={<ClientDetail />} />
-                    <Route path="/follow-ups" element={<LeadFollowUps />} />
-                    <Route path="/service-orders" element={<ServiceOrders />} />
-                    <Route path="/finance" element={<Finance />} />
-                    <Route path="/reports/payments" element={<PaymentsReport />} />
-                    <Route path="/inbox" element={<Inbox />} />
-                    <Route path="/cases/:caseId" element={<CaseDetail />} />
-                    <Route path="/offline-case" element={<OfflineCase />} />
-                    <Route path="/products" element={<RequireAdmin><Products /></RequireAdmin>} />
-                    <Route path="/products/:productId" element={<RequireAdmin><ProductBuilder /></RequireAdmin>} />
-                    <Route path="/passport-products" element={<RequireAdmin><PassportProducts /></RequireAdmin>} />
-                    <Route path="/passport-products/:productId" element={<RequireAdmin><PassportProductBuilder /></RequireAdmin>} />
-                    <Route path="/document-master" element={<RequireAdmin><DocumentMaster /></RequireAdmin>} />
-                    <Route path="/field-master" element={<RequireAdmin><FieldMaster /></RequireAdmin>} />
-                    <Route path="/consultants" element={<RequireAdmin><Consultants /></RequireAdmin>} />
-                    <Route path="/case-number-settings" element={<RequireAdmin><CaseNumberSettings /></RequireAdmin>} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/passport-expiry" element={<PassportExpiry />} />
-                    <Route path="/birthdays" element={<Birthdays />} />
+                    <Route path="/" element={<RequireMenu menuKey="dashboard"><CrmDashboard /></RequireMenu>} />
+                    <Route path="/pipeline" element={<RequireMenu menuKey="pipeline"><Pipeline /></RequireMenu>} />
+                    <Route path="/cases/closed" element={<RequireMenu menuKey="closed_cases"><ClosedCases /></RequireMenu>} />
+                    <Route path="/tasks" element={<RequireMenu menuKey="tasks"><Tasks /></RequireMenu>} />
+                    <Route path="/leads" element={<RequireMenu menuKey="leads"><Leads /></RequireMenu>} />
+                    <Route path="/leads/analysis" element={<RequireMenu menuKey="lead_analytics"><LeadsAnalytics /></RequireMenu>} />
+                    <Route path="/leads/new" element={<RequireMenu menuKey="leads"><LeadCreate /></RequireMenu>} />
+                    <Route path="/clients" element={<RequireMenu menuKey="clients"><Clients /></RequireMenu>} />
+                    <Route path="/clients/:customerId" element={<RequireMenu menuKey="clients"><ClientDetail /></RequireMenu>} />
+                    <Route path="/follow-ups" element={<RequireMenu menuKey="follow_ups"><LeadFollowUps /></RequireMenu>} />
+                    <Route path="/service-orders" element={<RequireMenu menuKey="service_orders"><ServiceOrders /></RequireMenu>} />
+                    <Route path="/finance" element={<RequireMenu menuKey="finance"><Finance /></RequireMenu>} />
+                    <Route path="/reports/payments" element={<RequireMenu menuKey="payment_reports"><PaymentsReport /></RequireMenu>} />
+                    <Route path="/inbox" element={<RequireMenu menuKey="inbox"><Inbox /></RequireMenu>} />
+                    <Route path="/cases/:caseId" element={<RequireMenu menuKey="pipeline"><CaseDetail /></RequireMenu>} />
+                    <Route path="/offline-case" element={<RequireMenu menuKey="offline_case"><OfflineCase /></RequireMenu>} />
+                    <Route path="/products" element={<RequireMenu menuKey="visa_products"><Products /></RequireMenu>} />
+                    <Route path="/products/:productId" element={<RequireMenu menuKey="visa_products"><ProductBuilder /></RequireMenu>} />
+                    <Route path="/passport-products" element={<RequireMenu menuKey="passport_products"><PassportProducts /></RequireMenu>} />
+                    <Route path="/passport-products/:productId" element={<RequireMenu menuKey="passport_products"><PassportProductBuilder /></RequireMenu>} />
+                    <Route path="/document-master" element={<RequireMenu menuKey="document_master"><DocumentMaster /></RequireMenu>} />
+                    <Route path="/field-master" element={<RequireMenu menuKey="field_master"><FieldMaster /></RequireMenu>} />
+                    <Route path="/consultants" element={<RequireMenu menuKey="user_master"><Consultants /></RequireMenu>} />
+                    <Route path="/roles" element={<RequireMenu menuKey="role_master"><RoleMaster /></RequireMenu>} />
+                    <Route path="/case-number-settings" element={<RequireMenu menuKey="case_numbers"><CaseNumberSettings /></RequireMenu>} />
+                    <Route path="/reports" element={<RequireMenu menuKey="case_reports"><Reports /></RequireMenu>} />
+                    <Route path="/passport-expiry" element={<RequireMenu menuKey="passport_expiry"><PassportExpiry /></RequireMenu>} />
+                    <Route path="/birthdays" element={<RequireMenu menuKey="birthdays"><Birthdays /></RequireMenu>} />
                     <Route path="/profile" element={<StaffProfile />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />

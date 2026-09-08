@@ -89,7 +89,7 @@ export function isStaffSessionValid() {
         return false;
     }
     const u = getUser();
-    return Boolean(u && (u.role === "consultant" || u.role === "admin"));
+    return Boolean(u && typeof u.role === "string" && u.role.length > 0 && u.role !== "customer");
 }
 
 function isLoginPath(path) {

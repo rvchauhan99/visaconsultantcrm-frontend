@@ -230,7 +230,7 @@ export default function CaseDetail() {
               <CrmButton variant="outline" size="sm" onClick={() => recordDecision("rfi")} data-testid="case-decide-rfi">RFI</CrmButton>
             </>
           )}
-          {(user?.role === "admin" || user?.sub === consultant?.id) && (
+          {(user?.unrestricted_scope || user?.role === "admin" || user?.sub === consultant?.id) && (
             <div className="w-52" data-testid="case-reassign">
               <ConsultantSelect
                 value={null}

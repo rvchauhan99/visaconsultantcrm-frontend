@@ -208,18 +208,19 @@ export default function Consultants() {
     }
   };
 
-  const activeAdminCount = rows.filter((row) => isConsultantActive(row) && row.role === "admin").length;
+  const isUnrestricted = (row) => Boolean(row?.unrestricted_scope || row?.role === "admin");
+  const activeAdminCount = rows.filter((row) => isConsultantActive(row) && isUnrestricted(row)).length;
 
   const canDeactivate = (row) => {
     if (!isConsultantActive(row)) return false;
     if (row.id === myId) return false;
-    if (row.role === "admin" && activeAdminCount <= 1) return false;
+    if (isUnrestricted(row) && activeAdminCount <= 1) return false;
     return true;
   };
 
   const deactivateTitle = (row) => {
     if (row.id === myId) return "You cannot deactivate your own account";
-    if (row.role === "admin" && activeAdminCount <= 1) return "Cannot deactivate the last remaining admin";
+    if (isUnrestricted(row) && activeAdminCount <= 1) return "Cannot deactivate the last remaining admin";
     return "Deactivate";
   };
 
@@ -242,7 +243,7 @@ export default function Consultants() {
     {
       key: "role",
       label: "Role",
-      render: (row) => <Stamp tone={row.role === "admin" ? "gold" : "ink"} size="sm">{row.role}</Stamp>,
+      render: (row) => <Stamp tone={isUnrestricted(row) ? "gold" : "ink"} size="sm">{row.role_name || row.role}</Stamp>,
     },
     {
       key: "manager_name",
@@ -266,7 +267,7 @@ export default function Consultants() {
       sortable: false,
       render: (row) => (
         <div className="flex flex-wrap gap-1 max-w-[200px]">
-          {row.role === "admin" ? <Stamp tone="muted" size="sm">All</Stamp>
+          {isUnrestricted(row) ? <Stamp tone="muted" size="sm">All</Stamp>
           : row.country_codes?.length > 0 ? row.country_codes.map((c) => <Stamp key={c} tone="ink" size="sm">{c}</Stamp>)
           : <span className="text-ink-muted italic text-xs">None</span>}
         </div>
@@ -293,7 +294,7 @@ export default function Consultants() {
       className: "text-right",
       render: (row) => {
         const active = isConsultantActive(row);
-        const allowInline = active && row.role !== "admin";
+        const allowInline = active && !isUnrestricted(row);
         return (
           <div className="inline-flex gap-2 items-center flex-wrap justify-end">
             {allowInline && (
@@ -483,11 +484,32 @@ function UserForm({ mode, user, onCancel, onSubmit }) {
   const [countryCodes, setCountryCodes] = useState(user?.country_codes || []);
   const [managerId, setManagerId] = useState(user?.manager_id || null);
   const [submitting, setSubmitting] = useState(false);
+  const [roleOptions, setRoleOptions] = useState([
+    { value: "consultant", label: "Consultant" },
+    { value: "admin", label: "Admin" },
+  ]);
+  const [roleMeta, setRoleMeta] = useState({});
+
+  useEffect(() => {
+    api.get("/admin/roles", { params: { active: true } }).then((r) => {
+      const items = Array.isArray(r.data) ? r.data : [];
+      if (!items.length) return;
+      const options = items.map((item) => ({ value: item.slug, label: item.name }));
+      if (user?.role && !options.some((opt) => opt.value === user.role)) {
+        options.push({ value: user.role, label: user.role_name || user.role });
+      }
+      setRoleOptions(options);
+      setRoleMeta(Object.fromEntries(items.map((item) => [item.slug, item])));
+    }).catch(() => {});
+  }, []);
+
+  const selectedRole = roleMeta[role] || {};
+  const needsCountries = !selectedRole.unrestricted_scope && role !== "admin";
 
   const submit = async (e) => {
     e.preventDefault();
-    if (role === "consultant" && countryCodes.length === 0) {
-      toast.error("Select at least one country for a consultant");
+    if (needsCountries && countryCodes.length === 0) {
+      toast.error("Select at least one country for this role");
       return;
     }
     if (!isEdit && (!password || password.length < 6)) {
@@ -504,7 +526,7 @@ function UserForm({ mode, user, onCancel, onSubmit }) {
         email: email.trim(),
         full_name: name.trim(),
         role,
-        country_codes: role === "admin" ? [] : countryCodes,
+        country_codes: needsCountries ? countryCodes : [],
         manager_id: managerId || null,
       };
       if (!isEdit || password) payload.password = password;
@@ -547,17 +569,15 @@ function UserForm({ mode, user, onCancel, onSubmit }) {
             clearable={false}
             value={role}
             onChange={(next) => {
-              setRole(next || "consultant");
-              if (next === "admin") setCountryCodes([]);
+              const nextRole = next || "consultant";
+              setRole(nextRole);
+              if (roleMeta[nextRole]?.unrestricted_scope || nextRole === "admin") setCountryCodes([]);
             }}
             data-testid="nc-role"
-            options={[
-              { value: "consultant", label: "Consultant" },
-              { value: "admin", label: "Admin" },
-            ]}
+            options={roleOptions}
           />
         </CrmField>
-        {role === "consultant" && (
+        {needsCountries && (
           <>
             <CrmField label="Manager (optional)" hint="Reporting line — managers see this consultant's data">
               <ConsultantSelect
