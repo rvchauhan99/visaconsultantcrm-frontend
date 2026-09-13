@@ -309,10 +309,51 @@
     margin-inline: auto;
   }
 
+  @media (max-width: 1023px) {
+    .amara-filter-scroll {
+      overflow-x: visible;
+      overflow-y: visible;
+    }
+  }
+
   @media (max-width: 767px) {
     .amara-filter-scroll-inner {
       margin-inline: 0;
     }
+  }
+
+  /* Mobile Accordion Filter Panel */
+  .mobile-filter-panel {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .mobile-filter-sections {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+  }
+
+  .mobile-filter-sections::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .mobile-filter-sections::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 999px;
+  }
+
+  @keyframes slideUpSheet {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .slide-in-from-bottom {
+    animation: slideUpSheet 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .amara-search-icon-btn {
@@ -747,6 +788,7 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.85rem 0.75rem 1rem;
+    color: #fff;
     transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
 

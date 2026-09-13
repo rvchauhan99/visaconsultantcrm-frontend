@@ -53,8 +53,14 @@ export function guaranteedByDateTime(processingDays = 0) {
   });
 }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export function countryCoverUrl(product) {
-  if (product?.banner_image_url) return product.banner_image_url;
+  if (product?.banner_image_url) {
+    const u = product.banner_image_url;
+    if (u.startsWith("/")) return `${BACKEND_URL}${u}`;
+    return u;
+  }
   return "https://images.unsplash.com/photo-1488646953014-85cb44e25828?crop=entropy&cs=srgb&fm=jpg&q=80&w=900";
 }
 

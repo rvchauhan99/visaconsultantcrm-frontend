@@ -76,7 +76,6 @@ export default function VisaDetailInner({ initialProduct = null }) {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6 mb-8"
       >
-        <span className="text-5xl leading-none">{product.country_flag}</span>
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-muted px-2.5 py-1 rounded-full bg-surface-muted border border-border">

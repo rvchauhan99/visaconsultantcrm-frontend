@@ -99,21 +99,6 @@ export function buildLocalBusinessJsonLd() {
   }
 }
 
-export function buildHomeFaqJsonLd(faqs) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqs.map((f) => ({
-      "@type": "Question",
-      name: f.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: f.answer,
-      },
-    })),
-  }
-}
-
 export function buildVisaServiceJsonLd(product) {
   if (!product) return null
   const url = absoluteUrl(`/visa/${product.id}`)
@@ -167,29 +152,6 @@ export function buildBreadcrumbJsonLd(product) {
     ],
   }
 }
-
-export const HOME_FAQS = [
-  {
-    question: "Who can apply for a visa with AmaraVisa?",
-    answer:
-      "AmaraVisa helps Indian passport holders plan, apply, and track tourist, business, and other visas with transparent fees and a dedicated human consultant.",
-  },
-  {
-    question: "Where is the AmaraVisa office located?",
-    answer:
-      "AmaraVisa India Private Limited is at RADHE Times Square, 408, Kudasan, Gandhinagar, Gujarat 382421. Use Get directions on the site to open Google Maps.",
-  },
-  {
-    question: "What is included in the AmaraVisa service fee?",
-    answer:
-      "Your application includes document guidance, consultant review, and embassy filing support. Government fees are shown separately before you pay.",
-  },
-  {
-    question: "How do I track my visa application?",
-    answer:
-      "After you apply and sign in, open My applications to see live status, document requests, and payment receipts for each case.",
-  },
-]
 
 /** Popular footer destinations — matched to live catalog by country_name. */
 export const POPULAR_DESTINATION_NAMES = [
