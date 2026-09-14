@@ -50,8 +50,8 @@ export function usePassportOCR() {
       const r = await api.post("/documents/scan-passport", form, {
         headers: { "Content-Type": "multipart/form-data" },
         signal: controller.signal,
-        // Success SLA ≤15s; 20s client buffer for network jitter.
-        timeout: 20000,
+        // Server OCR_REQUEST_TIMEOUT_SEC default 45s; client buffer for network jitter.
+        timeout: 50000,
       });
       const data = r.data;
       setResult(data);

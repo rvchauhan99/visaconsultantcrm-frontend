@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import api, { getUser, viewUrl, downloadUrl } from "@/lib/api";
 import Stamp from "@/components/Stamp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X, ArrowRight, Pencil, AlertTriangle, PauseCircle, Plus, FileCheck, FileX, Clock, ChevronLeft, Eye, Download } from "lucide-react";
+import { Check, X, ArrowRight, Pencil, AlertTriangle, PauseCircle, Plus, FileCheck, FileX, Clock, ChevronLeft, Eye, Download, Users } from "lucide-react";
 import { ConsultantSelect } from "@/components/forms/selects";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { CrmCard, CrmTableCard, CrmCardHeader, CrmEmptyState } from "@/components/ui/crm-card";
@@ -40,7 +40,26 @@ export default function CaseDetail() {
     </div>
   );
 
-  const { case: c, customer, consultant, documents, field_values, activity, notes = [], tasks = [], valid_next_stages, has_duplicate_flag, duplicate_open_applications = [] } = data;
+  const {
+    case: c,
+    customer,
+    consultant,
+    documents,
+    field_values,
+    activity,
+    notes = [],
+    tasks = [],
+    valid_next_stages,
+    has_duplicate_flag,
+    duplicate_open_applications = [],
+    case_group = null,
+    sibling_cases = [],
+  } = data;
+
+  const familySiblings = (sibling_cases || []).filter((s) => s.id !== c.id)
+  const familyTotal = case_group?.traveler_count || sibling_cases?.length || 0
+  const familyIndex = (c.traveler_index ?? 0) + 1
+  const showFamilyBanner = Boolean(c.case_group_id) && familyTotal > 1
 
   const advance = async (target) => {
     try {
@@ -116,6 +135,46 @@ export default function CaseDetail() {
         <ChevronLeft className="w-3.5 h-3.5" />
         Pipeline
       </Link>
+
+      {/* Family booking banner */}
+      {showFamilyBanner && (
+        <div
+          className="flex items-start gap-2.5 bg-teal/8 border border-teal/30 rounded-[10px] p-3 text-sm"
+          data-testid="family-booking-banner"
+        >
+          <Users className="w-4 h-4 text-teal shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <div className="font-medium text-ink">
+              Part of family booking ({familyIndex} of {familyTotal})
+            </div>
+            {(familySiblings.length > 0 || sibling_cases.length > 0) && (
+              <div className="text-xs text-ink-muted mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                {(sibling_cases.length ? sibling_cases : familySiblings).map((s) => {
+                  const name = s.traveler?.full_name || s.traveler_name || "Traveler"
+                  const label = `${name} · ${s.stage_label || STAGE_LABELS[s.stage] || s.stage}`
+                  if (s.id === c.id) {
+                    return (
+                      <span key={s.id} className="font-medium text-ink" data-testid="family-sibling-current">
+                        {label} (this case)
+                      </span>
+                    )
+                  }
+                  return (
+                    <Link
+                      key={s.id}
+                      to={`/cases/${s.id}`}
+                      className="underline hover:text-navy"
+                      data-testid={`family-sibling-${s.id.slice(0, 8)}`}
+                    >
+                      {label}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Duplicate banner */}
       {has_duplicate_flag && (

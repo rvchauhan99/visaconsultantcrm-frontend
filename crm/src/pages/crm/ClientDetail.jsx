@@ -205,12 +205,17 @@ export default function ClientDetail() {
       render: (row) => {
         if (row.kind === "case") {
           return (
-            <Link to={`/cases/${row.id}`} className="text-sm text-navy hover:underline">
-              <span className="font-mono text-[10px] text-ink-muted mr-1">
-                {formatCaseNumber(row)}
-              </span>
-              {row.title}
-            </Link>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Link to={`/cases/${row.id}`} className="text-sm text-navy hover:underline">
+                <span className="font-mono text-[10px] text-ink-muted mr-1">
+                  {formatCaseNumber(row)}
+                </span>
+                {row.title}
+              </Link>
+              {row.case_group_id && (
+                <Stamp tone="teal" size="xs">Family</Stamp>
+              )}
+            </div>
           );
         }
         return (
@@ -365,6 +370,9 @@ export default function ClientDetail() {
                             {w.kind === "case" ? "Case" : "Order"}
                           </Stamp>
                           <Stamp tone="muted" size="sm">{w.status}</Stamp>
+                          {w.kind === "case" && w.case_group_id && (
+                            <Stamp tone="teal" size="sm">Family</Stamp>
+                          )}
                         </div>
                         {w.kind === "case" ? (
                           <Link to={`/cases/${w.id}`} className="text-sm text-navy hover:underline truncate block">

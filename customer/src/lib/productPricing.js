@@ -31,13 +31,18 @@ export function computeFeeBreakdown({
   const govt = Number(govtFee) || 0;
   const service = Number(serviceFee) || 0;
   const pct = Number(gstPercent) || DEFAULT_GST_PERCENT;
-  const serviceGst = computeServiceGst(service, pct);
-  const total = computeLineTotal({ govtFee: govt, serviceFee: service, gstPercent: pct, headcount });
+  const count = Math.max(1, Number(headcount) || 1);
+  const unitServiceGst = computeServiceGst(service, pct);
+  const unitTotal = computeLineTotal({ govtFee: govt, serviceFee: service, gstPercent: pct, headcount: 1 });
+  const serviceGst = unitServiceGst * count;
+  const total = unitTotal * count;
   return {
-    govtFee: govt,
-    serviceFee: service,
+    govtFee: govt * count,
+    serviceFee: service * count,
     serviceGst,
     gstPercent: pct,
+    headcount: count,
+    unitTotal,
     total,
   };
 }

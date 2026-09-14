@@ -11,7 +11,7 @@ import { PaginatedTable } from "@/components/ui/paginated-table";
 import { PipelineQuickFilters } from "@/components/crm/pipeline/PipelineQuickFilters";
 import { MeterBar } from "@/components/ui/meter-bar";
 import { useListQueryState, unwrapListResponse } from "@/hooks/useListQueryState";
-import { RefreshCw, LayoutGrid, List, AlertTriangle } from "lucide-react";
+import { RefreshCw, LayoutGrid, List, AlertTriangle, Users, ChevronDown } from "lucide-react";
 import { cn, formatCaseNumber } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import "./pipeline.css";
@@ -29,6 +29,43 @@ const STAGE_LABELS = {
   decision: "Decision",
   closed: "Closed",
 };
+
+function isGroupPrimary(c) {
+  if (!c?.case_group_id) return true;
+  if (c.is_primary) return true;
+  return (c.traveler_index ?? 0) === 0;
+}
+
+function isGroupedCase(c) {
+  return Boolean(c?.case_group_id) && (c.traveler_count || 1) > 1;
+}
+
+/** Collapse multi-traveler siblings into one group card under the primary's stage. */
+function boardEntriesForStage(stageItems, allCases) {
+  const primaryGroupIds = new Set();
+  (allCases || []).forEach((c) => {
+    if (isGroupedCase(c) && isGroupPrimary(c)) primaryGroupIds.add(c.case_group_id);
+  });
+
+  const seenGroups = new Set();
+  const entries = [];
+  for (const c of stageItems || []) {
+    if (!isGroupedCase(c)) {
+      entries.push({ kind: "case", case: c });
+      continue;
+    }
+    if (isGroupPrimary(c)) {
+      if (seenGroups.has(c.case_group_id)) continue;
+      seenGroups.add(c.case_group_id);
+      entries.push({ kind: "group", case: c });
+      continue;
+    }
+    // Hide lagging siblings when the primary is on the board somewhere
+    if (primaryGroupIds.has(c.case_group_id)) continue;
+    entries.push({ kind: "case", case: c });
+  }
+  return entries;
+}
 
 const SLA_TONE = {
   on_track: "success",
@@ -219,6 +256,13 @@ export default function Pipeline() {
     return m;
   }, [viewMode, boardByStage, cases]);
 
+  const boardEntriesByStage = useMemo(() => {
+    if (viewMode !== "board") return {};
+    return Object.fromEntries(
+      ACTIVE_STAGES.map((s) => [s, boardEntriesForStage(byStage[s], cases)]),
+    );
+  }, [viewMode, byStage, cases]);
+
   const stageCounts = summary?.by_stage || {};
   const stageTotal = ACTIVE_STAGES.reduce((a, s) => a + (stageCounts[s] || 0), 0);
   const boardTruncated = viewMode === "board" && ACTIVE_STAGES.some(
@@ -340,9 +384,19 @@ export default function Pipeline() {
       sortable: false,
       render: (c) => (
         <div>
-          <Link to={`/cases/${c.id}`} className="text-navy hover:underline text-xs font-medium" onClick={(e) => e.stopPropagation()}>
-            {c.customer?.full_name || "—"}
-          </Link>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Link to={`/cases/${c.id}`} className="text-navy hover:underline text-xs font-medium" onClick={(e) => e.stopPropagation()}>
+              {c.customer?.full_name || "—"}
+            </Link>
+            {isGroupedCase(c) && (
+              <Stamp tone="teal" size="xs">
+                <Users className="w-2.5 h-2.5" /> {c.traveler_count} travelers
+              </Stamp>
+            )}
+            {c.group_has_lagging_sibling && (
+              <Stamp tone="warning" size="xs">Lagging</Stamp>
+            )}
+          </div>
           <div className="text-[10px] font-mono text-ink-muted">{formatCaseNumber(c)}</div>
         </div>
       ),
@@ -580,27 +634,46 @@ export default function Pipeline() {
               {/* Column body */}
               <div className="pipeline-column__body">
                 <AnimatePresence mode="popLayout">
-                  {byStage[s].map((c) => (
-                    <PipelineCard
-                      key={c.id}
-                      c={c}
-                      onDragStart={onDragStart}
-                      selected={selected.has(c.id)}
-                      onToggleSelect={() => {
-                        setSelected((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(c.id)) next.delete(c.id);
-                          else next.add(c.id);
-                          return next;
-                        });
-                      }}
-                      showSelect={bulkAvailable}
-                    />
+                  {(boardEntriesByStage[s] || []).map((entry) => (
+                    entry.kind === "group" ? (
+                      <PipelineGroupCard
+                        key={`group-${entry.case.case_group_id}`}
+                        c={entry.case}
+                        onDragStart={onDragStart}
+                        selected={selected.has(entry.case.id)}
+                        onToggleSelect={() => {
+                          setSelected((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(entry.case.id)) next.delete(entry.case.id);
+                            else next.add(entry.case.id);
+                            return next;
+                          });
+                        }}
+                        showSelect={bulkAvailable}
+                        casesById={cases}
+                      />
+                    ) : (
+                      <PipelineCard
+                        key={entry.case.id}
+                        c={entry.case}
+                        onDragStart={onDragStart}
+                        selected={selected.has(entry.case.id)}
+                        onToggleSelect={() => {
+                          setSelected((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(entry.case.id)) next.delete(entry.case.id);
+                            else next.add(entry.case.id);
+                            return next;
+                          });
+                        }}
+                        showSelect={bulkAvailable}
+                      />
+                    )
                   ))}
                 </AnimatePresence>
 
                 {/* Drop zone indicator */}
-                {byStage[s].length === 0 && dragOverStage === s && (
+                {(boardEntriesByStage[s] || []).length === 0 && dragOverStage === s && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -649,6 +722,196 @@ export default function Pipeline() {
       )}
     </div>
   );
+}
+
+/* ════════════════════════════════════════════
+   PipelineGroupCard — Multi-traveler family booking
+   ════════════════════════════════════════════ */
+
+function PipelineGroupCard({ c, onDragStart, selected, onToggleSelect, showSelect, casesById }) {
+  const [expanded, setExpanded] = useState(false)
+  const [groupCases, setGroupCases] = useState(null)
+  const [loadingMembers, setLoadingMembers] = useState(false)
+  const slaTone = SLA_TONE[c.sla_status] || "muted"
+  const productLabel = [
+    c.config_snapshot_json?.country_name,
+    c.config_snapshot_json?.visa_type,
+  ].filter(Boolean).join(" · ") || c.config_snapshot_json?.country_code || "—"
+  const travelerCount = c.traveler_count || (c.group_members || []).length || 1
+
+  const members = useMemo(() => {
+    const base = c.group_members || []
+    if (!base.length) return []
+    const enriched = groupCases || []
+    const byId = new Map()
+    ;(casesById || []).forEach((row) => byId.set(row.id, row))
+    enriched.forEach((row) => byId.set(row.id, row))
+    return base.map((m) => {
+      const full = byId.get(m.id)
+      return {
+        ...m,
+        docs_progress: full?.docs_progress,
+        docs_verified: full?.docs_verified,
+        docs_required: full?.docs_required,
+      }
+    })
+  }, [c.group_members, groupCases, casesById])
+
+  const handleToggleExpand = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const next = !expanded
+    setExpanded(next)
+    if (!next || groupCases || !c.case_group_id) return
+    setLoadingMembers(true)
+    try {
+      const r = await api.get(`/crm/case-groups/${c.case_group_id}`)
+      setGroupCases(r.data?.cases || [])
+    } catch {
+      // Keep list enrichment from the case row
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
+
+  return (
+    <motion.div
+      layout
+      layoutId={`group-${c.case_group_id}`}
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
+      transition={{ type: "spring", stiffness: 420, damping: 32 }}
+      draggable
+      onDragStart={(e) => onDragStart(e, c.id)}
+      className="cursor-grab active:cursor-grabbing relative group"
+    >
+      {showSelect && (
+        <label
+          className="pipeline-card__checkbox-wrap"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            className="pipeline-card__checkbox"
+            data-testid={`pipeline-group-select-${c.case_group_id?.slice(0, 8)}`}
+          />
+        </label>
+      )}
+
+      <div
+        className={cn(
+          "pipeline-card pipeline-card--group",
+          selected && "pipeline-card--selected",
+          expanded && "pipeline-card--group-expanded",
+        )}
+        data-testid={`pipeline-group-${c.case_group_id?.slice(0, 8)}`}
+      >
+        <div className={`pipeline-card__sla-edge pipeline-card__sla-edge--${slaTone}`} />
+
+        <button
+          type="button"
+          className="pipeline-group__toggle"
+          onClick={handleToggleExpand}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse travelers" : "Expand travelers"}
+          data-testid={`pipeline-group-toggle-${c.case_group_id?.slice(0, 8)}`}
+        >
+          <div className="pipeline-card__top">
+            <span className="pipeline-card__flag">{c.config_snapshot_json?.country_flag}</span>
+            <span className="pipeline-card__name">{c.customer?.full_name || "—"}</span>
+            {c.on_hold && <Stamp tone="warning" size="xs">On Hold</Stamp>}
+          </div>
+
+          <div className="pipeline-card__meta">
+            <span className="pipeline-card__case-num truncate">{productLabel}</span>
+          </div>
+
+          <div className="pipeline-group__badges">
+            <Stamp tone="teal" size="xs">
+              <Users className="w-2.5 h-2.5" /> {travelerCount} travelers
+            </Stamp>
+            {c.group_has_lagging_sibling && (
+              <Stamp tone="warning" size="xs">
+                <AlertTriangle className="w-2.5 h-2.5" /> Lagging
+              </Stamp>
+            )}
+            <ChevronDown
+              className={cn(
+                "w-3.5 h-3.5 text-ink-muted ml-auto transition-transform",
+                expanded && "rotate-180",
+              )}
+            />
+          </div>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.ul
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="pipeline-group__members"
+              data-testid={`pipeline-group-members-${c.case_group_id?.slice(0, 8)}`}
+            >
+              {loadingMembers && (
+                <li className="pipeline-group__member pipeline-group__member--muted">Loading…</li>
+              )}
+              {!loadingMembers && members.map((m) => (
+                <li key={m.id}>
+                  <Link
+                    to={`/cases/${m.id}`}
+                    className="pipeline-group__member"
+                    data-testid={`pipeline-group-member-${m.id.slice(0, 8)}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="pipeline-group__member-name">
+                      {m.traveler_name || "Traveler"}
+                      {m.is_primary && (
+                        <span className="pipeline-group__primary-tag">Primary</span>
+                      )}
+                    </span>
+                    <span className="pipeline-group__member-meta">
+                      <span>{m.stage_label || STAGE_LABELS[m.stage] || m.stage}</span>
+                      <span className="font-mono">
+                        {typeof m.docs_progress === "number"
+                          ? `${m.docs_progress}%`
+                          : (m.docs_required != null
+                            ? `${m.docs_verified || 0}/${m.docs_required || 0}`
+                            : "—")}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+              {!loadingMembers && members.length === 0 && (
+                <li className="pipeline-group__member pipeline-group__member--muted">
+                  No members listed
+                </li>
+              )}
+            </motion.ul>
+          )}
+        </AnimatePresence>
+
+        <div className="pipeline-card__footer px-3 pb-2.5">
+          <div className={`pipeline-card__sla-badge pipeline-card__sla-badge--${slaTone}`}>
+            {c.sla_status?.replace("_", " ") || "No SLA"}
+          </div>
+          <Link
+            to={`/cases/${c.id}`}
+            className="text-[10px] font-mono text-navy hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Open primary
+          </Link>
+        </div>
+      </div>
+    </motion.div>
+  )
 }
 
 /* ════════════════════════════════════════════

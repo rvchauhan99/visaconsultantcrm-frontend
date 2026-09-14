@@ -283,6 +283,13 @@ function CaseCard({ caseData: c, index, reduce }) {
               {formatInDate(c.created_at, { day: "numeric", month: "short", year: "numeric" })}
             </span>
           </div>
+          {c.case_group_id && (c.traveler_count || 0) > 1 && (
+            <div className="mt-1.5" data-testid={`account-family-${c.id.slice(0, 6)}`}>
+              <Stamp tone="teal" size="sm">
+                Family · {c.traveler_count} travelers
+              </Stamp>
+            </div>
+          )}
         </Link>
 
         <div className="flex flex-col items-end gap-1.5 shrink-0">

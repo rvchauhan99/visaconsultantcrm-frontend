@@ -60,6 +60,10 @@ function StatusTracker() {
   const c = data.case;
   const snapshot = c.config_snapshot_json;
   const rejected = (data.documents || []).filter((d) => d.status === "rejected");
+  const siblings = data.sibling_cases || [];
+  const group = data.case_group;
+  const groupCount = group?.traveler_count || (siblings.length + 1);
+  const travelerIndex = (c.traveler_index ?? 0) + 1;
 
   return (
     <div className="max-w-4xl mx-auto px-5 md:px-10 py-10 space-y-8">
@@ -76,6 +80,9 @@ function StatusTracker() {
           <div className="text-xs font-mono uppercase tracking-widest text-ink-muted">
             Case {formatCaseNumber(c)} · Applied {formatInDate(c.created_at, { day: "numeric", month: "short", year: "numeric" })}
           </div>
+          {c.traveler?.full_name && (
+            <div className="text-sm text-ink-muted mt-1">Traveler: {c.traveler.full_name}</div>
+          )}
         </div>
         <div className="text-right">
           <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Guaranteed by</div>
@@ -83,6 +90,35 @@ function StatusTracker() {
           <SlaBadge status={data.sla_status} />
         </div>
       </div>
+
+      {(group || siblings.length > 0) && groupCount > 1 && (
+        <Card className="p-4 md:p-5" data-testid="status-family-banner">
+          <div className="text-sm font-medium text-navy">
+            Part of family booking ({travelerIndex} of {groupCount})
+          </div>
+          <p className="text-xs text-ink-muted mt-1 mb-3">
+            Each traveler has their own case and documents. Open a sibling to track their progress.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            <li>
+              <Stamp tone="ink" size="sm">This case · {c.traveler?.full_name || "You"}</Stamp>
+            </li>
+            {siblings.map((s) => (
+              <li key={s.id}>
+                <Link
+                  href={`/status/${s.id}`}
+                  aria-label={`Open sibling case for ${s.traveler?.full_name || formatCaseNumber(s)}`}
+                  className="inline-flex items-center gap-1.5 text-xs rounded-full border border-border px-3 py-1 hover:border-navy hover:text-navy"
+                  data-testid={`status-sibling-${s.id.slice(0, 6)}`}
+                >
+                  {s.traveler?.full_name || formatCaseNumber(s)}
+                  <span className="font-mono text-[10px] uppercase text-ink-muted">{s.stage_label || s.stage}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {data.on_hold && (
         <div className="bg-warning/10 border-l-4 border-warning rounded-xl p-5 flex items-start gap-3" data-testid="on-hold-banner">

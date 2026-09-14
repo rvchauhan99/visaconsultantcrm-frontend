@@ -448,6 +448,91 @@
   flex-shrink: 0;
 }
 
+/* ── Group (multi-traveler) card ── */
+.pipeline-card--group {
+  padding: 0;
+  overflow: hidden;
+}
+
+.pipeline-card--group .pipeline-card__sla-edge {
+  border-radius: 10px 0 0 10px;
+}
+
+.pipeline-group__toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 0.625rem 0.75rem 0.375rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.pipeline-group__badges {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin-top: 0.375rem;
+}
+
+.pipeline-group__members {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.5rem 0.5rem;
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.pipeline-group__member {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.5rem 0.5rem;
+  margin-top: 0.25rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface-muted);
+  transition: background var(--duration-fast) ease;
+}
+
+.pipeline-group__member:hover {
+  background: rgba(31, 74, 58, 0.08);
+}
+
+.pipeline-group__member--muted {
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  background: transparent;
+}
+
+.pipeline-group__member-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.pipeline-group__primary-tag {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--teal, #2f6b5a);
+}
+
+.pipeline-group__member-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.625rem;
+  color: var(--ink-muted);
+}
+
 /* ── Drop zone ── */
 .pipeline-drop-zone {
   height: 4.5rem;

@@ -11,23 +11,15 @@ import { mapOcrToTraveler } from "@/config/passportFieldMap";
 
 /**
  * Scan passport — camera or file/PDF upload → OCR → parent autofill.
+ * Always replaces existing traveler passport fields (no confirm).
  * Never auto-submits the application.
  */
 export default function PassportScanner({ traveler, setTraveler, onStatuses, onManual }) {
   const { scan, loading, reset } = usePassportOCR();
   const [mode, setMode] = useState("idle"); // idle | camera | upload
-  const [confirmReplace, setConfirmReplace] = useState(null);
-
-  const hasExisting =
-    !!(traveler?.full_name || traveler?.passport_number || traveler?.dob || traveler?.passport_expiry_date);
 
   const runScan = async (file) => {
     if (!file) return;
-    if (hasExisting && !confirmReplace) {
-      setConfirmReplace(file);
-      return;
-    }
-    setConfirmReplace(null);
     setMode("idle");
     try {
       const data = await scan(file);
@@ -80,25 +72,6 @@ export default function PassportScanner({ traveler, setTraveler, onStatuses, onM
       </div>
 
       <ScanProgress active={loading} />
-
-      {confirmReplace && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm" data-testid="ocr-replace-confirm">
-          <p className="text-ink mb-2">Replace existing passport details?</p>
-          <div className="flex gap-2">
-            <Button type="button" size="sm" onClick={() => runScan(confirmReplace)}>
-              Replace
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => setConfirmReplace(null)}
-            >
-              Keep current
-            </Button>
-          </div>
-        </div>
-      )}
 
       {mode === "camera" && !loading && (
         <CameraCapture onCapture={runScan} onCancel={() => setMode("idle")} disabled={loading} />

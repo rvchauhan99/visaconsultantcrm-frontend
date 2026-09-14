@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api, { viewUrl, downloadUrl } from "@/lib/api";
-import { Upload, PlusSquare, Check, Eye, Download } from "lucide-react";
+import { Upload, PlusSquare, Check, Eye, Download, Plus, Trash2 } from "lucide-react";
 import { ProductSelect } from "@/components/forms/selects";
 import { PageHeader, SectionLabel } from "@/components/ui/page-header";
 import { CrmButton } from "@/components/ui/crm-button";
@@ -13,6 +13,20 @@ import { CrmPhoneField } from "@/components/ui/crm-phone-field";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { isValidPhone } from "@/lib/phone";
 import Stamp from "@/components/Stamp";
+
+const MAX_TRAVELERS = 6;
+
+function blankTraveler() {
+  return {
+    full_name: "",
+    dob: "",
+    passport_number: "",
+    passport_expiry_date: "",
+    nationality: "Indian",
+    phone: "",
+    email: "",
+  };
+}
 
 function sortByOrder(items) {
   return [...(items || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -63,15 +77,7 @@ export default function OfflineCase() {
   const [schema, setSchema] = useState(null);
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [customer, setCustomer] = useState({ email: "", full_name: "", phone: "" });
-  const [traveler, setTraveler] = useState({
-    full_name: "",
-    dob: "",
-    passport_number: "",
-    passport_expiry_date: "",
-    nationality: "Indian",
-    phone: "",
-    email: "",
-  });
+  const [travelers, setTravelers] = useState([blankTraveler()]);
   const [fields, setFields] = useState({});
   const [uploads, setUploads] = useState({});
   const [payment, setPayment] = useState({ status: "pending", method: "", reference: "" });
@@ -102,6 +108,23 @@ export default function OfflineCase() {
     setFields((prev) => ({ ...prev, [key]: value }));
   };
 
+  const setTravelerField = (index, key, value) => {
+    setTravelers((prev) => prev.map((t, i) => (i === index ? { ...t, [key]: value } : t)));
+  };
+
+  const handleAddTraveler = () => {
+    if (travelers.length >= MAX_TRAVELERS) {
+      toast.error(`Maximum ${MAX_TRAVELERS} travelers per booking`);
+      return;
+    }
+    setTravelers((prev) => [...prev, blankTraveler()]);
+  };
+
+  const handleRemoveTraveler = (index) => {
+    if (travelers.length <= 1) return;
+    setTravelers((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const uploadDoc = async (docKey, file) => {
     try {
       const form = new FormData();
@@ -128,8 +151,13 @@ export default function OfflineCase() {
       "full_name", "dob",
       "passport_number", "passport_expiry_date", "nationality",
     ];
-    for (const k of requiredTraveler) {
-      if (!String(traveler[k] || "").trim()) return "Complete all required traveler fields";
+    for (let i = 0; i < travelers.length; i += 1) {
+      const t = travelers[i];
+      for (const k of requiredTraveler) {
+        if (!String(t[k] || "").trim()) {
+          return `Complete required fields for traveler ${i + 1}`;
+        }
+      }
     }
     for (const f of schemaFields) {
       if (f.required && !String(fields[f.field_key] ?? "").trim()) {
@@ -154,20 +182,26 @@ export default function OfflineCase() {
     setBusy(true);
     try {
       const payStatus = payment.status === "partial" ? "pending" : payment.status;
+      const travelersPayload = travelers.map((t) => {
+        const fullName = (t.full_name || "").trim();
+        const parts = fullName.split(/\s+/).filter(Boolean);
+        return {
+          ...t,
+          full_name: fullName,
+          dob: t.dob,
+          first_name: parts[0] || "",
+          last_name: parts.slice(1).join(" ") || "",
+          date_of_birth: t.dob,
+        };
+      });
+      const primary = travelersPayload[0];
       const body = {
         visa_product_id: productId,
         customer_email: customer.email.trim(),
         customer_full_name: customer.full_name.trim(),
         customer_phone: customer.phone.trim(),
-        traveler: {
-          ...traveler,
-          full_name: traveler.full_name?.trim(),
-          dob: traveler.dob,
-          // Keep legacy aliases for older readers
-          first_name: (traveler.full_name || "").trim().split(/\s+/)[0] || "",
-          last_name: (traveler.full_name || "").trim().split(/\s+/).slice(1).join(" ") || "",
-          date_of_birth: traveler.dob,
-        },
+        traveler: primary,
+        travelers: travelersPayload,
         field_values: fields,
         document_uploads: Object.entries(uploads).map(([k, v]) => ({
           doc_key: k,
@@ -180,8 +214,10 @@ export default function OfflineCase() {
         payment_reference: payment.reference || null,
       };
       const r = await api.post("/crm/cases", body);
-      toast.success("Offline case created");
-      nav(`/cases/${r.data.case_id}`);
+      const primaryId = r.data.case_id || r.data.case_ids?.[0];
+      const n = r.data.traveler_count || travelersPayload.length;
+      toast.success(n > 1 ? `Created family booking (${n} cases)` : "Offline case created");
+      nav(`/cases/${primaryId}`);
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed");
     } finally {
@@ -194,7 +230,7 @@ export default function OfflineCase() {
       <PageHeader
         label="Cases"
         title="New offline case"
-        subtitle="Manually create a case without customer portal checkout"
+        subtitle="Manually create a case (or family booking) without customer portal checkout"
       />
 
       <CrmCard className="p-5">
@@ -239,43 +275,109 @@ export default function OfflineCase() {
           </CrmCard>
 
           <CrmCard className="p-5">
-            <SectionLabel>Traveler</SectionLabel>
-            <p className="text-xs text-ink-muted mb-3">
-              Passport holder for this case (may differ from the contact person).
-            </p>
-            <div className="grid md:grid-cols-3 gap-4">
-              <CrmField label="Full name (as on passport)" required>
-                <CrmInput required value={traveler.full_name || ""} onChange={(e) => setTraveler({ ...traveler, full_name: e.target.value })} data-testid="oc-t-full" />
-              </CrmField>
-              <CrmField label="Date of birth" required>
-                <DatePicker
-                  value={traveler.dob || null}
-                  onChange={(v) => setTraveler({ ...traveler, dob: v || "" })}
-                  data-testid="oc-t-dob"
-                  fromYear={1940}
-                  toYear={new Date().getFullYear()}
-                  clearable={false}
-                />
-              </CrmField>
-              <CrmField label="Passport Number" required>
-                <CrmInput required value={traveler.passport_number || ""} onChange={(e) => setTraveler({ ...traveler, passport_number: e.target.value })} data-testid="oc-t-pass" />
-              </CrmField>
-              <CrmField label="Passport Expiry" required>
-                <DatePicker
-                  value={traveler.passport_expiry_date || null}
-                  onChange={(v) => setTraveler({ ...traveler, passport_expiry_date: v || "" })}
-                  data-testid="oc-t-exp"
-                  fromYear={new Date().getFullYear() - 1}
-                  toYear={new Date().getFullYear() + 20}
-                  clearable={false}
-                />
-              </CrmField>
-              <CrmField label="Nationality" required>
-                <CrmInput required value={traveler.nationality || ""} onChange={(e) => setTraveler({ ...traveler, nationality: e.target.value })} data-testid="oc-t-nat" />
-              </CrmField>
-              <CrmField label="Traveler phone (optional)">
-                <CrmPhoneField value={traveler.phone || ""} onChange={(v) => setTraveler({ ...traveler, phone: v })} data-testid="oc-t-phone" />
-              </CrmField>
+            <div className="flex items-start justify-between gap-3 mb-1">
+              <div>
+                <SectionLabel>Travelers</SectionLabel>
+                <p className="text-xs text-ink-muted mb-3">
+                  Passport holders for this booking (up to {MAX_TRAVELERS}). Product fields and documents apply to the primary traveler; add remaining docs on each case after create.
+                </p>
+              </div>
+              <CrmButton
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddTraveler}
+                disabled={travelers.length >= MAX_TRAVELERS}
+                data-testid="oc-add-traveler"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add traveler
+              </CrmButton>
+            </div>
+
+            <div className="space-y-4" data-testid="oc-travelers">
+              {travelers.map((traveler, index) => (
+                <div
+                  key={`traveler-${index}`}
+                  className="border border-border rounded-md p-4 bg-surface"
+                  data-testid={`oc-traveler-${index}`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono uppercase tracking-wider text-ink-muted">
+                        Traveler {index + 1}
+                      </span>
+                      {index === 0 && <Stamp tone="teal" size="xs">Primary</Stamp>}
+                    </div>
+                    {travelers.length > 1 && (
+                      <CrmButton
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveTraveler(index)}
+                        data-testid={`oc-remove-traveler-${index}`}
+                        aria-label={`Remove traveler ${index + 1}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </CrmButton>
+                    )}
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <CrmField label="Full name (as on passport)" required>
+                      <CrmInput
+                        required
+                        value={traveler.full_name || ""}
+                        onChange={(e) => setTravelerField(index, "full_name", e.target.value)}
+                        data-testid={`oc-t-full-${index}`}
+                      />
+                    </CrmField>
+                    <CrmField label="Date of birth" required>
+                      <DatePicker
+                        value={traveler.dob || null}
+                        onChange={(v) => setTravelerField(index, "dob", v || "")}
+                        data-testid={`oc-t-dob-${index}`}
+                        fromYear={1940}
+                        toYear={new Date().getFullYear()}
+                        clearable={false}
+                      />
+                    </CrmField>
+                    <CrmField label="Passport Number" required>
+                      <CrmInput
+                        required
+                        value={traveler.passport_number || ""}
+                        onChange={(e) => setTravelerField(index, "passport_number", e.target.value)}
+                        data-testid={`oc-t-pass-${index}`}
+                      />
+                    </CrmField>
+                    <CrmField label="Passport Expiry" required>
+                      <DatePicker
+                        value={traveler.passport_expiry_date || null}
+                        onChange={(v) => setTravelerField(index, "passport_expiry_date", v || "")}
+                        data-testid={`oc-t-exp-${index}`}
+                        fromYear={new Date().getFullYear() - 1}
+                        toYear={new Date().getFullYear() + 20}
+                        clearable={false}
+                      />
+                    </CrmField>
+                    <CrmField label="Nationality" required>
+                      <CrmInput
+                        required
+                        value={traveler.nationality || ""}
+                        onChange={(e) => setTravelerField(index, "nationality", e.target.value)}
+                        data-testid={`oc-t-nat-${index}`}
+                      />
+                    </CrmField>
+                    <CrmField label="Traveler phone (optional)">
+                      <CrmPhoneField
+                        value={traveler.phone || ""}
+                        onChange={(v) => setTravelerField(index, "phone", v)}
+                        data-testid={`oc-t-phone-${index}`}
+                      />
+                    </CrmField>
+                  </div>
+                </div>
+              ))}
             </div>
           </CrmCard>
 
@@ -424,7 +526,9 @@ export default function OfflineCase() {
           <div className="flex justify-end pt-2">
             <CrmButton type="submit" variant="solid" size="md" loading={busy} data-testid="oc-submit">
               <PlusSquare className="w-4 h-4" />
-              Create offline case
+              {travelers.length > 1
+                ? `Create family booking (${travelers.length})`
+                : "Create offline case"}
             </CrmButton>
           </div>
         </form>

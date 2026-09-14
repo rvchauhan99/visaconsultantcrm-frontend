@@ -26,6 +26,7 @@ import { isValidPhoneOptional, normalizePhoneValue } from "@/lib/phone";
 import PassportScanner from "@/components/passport/PassportScanner";
 import OCRFieldStatus from "@/components/passport/OCRFieldStatus";
 import { buildFieldStatuses } from "@/config/passportFieldMap";
+import { expiryFromIssue, issueFromExpiry } from "@/lib/passportValidityDates";
 
 const RELATIONSHIPS = ["self", "spouse", "child", "parent", "other"];
 
@@ -166,14 +167,82 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
   });
   const [ocrStatuses, setOcrStatuses] = useState({});
 
-  const upd = (k, v) => {
+  const clearOcr = (k) => {
     setOcrStatuses((s) => {
       if (!s[k]) return s;
       const next = { ...s };
       delete next[k];
       return next;
     });
+  };
+
+  const upd = (k, v) => {
+    clearOcr(k);
     setForm((p) => ({ ...p, [k]: v }));
+  };
+
+  const handleDobChange = (v) => {
+    clearOcr("dob");
+    const dob = v || "";
+    setForm((p) => {
+      const next = { ...p, dob };
+      if (next.passport_issue_date) {
+        const exp = expiryFromIssue(next.passport_issue_date, dob);
+        if (exp) next.passport_expiry_date = exp;
+      } else if (next.passport_expiry_date && !next.passport_issue_date) {
+        const iss = issueFromExpiry(next.passport_expiry_date, dob);
+        if (iss) next.passport_issue_date = iss;
+      }
+      return next;
+    });
+  };
+
+  const handleIssueChange = (v) => {
+    clearOcr("passport_issue_date");
+    const issue = v || "";
+    setForm((p) => {
+      const next = { ...p, passport_issue_date: issue };
+      if (issue) {
+        const exp = expiryFromIssue(issue, next.dob);
+        if (exp) next.passport_expiry_date = exp;
+      }
+      return next;
+    });
+  };
+
+  const handleExpiryChange = (v) => {
+    clearOcr("passport_expiry_date");
+    const expiry = v || "";
+    setForm((p) => {
+      const next = { ...p, passport_expiry_date: expiry };
+      if (expiry) {
+        const status = ocrStatuses.passport_issue_date;
+        const shouldDerive = !next.passport_issue_date || status === "needs_review";
+        if (shouldDerive) {
+          const iss = issueFromExpiry(expiry, next.dob);
+          if (iss) {
+            next.passport_issue_date = iss;
+            setOcrStatuses((s) => ({ ...s, passport_issue_date: "needs_review" }));
+          }
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleOcrStatuses = (data) => {
+    const statuses = buildFieldStatuses(data);
+    if (data.passport_expiry_date) {
+      const issueMissing = !data.passport_issue_date || statuses.passport_issue_date === "needs_review";
+      if (issueMissing) {
+        const iss = issueFromExpiry(data.passport_expiry_date, data.date_of_birth);
+        if (iss) {
+          statuses.passport_issue_date = "needs_review";
+          setForm((prev) => ({ ...prev, passport_issue_date: iss }));
+        }
+      }
+    }
+    setOcrStatuses(statuses);
   };
 
   return (
@@ -191,7 +260,7 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
               return { ...prev, ...next };
             });
           }}
-          onStatuses={(data) => setOcrStatuses(buildFieldStatuses(data))}
+          onStatuses={handleOcrStatuses}
           onManual={() => setOcrStatuses({})}
         />
 
@@ -212,7 +281,7 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
           <Field label="Date of birth">
             <DatePicker
               value={form.dob || null}
-              onChange={(v) => upd("dob", v || "")}
+              onChange={handleDobChange}
               fromYear={1940}
               toYear={new Date().getFullYear()}
             />
@@ -229,7 +298,7 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
           <Field label="Passport issue">
             <DatePicker
               value={form.passport_issue_date || null}
-              onChange={(v) => upd("passport_issue_date", v || "")}
+              onChange={handleIssueChange}
               fromYear={1990}
               toYear={new Date().getFullYear()}
             />
@@ -238,7 +307,7 @@ function TravelerEditor({ profile, onCancel, onSave, busy }) {
           <Field label="Passport expiry">
             <DatePicker
               value={form.passport_expiry_date || null}
-              onChange={(v) => upd("passport_expiry_date", v || "")}
+              onChange={handleExpiryChange}
               fromYear={new Date().getFullYear() - 1}
               toYear={new Date().getFullYear() + 20}
             />
