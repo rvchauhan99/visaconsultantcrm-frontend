@@ -37,19 +37,15 @@ export function guaranteedByText(processingDays = 0) {
 
 export function guaranteedByDate(processingDays = 0) {
   const d = new Date();
-  d.setDate(d.getDate() + Number(processingDays || 0) + 2);
-  d.setHours(14, 43, 0, 0);
+  d.setDate(d.getDate() + Number(processingDays || 0));
   return d;
 }
 
 export function guaranteedByDateTime(processingDays = 0) {
-  return guaranteedByDate(processingDays).toLocaleString("en-IN", {
+  return guaranteedByDate(processingDays).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
   });
 }
 

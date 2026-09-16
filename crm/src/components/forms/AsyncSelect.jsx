@@ -337,7 +337,7 @@ export function SearchableSelect({
                                         data-testid={resolvedTestId ? `${resolvedTestId}-opt-${v}` : undefined}
                                     >
                                         <Check className={cn("mr-2 h-3.5 w-3.5 shrink-0", selected ? "opacity-100 text-navy" : "opacity-0")} />
-                                        <span className="truncate flex-1 min-w-0">
+                                        <span className={cn("flex-1 min-w-0", renderOption ? "py-0.5" : "truncate")}>
                                             {renderOption ? renderOption(option) : getOptionLabel(option)}
                                         </span>
                                     </CommandItem>

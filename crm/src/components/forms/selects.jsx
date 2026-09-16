@@ -180,7 +180,7 @@ export function ProductSelect({
     );
 }
 
-/** Document or field master key select */
+/** Document or field master key select — full active catalog (no limit; matches master list pages). */
 export function MasterSelect({
     kind = "document",
     value,
@@ -190,8 +190,9 @@ export function MasterSelect({
     ...rest
 }) {
     const path = kind === "field" ? "/admin/field-master" : "/admin/document-master";
-    const fetcher = async ({ q, limit, signal, id }) => {
-        const params = { limit: limit || 10, active: true };
+    const fetcher = async ({ q, signal, id }) => {
+        // Omit limit so API returns the full active master list (AsyncSelect pageSize would otherwise cap at 10).
+        const params = { active: true };
         if (q) params.q = q;
         if (id) params.id = id;
         const r = await api.get(path, { params, signal });
@@ -205,11 +206,47 @@ export function MasterSelect({
             value={value}
             onChange={onChange}
             getOptionValue={(o) => (isField ? o.field_key : o.doc_key)}
-            getOptionLabel={(o) =>
+            getOptionLabel={(o) => {
+                if (isField) {
+                    const opts = Array.isArray(o.default_options) ? o.default_options.join(", ") : "";
+                    return [o.default_label, o.default_field_type, opts, o.field_key].filter(Boolean).join(" ");
+                }
+                const parts = [o.default_name, o.default_description, o.doc_key].filter(Boolean);
+                return parts.join(" ");
+            }}
+            renderOption={
                 isField
-                    ? `${o.field_key} — ${o.default_label}`
-                    : `${o.doc_key} — ${o.default_name}`
+                    ? (o) => {
+                        const opts = Array.isArray(o.default_options) && o.default_options.length
+                            ? o.default_options.join(", ")
+                            : "";
+                        const typeLine = [o.default_field_type, opts].filter(Boolean).join(" · ");
+                        return (
+                            <div className="flex min-w-0 flex-col gap-0.5">
+                                <span className="truncate font-medium">{o.default_label}</span>
+                                {typeLine ? (
+                                    <span className="truncate text-[10px] text-ink-muted">{typeLine}</span>
+                                ) : null}
+                                <span className="truncate font-mono text-[10px] text-ink-muted">{o.field_key}</span>
+                            </div>
+                        );
+                    }
+                    : (o) => (
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                            <span className="truncate font-medium">{o.default_name}</span>
+                            {o.default_description ? (
+                                <span className="truncate text-[10px] text-ink-muted">{o.default_description}</span>
+                            ) : null}
+                            <span className="truncate font-mono text-[10px] text-ink-muted">{o.doc_key}</span>
+                        </div>
+                    )
             }
+            renderValue={
+                isField
+                    ? (o) => o.default_label || o.field_key
+                    : (o) => o.default_name || o.doc_key
+            }
+            contentClassName="min-w-[320px]"
             placeholder={placeholder || (isField ? "Select field…" : "Select document…")}
             searchPlaceholder="Search masters…"
             testId={testId || (isField ? "field-master-select" : "doc-master-select")}

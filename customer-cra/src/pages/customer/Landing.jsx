@@ -8,8 +8,8 @@ const FEE_FMT = new Intl.NumberFormat("en-IN", { style: "currency", currency: "I
 
 function guaranteedByText(processingDays) {
     const d = new Date();
-    d.setDate(d.getDate() + processingDays + 2);
-    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    d.setDate(d.getDate() + Number(processingDays || 0));
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function Landing() {
