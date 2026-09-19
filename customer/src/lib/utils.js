@@ -53,7 +53,7 @@ export function guaranteedByDateTime(processingDays = 0) {
   });
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://10.136.72.12:8000";
 
 export function countryCoverUrl(product) {
   if (product?.banner_image_url) {

@@ -1,20 +1,26 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Archive,
   Check,
+  CheckCircle2,
   ChevronUp,
   ExternalLink,
   FileText,
   Loader2,
+  QrCode,
   Save,
+  Smartphone,
   Upload,
   User,
 } from "lucide-react";
+import MobileUploadModal from "@/components/customer/mobile-upload-modal";
+import MobileConnectFlow from "@/components/customer/mobile-connect-flow";
+import { useDocumentSync } from "@/hooks/use-document-sync";
 import api from "@/lib/api";
 import DocumentActions from "@/components/ui/document-actions";
 import { draftKey, getUser } from "@/lib/session";
@@ -48,17 +54,248 @@ export default function ApplyPageInner() {
   const { data: schema, isLoading: productLoading, isError: productError, error: productErr, refetch } = useVisaProduct(productId);
   const { data: profiles = [] } = useTravelerProfiles(true);
 
-  const [step, setStep] = useState(0);
-  const [traveler, setTraveler] = useState({});
-  const [fields, setFields] = useState({});
-  const [uploads, setUploads] = useState({});
+  // Initialize draftId from URL parameter or sessionStorage
+  const [draftId, setDraftId] = useState(() => {
+    if (draftParam) return draftParam;
+    if (typeof window !== "undefined" && productId) {
+      return sessionStorage.getItem(draftKey(productId)) || null;
+    }
+    return null;
+  });
+
+  const [step, setStep] = useState(() => {
+    if (typeof window !== "undefined") {
+      const qStep = searchParams.get("step");
+      if (qStep !== null) {
+        const byKey = STEP_KEYS.indexOf(qStep);
+        if (byKey >= 0) return byKey;
+        if (!isNaN(Number(qStep))) {
+          return Math.max(0, Math.min(STEPS.length - 1, Number(qStep)));
+        }
+      }
+      if (productId) {
+        const savedStep = sessionStorage.getItem(`vc_apply_step_${productId}`);
+        if (savedStep !== null && !isNaN(Number(savedStep))) {
+          return Math.max(0, Math.min(STEPS.length - 1, Number(savedStep)));
+        }
+      }
+    }
+    return 0;
+  });
+
+  const [traveler, setTraveler] = useState(() => {
+    if (typeof window !== "undefined" && productId) {
+      try {
+        const cached = sessionStorage.getItem(`vc_apply_traveler_${productId}`);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return {};
+  });
+
+  const [fields, setFields] = useState(() => {
+    if (typeof window !== "undefined" && productId) {
+      try {
+        const cached = sessionStorage.getItem(`vc_apply_fields_${productId}`);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return {};
+  });
+
+  const [uploads, setUploads] = useState(() => {
+    if (typeof window !== "undefined" && productId) {
+      try {
+        const cached = sessionStorage.getItem(`vc_apply_uploads_${productId}`);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return {};
+  });
+
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [saveAsProfile, setSaveAsProfile] = useState(false);
   const [profileRelationship, setProfileRelationship] = useState("self");
-  const [draftId, setDraftId] = useState(draftParam || null);
-  const [draftLoaded, setDraftLoaded] = useState(!draftParam);
+  const [draftLoaded, setDraftLoaded] = useState(() => {
+    if (draftParam) return false;
+    if (typeof window !== "undefined" && productId && sessionStorage.getItem(draftKey(productId))) {
+      return false;
+    }
+    return true;
+  });
   const [prefilledUser, setPrefilledUser] = useState(false);
+
+  // Stable upload session ID linking laptop and phone - prioritize query param on phone
+  const [uploadSessionId] = useState(() => {
+    if (typeof window !== "undefined") {
+      const qSession = searchParams.get("session_id");
+      if (qSession) return qSession;
+      const existing = sessionStorage.getItem(`vc_mobile_session_${productId}`);
+      if (existing) return existing;
+      const gen = draftParam || `mus_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      sessionStorage.setItem(`vc_mobile_session_${productId}`, gen);
+      return gen;
+    }
+    return searchParams.get("session_id") || draftParam || "mus_default";
+  });
+
+  // Keep state synchronized to sessionStorage & URL query params continuously
+  useEffect(() => {
+    if (typeof window !== "undefined" && productId && step != null) {
+      sessionStorage.setItem(`vc_apply_step_${productId}`, String(step));
+      const url = new URL(window.location.href);
+      if (!url.searchParams.get("mobile_connect") && url.searchParams.get("step") !== STEP_KEYS[step]) {
+        url.searchParams.set("step", STEP_KEYS[step]);
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
+    }
+  }, [step, productId]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && productId && Object.keys(traveler).length > 0) {
+      sessionStorage.setItem(`vc_apply_traveler_${productId}`, JSON.stringify(traveler));
+    }
+  }, [traveler, productId]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && productId && Object.keys(fields).length > 0) {
+      sessionStorage.setItem(`vc_apply_fields_${productId}`, JSON.stringify(fields));
+    }
+  }, [fields, productId]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && productId && Object.keys(uploads).length > 0) {
+      sessionStorage.setItem(`vc_apply_uploads_${productId}`, JSON.stringify(uploads));
+    }
+  }, [uploads, productId]);
+
+  // Re-hydrate session uploads on laptop mount if any documents were uploaded via phone
+  useEffect(() => {
+    if (!uploadSessionId) return;
+    let cancelled = false;
+    const effDraft = draftId || (typeof window !== "undefined" ? sessionStorage.getItem(draftKey(productId)) : null);
+    const draftQuery = effDraft ? `?draft_id=${encodeURIComponent(effDraft)}` : "";
+    api
+      .get(`/documents/session/${encodeURIComponent(uploadSessionId)}${draftQuery}`)
+      .then((res) => {
+        if (cancelled) return;
+        const sessionDocs = res.data?.documents || {};
+        const entries = Object.entries(sessionDocs);
+        if (entries.length === 0) return;
+        setUploads((prev) => {
+          let changed = false;
+          const next = { ...prev };
+          entries.forEach(([k, doc]) => {
+            if ((doc.status === "uploaded" || doc.file_url) && !next[k]) {
+              next[k] = {
+                file_url: doc.file_url || "",
+                filename: doc.filename || doc.name || `${k}.jpg`,
+                storage_key: doc.storage_key || null,
+                from_mobile: true,
+              };
+              changed = true;
+            }
+          });
+          if (changed && typeof window !== "undefined" && productId) {
+            sessionStorage.setItem(`vc_apply_uploads_${productId}`, JSON.stringify(next));
+          }
+          return changed ? next : prev;
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [uploadSessionId, draftId, productId]);
+
+  // Real-time listener: updates laptop document upload state immediately upon phone upload
+  const handleLiveDocumentUpload = useCallback(
+    (event) => {
+      if (!event || !event.doc_key) return;
+
+      const rawKey = event.doc_key;
+      let matchedKey = rawKey;
+      if (schema?.documents) {
+        const directMatch = schema.documents.find((d) => d.doc_key === rawKey);
+        if (!directMatch) {
+          if (rawKey === "photo") {
+            const photoDoc = schema.documents.find(
+              (d) => d.doc_key.includes("photo") || d.doc_key.includes("photograph")
+            );
+            if (photoDoc) matchedKey = photoDoc.doc_key;
+          } else if (rawKey === "passport_scan" || rawKey === "passport_bio") {
+            const passDoc = schema.documents.find(
+              (d) => d.doc_key.includes("passport") || d.doc_key.includes("bio")
+            );
+            if (passDoc) matchedKey = passDoc.doc_key;
+          }
+        }
+      }
+
+      setUploads((prev) => {
+        if (prev[matchedKey]?.file_url === event.file_url && prev[matchedKey]?.file_url) {
+          return prev;
+        }
+        const updated = {
+          ...prev,
+          [matchedKey]: {
+            file_url: event.file_url || "",
+            filename: event.filename || `${event.name || matchedKey}.jpg`,
+            storage_key: event.storage_key || null,
+            size_mb: event.size_mb || 0,
+            from_mobile: true,
+          },
+          ...(matchedKey !== rawKey
+            ? {
+                [rawKey]: {
+                  file_url: event.file_url || "",
+                  filename: event.filename || `${event.name || rawKey}.jpg`,
+                  storage_key: event.storage_key || null,
+                  size_mb: event.size_mb || 0,
+                  from_mobile: true,
+                },
+              }
+            : {}),
+        };
+
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(`vc_apply_uploads_${productId}`, JSON.stringify(updated));
+        }
+
+        // Auto-patch backend draft so document status is never lost
+        const activeDraftId =
+          draftId ||
+          (typeof window !== "undefined" ? sessionStorage.getItem(draftKey(productId)) : null);
+        if (activeDraftId) {
+          const uploadsList = Object.entries(updated).map(([k, u]) => ({
+            doc_key: k,
+            file_url: u.file_url,
+            filename: u.filename,
+            storage_key: u.storage_key || null,
+          }));
+          api
+            .patch(`/cases/drafts/${activeDraftId}`, {
+              document_uploads: uploadsList,
+            })
+            .catch(() => {});
+        }
+
+        return updated;
+      });
+
+      toast.success(
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-teal" />
+          <span>{event.name || "Document"} uploaded from phone!</span>
+        </div>
+      );
+      track("mobile_upload_sync_received", { product_id: productId, doc_key: matchedKey });
+    },
+    [productId, schema, draftId]
+  );
+
+  useDocumentSync(uploadSessionId, handleLiveDocumentUpload);
 
   // Prefill contact from session when starting fresh (no draft).
   useEffect(() => {
@@ -75,35 +312,81 @@ export default function ApplyPageInner() {
     track("apply_opened", { product_id: productId });
   }, [schema, draftParam, prefilledUser, productId]);
 
-  // Resume a saved draft when ?draft= is present.
+  // Resume a saved draft when draftId is present (URL query or sessionStorage).
   useEffect(() => {
-    if (!draftParam) return;
+    const effectiveDraftId =
+      draftParam ||
+      draftId ||
+      (typeof window !== "undefined" ? sessionStorage.getItem(draftKey(productId)) : null);
+
+    if (!effectiveDraftId) {
+      setDraftLoaded(true);
+      return;
+    }
+
     let cancelled = false;
     api
-      .get(`/cases/drafts/${draftParam}`)
+      .get(`/cases/drafts/${effectiveDraftId}`)
       .then((r) => {
         if (cancelled) return;
         const d = r.data;
         const t = d.traveler || {};
-        setTraveler({ ...t, phone: normalizePhoneValue(t.phone || "") });
-        setFields(d.field_values || {});
+        const normTraveler = { ...t, phone: normalizePhoneValue(t.phone || "") };
+        setTraveler((prev) => ({ ...normTraveler, ...prev }));
+        setFields((prev) => ({ ...(d.field_values || {}), ...prev }));
+
         const um = {};
         (d.document_uploads || []).forEach((u) => {
-          um[u.doc_key] = {
-            file_url: u.file_url,
-            filename: u.filename,
-            storage_key: u.storage_key || u.key || null,
-            size_mb: 0,
-          };
+          if (u.doc_key) {
+            um[u.doc_key] = {
+              file_url: u.file_url,
+              filename: u.filename,
+              storage_key: u.storage_key || u.key || null,
+              size_mb: 0,
+            };
+          }
         });
-        setUploads(um);
+
+        // Merge with any uploads already in state/sessionStorage so live uploads are not wiped
+        setUploads((prev) => {
+          const merged = { ...um, ...prev };
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem(`vc_apply_uploads_${productId}`, JSON.stringify(merged));
+          }
+          return merged;
+        });
+
         setDraftId(d.id);
-        const idx = STEP_KEYS.indexOf(d.step);
-        setStep(idx >= 0 ? idx : 0);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(draftKey(productId), d.id);
+          // Sync browser URL with ?draft= parameter without reloading
+          const url = new URL(window.location.href);
+          if (url.searchParams.get("draft") !== d.id && !url.searchParams.get("mobile_connect")) {
+            url.searchParams.set("draft", d.id);
+            window.history.replaceState({}, "", url.pathname + url.search);
+          }
+        }
+
+        const savedStep =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem(`vc_apply_step_${productId}`)
+            : null;
+        const qStep = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("step") : null;
+        const urlStepIdx = qStep ? STEP_KEYS.indexOf(qStep) : -1;
+        const draftStepIdx = STEP_KEYS.indexOf(d.step);
+        const resolvedStep =
+          urlStepIdx >= 0
+            ? urlStepIdx
+            : savedStep !== null && !isNaN(Number(savedStep))
+            ? Math.max(0, Math.min(STEPS.length - 1, Number(savedStep)))
+            : draftStepIdx >= 0
+            ? draftStepIdx
+            : 0;
+        setStep(resolvedStep);
         track("apply_draft_resumed", { product_id: productId, draft_id: d.id, step: d.step });
       })
       .catch(() => {
-        if (!cancelled) toast.error("Couldn't load your saved application — starting fresh.");
+        // Retain saved step and local data; don't reset to 0
       })
       .finally(() => {
         if (!cancelled) setDraftLoaded(true);
@@ -114,7 +397,9 @@ export default function ApplyPageInner() {
   }, [draftParam, productId]);
 
   useEffect(() => {
-    if (draftId && productId) sessionStorage.setItem(draftKey(productId), draftId);
+    if (draftId && productId && typeof window !== "undefined") {
+      sessionStorage.setItem(draftKey(productId), draftId);
+    }
   }, [draftId, productId]);
 
   useEffect(() => {
@@ -133,7 +418,9 @@ export default function ApplyPageInner() {
 
   /** Create the draft on first save, then keep it in sync with a PATCH on every step change. */
   const persistDraft = async (stepKey) => {
-    let id = draftId;
+    let id =
+      draftId ||
+      (typeof window !== "undefined" ? sessionStorage.getItem(draftKey(productId)) : null);
     if (!id) {
       const res = await api.post("/cases", {
         visa_product_id: productId,
@@ -150,6 +437,25 @@ export default function ApplyPageInner() {
       document_uploads: uploadsArray(),
       step: stepKey,
     });
+
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(draftKey(productId), id);
+      const stepIdx = STEP_KEYS.indexOf(stepKey);
+      if (stepIdx >= 0) {
+        sessionStorage.setItem(`vc_apply_step_${productId}`, String(stepIdx));
+      }
+      sessionStorage.setItem(`vc_apply_uploads_${productId}`, JSON.stringify(uploads));
+
+      // Keep the browser URL updated with ?draft= and ?step= so refresh stays on this draft & step
+      const url = new URL(window.location.href);
+      if (!url.searchParams.get("mobile_connect")) {
+        if (url.searchParams.get("draft") !== id) {
+          url.searchParams.set("draft", id);
+        }
+        url.searchParams.set("step", stepKey);
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
+    }
     return id;
   };
 
@@ -165,12 +471,18 @@ export default function ApplyPageInner() {
       await persistDraft(STEP_KEYS[next]);
       track("apply_step_continue", { product_id: productId, from: STEP_KEYS[step], to: STEP_KEYS[next] });
       setStep(next);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`vc_apply_step_${productId}`, String(next));
+      }
     } catch (e) {
       if (e.response?.status === 410) {
         handleProductGone();
       } else {
         toast.error("Couldn't save your progress, but you can continue.");
         setStep(next);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(`vc_apply_step_${productId}`, String(next));
+        }
       }
     } finally {
       setSavingDraft(false);
@@ -185,12 +497,18 @@ export default function ApplyPageInner() {
       await persistDraft(STEP_KEYS[prev]);
       track("apply_step_back", { product_id: productId, from: STEP_KEYS[step], to: STEP_KEYS[prev] });
       setStep(prev);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`vc_apply_step_${productId}`, String(prev));
+      }
     } catch (e) {
       if (e.response?.status === 410) {
         handleProductGone();
       } else {
         toast.error("Couldn't save your progress, but you can go back.");
         setStep(prev);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(`vc_apply_step_${productId}`, String(prev));
+        }
       }
     } finally {
       setSavingDraft(false);
@@ -356,6 +674,20 @@ export default function ApplyPageInner() {
     }
   };
 
+  const isMobileConnect = searchParams.get("mobile_connect") === "1";
+  if (isMobileConnect) {
+    const qSession = searchParams.get("session_id");
+    const qDraft = searchParams.get("draft");
+    return (
+      <MobileConnectFlow
+        productId={productId}
+        draftId={qDraft || draftId || draftParam}
+        sessionId={qSession || uploadSessionId}
+        schema={schema}
+      />
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-2 md:py-3 pb-20 md:pb-6">
       <div className="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -445,7 +777,16 @@ export default function ApplyPageInner() {
                   />
                 )}
                 {step === 1 && <FieldsStep schema={schema} fields={fields} setFields={setFields} />}
-                {step === 2 && <DocsStep schema={schema} uploads={uploads} setUploads={setUploads} />}
+                {step === 2 && (
+                  <DocsStep
+                    schema={schema}
+                    uploads={uploads}
+                    setUploads={setUploads}
+                    productId={productId}
+                    draftId={draftId}
+                    sessionId={uploadSessionId}
+                  />
+                )}
                 {step === 3 && <ReviewStep schema={schema} traveler={traveler} fields={fields} uploads={uploads} />}
                 {step === 4 && <PaymentStep breakdown={feeBreakdown} submit={submit} submitting={submitting} />}
               </motion.div>
@@ -775,28 +1116,143 @@ function FieldsStep({ schema, fields, setFields }) {
   );
 }
 
-function DocsStep({ schema, uploads, setUploads }) {
+function DocsStep({ schema, uploads, setUploads, productId, draftId, sessionId }) {
+  const [showMobileModal, setShowMobileModal] = useState(false);
+
+  // Compute dynamic progress on desktop
+  const requiredDocs = (schema.documents || []).filter((d) => d.required !== false);
+  const totalCount = requiredDocs.length || (schema.documents || []).length;
+  const uploadedCount = requiredDocs.filter((d) => uploads[d.doc_key]).length;
+  const progressPct = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 100;
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="mb-4">
         <h2 className="font-display text-xl text-navy mb-0.5">Upload your documents</h2>
         <p className="text-sm text-ink-muted">Files are private and encrypted. Only your consultant sees them.</p>
       </div>
+
+      {/* Desktop Real-time Progress Bar */}
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white/80 border border-border/80 shadow-xs mb-5">
+        <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
+          <span className="font-medium text-navy">
+            {uploadedCount} of {totalCount} uploaded
+          </span>
+          <span className="font-mono font-semibold text-teal text-xs tracking-wider">
+            {progressPct}%
+          </span>
+        </div>
+        <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
+          <div
+            className="h-full bg-teal rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </div>
+
       <div className="space-y-4">
         {(schema.documents || []).map((d) => (
           <DocUploader
             key={d.doc_key}
             doc={d}
             value={uploads[d.doc_key]}
-            onUpload={(u) => setUploads((prev) => ({ ...prev, [d.doc_key]: u }))}
+            sessionId={sessionId}
+            onUpload={(u) => {
+              setUploads((prev) => {
+                const updated = { ...prev, [d.doc_key]: u };
+                if (typeof window !== "undefined") {
+                  sessionStorage.setItem(`vc_apply_uploads_${productId}`, JSON.stringify(updated));
+                }
+
+                // Immediately sync to backend upload session manager so phone QR sees it
+                if (sessionId) {
+                  api
+                    .post("/documents/notify-upload", {
+                      session_id: sessionId,
+                      doc_key: d.doc_key,
+                      document_type: d.doc_key,
+                      name: d.name,
+                      status: "uploaded",
+                      file_url: u.file_url || "",
+                      filename: u.filename || `${d.doc_key}.jpg`,
+                      storage_key: u.storage_key || null,
+                    })
+                    .catch(() => {});
+                }
+
+                // Auto-patch backend draft immediately if draftId exists
+                const activeDraftId =
+                  draftId ||
+                  (typeof window !== "undefined" ? sessionStorage.getItem(draftKey(productId)) : null);
+                if (activeDraftId) {
+                  const uploadsList = Object.entries(updated).map(([k, up]) => ({
+                    doc_key: k,
+                    file_url: up.file_url,
+                    filename: up.filename,
+                    storage_key: up.storage_key || null,
+                  }));
+                  api
+                    .patch(`/cases/drafts/${activeDraftId}`, {
+                      document_uploads: uploadsList,
+                    })
+                    .catch(() => {});
+                }
+
+                return updated;
+              });
+            }}
           />
         ))}
       </div>
+
+      {/* Upload from Mobile Option */}
+      <div className="mt-6 pt-5 border-t border-border/70">
+        <div className="rounded-2xl border border-dashed border-border-strong/90 bg-surface-card/90 hover:bg-surface-card p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-xs hover:border-teal/60 hover:shadow-card">
+          <div className="flex items-center gap-3.5 text-center sm:text-left">
+            <div className="w-11 h-11 rounded-2xl bg-teal/10 text-teal flex items-center justify-center shrink-0 shadow-xs border border-teal/15">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                <h3 className="text-sm font-semibold text-navy">Upload from Mobile</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold uppercase bg-teal/10 text-teal border border-teal/20">
+                  Phone Camera
+                </span>
+              </div>
+              <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+                Scan a QR code to securely connect your phone and upload required documents in real time.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowMobileModal(true)}
+            data-testid="upload-from-mobile-trigger"
+            className="shrink-0 rounded-full px-5 py-2 text-xs font-medium border-border-strong hover:border-navy hover:text-navy hover:bg-navy/5 transition-all cursor-pointer shadow-xs"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            Upload from Mobile
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Upload Modal */}
+      <MobileUploadModal
+        open={showMobileModal}
+        onOpenChange={setShowMobileModal}
+        productId={productId}
+        draftId={draftId}
+        sessionId={sessionId}
+        uploadedDocs={uploads}
+        totalCount={totalCount}
+      />
     </div>
   );
 }
 
-function DocUploader({ doc, value, onUpload }) {
+function DocUploader({ doc, value, sessionId, onUpload }) {
   const [busy, setBusy] = useState(false);
   const [showVault, setShowVault] = useState(false);
   const { data: vaultOptions = [] } = useVaultByKey(doc.doc_key, Boolean(doc.vault_eligible));
@@ -809,6 +1265,19 @@ function DocUploader({ doc, value, onUpload }) {
       size_mb: 0,
       from_vault: true,
     });
+    if (sessionId) {
+      api
+        .post("/documents/notify-upload", {
+          session_id: sessionId,
+          doc_key: doc.doc_key,
+          document_type: doc.doc_key,
+          name: doc.name,
+          status: "uploaded",
+          file_url: v.file_url,
+          filename: v.filename,
+        })
+        .catch(() => {});
+    }
     setShowVault(false);
     track("vault_reuse", { doc_key: doc.doc_key, vault_id: v.id });
     toast.success(`Reused ${v.filename} from your vault`);
@@ -832,7 +1301,10 @@ function DocUploader({ doc, value, onUpload }) {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await api.post(`/documents/upload?doc_key=${encodeURIComponent(doc.doc_key)}`, form, {
+      const url = `/documents/upload?doc_key=${encodeURIComponent(doc.doc_key)}${
+        sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""
+      }`;
+      const res = await api.post(url, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       onUpload(res.data);
@@ -856,10 +1328,16 @@ function DocUploader({ doc, value, onUpload }) {
             <FileText className="w-4 h-4 text-ink-muted shrink-0" />
             <span className="font-medium text-sm">{doc.name}</span>
             {!doc.required && <span className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Optional</span>}
-            {value && (
-              <Stamp tone="success" size="sm">
-                Uploaded
+            {value ? (
+              <Stamp tone="success" size="sm" className="inline-flex items-center gap-1 font-medium">
+                <Check className="w-3 h-3 stroke-[2.5]" />
+                <span>Uploaded</span>
+                {value.from_mobile && (
+                  <span className="text-[9px] font-mono text-teal-light opacity-90">(phone)</span>
+                )}
               </Stamp>
+            ) : (
+              <span className="text-xs text-ink-subtle">Not uploaded</span>
             )}
           </div>
           {doc.description && <p className="text-xs text-ink-muted mt-1">{doc.description}</p>}
@@ -967,10 +1445,34 @@ function ReviewStep({ schema, traveler, fields, uploads }) {
         )}
         <ReviewBlock title="Documents">
           {(schema.documents || []).map((d) => {
-            const up = uploads[d.doc_key];
+            const rawKey = d.doc_key;
+            const up =
+              uploads[rawKey] ||
+              (rawKey.includes("passport") || rawKey.includes("bio")
+                ? uploads["passport_scan"] || uploads["passport_bio"] || uploads["passport"]
+                : null) ||
+              (rawKey.includes("photo")
+                ? uploads["photo"] || uploads["passport_photo"] || uploads["photograph"]
+                : null) ||
+              (rawKey.includes("bank")
+                ? uploads["bank_statement"]
+                : null);
+            const isUploaded = Boolean(up?.file_url || up?.filename);
+
             return (
               <div key={d.doc_key} className="flex items-center justify-between px-4 py-3 text-sm gap-3 hover:bg-surface-card/50 transition-colors">
-                <span className="text-ink-muted capitalize">{d.name}</span>
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <span className="text-ink-muted capitalize">{d.name}</span>
+                  {isUploaded && (
+                    <Stamp tone="success" size="sm" className="inline-flex items-center gap-1 font-medium">
+                      <Check className="w-3 h-3 stroke-[2.5]" />
+                      <span>Uploaded</span>
+                      {up.from_mobile && (
+                        <span className="text-[9px] font-mono text-teal-light opacity-90">(phone)</span>
+                      )}
+                    </Stamp>
+                  )}
+                </div>
                 <span className="flex flex-col items-end gap-1 min-w-0">
                   <span className="text-ink font-mono truncate max-w-[40ch] text-right font-medium">
                     {up?.filename || (d.required ? "MISSING" : "not provided")}

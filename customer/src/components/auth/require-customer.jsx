@@ -12,6 +12,16 @@ export default function RequireCustomer({ children }) {
   const [ok, setOk] = useState(false);
 
   useEffect(() => {
+    const isMobileConnect =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("mobile_connect") === "1";
+
+    if (isMobileConnect) {
+      setOk(true);
+      setReady(true);
+      return;
+    }
+
     if (!isCustomer()) {
       const search = typeof window !== "undefined" ? window.location.search : "";
       setNextPath(`${pathname}${search}`);

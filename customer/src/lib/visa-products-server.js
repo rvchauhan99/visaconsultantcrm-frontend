@@ -2,7 +2,7 @@
  * Server-only visa product fetches for metadata, sitemap, and JSON-LD.
  */
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://10.136.72.12:8000"
 
 export async function fetchVisaProducts() {
   try {
