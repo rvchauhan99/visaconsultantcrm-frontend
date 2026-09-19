@@ -1,23 +1,29 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Archive,
   Check,
+  CheckCircle2,
   ChevronUp,
   ExternalLink,
   FileText,
   Loader2,
   Plus,
+  QrCode,
   Save,
+  Smartphone,
   Trash2,
   Upload,
   User,
   Users,
 } from "lucide-react";
+import MobileUploadModal from "@/components/customer/mobile-upload-modal";
+import MobileConnectFlow from "@/components/customer/mobile-connect-flow";
+import { useDocumentSync } from "@/hooks/use-document-sync";
 import api from "@/lib/api";
 import DocumentActions from "@/components/ui/document-actions";
 import { draftKey, getUser } from "@/lib/session";
@@ -156,6 +162,121 @@ export default function ApplyPageInner() {
     setActiveIndex(idx);
     loadWorkingFromMember(nextParty[idx]);
   };
+
+  // Stable upload session ID linking laptop and phone - prioritize query param on phone
+  const [uploadSessionId] = useState(() => {
+    if (typeof window !== "undefined") {
+      const qSession = searchParams.get("session_id");
+      if (qSession) return qSession;
+      const existing = sessionStorage.getItem(`vc_mobile_session_${productId}`);
+      if (existing) return existing;
+      const gen = draftParam || `mus_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      sessionStorage.setItem(`vc_mobile_session_${productId}`, gen);
+      return gen;
+    }
+    return searchParams.get("session_id") || draftParam || "mus_default";
+  });
+
+  // Re-hydrate session uploads on laptop mount if any documents were uploaded via phone
+  useEffect(() => {
+    if (!uploadSessionId) return;
+    let cancelled = false;
+    const effDraft = draftId || (typeof window !== "undefined" ? sessionStorage.getItem(draftKey(productId)) : null);
+    const draftQuery = effDraft ? `?draft_id=${encodeURIComponent(effDraft)}` : "";
+    api
+      .get(`/documents/session/${encodeURIComponent(uploadSessionId)}${draftQuery}`)
+      .then((res) => {
+        if (cancelled) return;
+        const sessionDocs = res.data?.documents || {};
+        const entries = Object.entries(sessionDocs);
+        if (entries.length === 0) return;
+        setUploads((prev) => {
+          let changed = false;
+          const next = { ...prev };
+          entries.forEach(([k, doc]) => {
+            if ((doc.status === "uploaded" || doc.file_url) && !next[k]) {
+              next[k] = {
+                file_url: doc.file_url || "",
+                filename: doc.filename || doc.name || `${k}.jpg`,
+                storage_key: doc.storage_key || null,
+                from_mobile: true,
+              };
+              changed = true;
+            }
+          });
+          return changed ? next : prev;
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [uploadSessionId, draftId, productId]);
+
+  // Real-time listener: updates laptop document upload state immediately upon phone upload
+  const handleLiveDocumentUpload = useCallback(
+    (event) => {
+      if (!event || !event.doc_key) return;
+
+      const rawKey = event.doc_key;
+      let matchedKey = rawKey;
+      if (schema?.documents) {
+        const directMatch = schema.documents.find((d) => d.doc_key === rawKey);
+        if (!directMatch) {
+          if (rawKey === "photo") {
+            const photoDoc = schema.documents.find(
+              (d) => d.doc_key.includes("photo") || d.doc_key.includes("photograph")
+            );
+            if (photoDoc) matchedKey = photoDoc.doc_key;
+          } else if (rawKey === "passport_scan" || rawKey === "passport_bio") {
+            const passDoc = schema.documents.find(
+              (d) => d.doc_key.includes("passport") || d.doc_key.includes("bio")
+            );
+            if (passDoc) matchedKey = passDoc.doc_key;
+          }
+        }
+      }
+
+      setUploads((prev) => {
+        if (prev[matchedKey]?.file_url === event.file_url && prev[matchedKey]?.file_url) {
+          return prev;
+        }
+        const updated = {
+          ...prev,
+          [matchedKey]: {
+            file_url: event.file_url || "",
+            filename: event.filename || `${event.name || matchedKey}.jpg`,
+            storage_key: event.storage_key || null,
+            size_mb: event.size_mb || 0,
+            from_mobile: true,
+          },
+          ...(matchedKey !== rawKey
+            ? {
+                [rawKey]: {
+                  file_url: event.file_url || "",
+                  filename: event.filename || `${event.name || rawKey}.jpg`,
+                  storage_key: event.storage_key || null,
+                  size_mb: event.size_mb || 0,
+                  from_mobile: true,
+                },
+              }
+            : {}),
+        };
+        return updated;
+      });
+
+      toast.success(
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-teal" />
+          <span>{event.name || "Document"} uploaded from phone!</span>
+        </div>
+      );
+      track("mobile_upload_sync_received", { product_id: productId, doc_key: matchedKey });
+    },
+    [productId, schema]
+  );
+
+  useDocumentSync(uploadSessionId, handleLiveDocumentUpload);
 
   // Prefill contact from session when starting fresh (no draft).
   useEffect(() => {
@@ -563,6 +684,20 @@ export default function ApplyPageInner() {
     }
   };
 
+  const isMobileConnect = searchParams.get("mobile_connect") === "1";
+  if (isMobileConnect) {
+    const qSession = searchParams.get("session_id");
+    const qDraft = searchParams.get("draft");
+    return (
+      <MobileConnectFlow
+        productId={productId}
+        draftId={qDraft || draftId || draftParam}
+        sessionId={qSession || uploadSessionId}
+        schema={schema}
+      />
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-2 md:py-3 pb-20 md:pb-6">
       <div className="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -675,6 +810,9 @@ export default function ApplyPageInner() {
                     party={partyForValidation}
                     activeIndex={activeIndex}
                     onSelectTraveler={switchActiveTraveler}
+                    productId={productId}
+                    draftId={draftId}
+                    sessionId={uploadSessionId}
                   />
                 )}
                 {currentStepKey === "review" && (
@@ -1250,7 +1388,14 @@ function FieldsStep({ schema, fields, setFields, party, activeIndex, onSelectTra
   );
 }
 
-function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTraveler }) {
+function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTraveler, productId, draftId, sessionId }) {
+  const [showMobileModal, setShowMobileModal] = useState(false);
+
+  const requiredDocs = (schema.documents || []).filter((d) => d.required !== false);
+  const totalCount = requiredDocs.length || (schema.documents || []).length;
+  const uploadedCount = requiredDocs.filter((d) => uploads[d.doc_key]).length;
+  const progressPct = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 100;
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="mb-4">
@@ -1261,21 +1406,101 @@ function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTra
         </p>
       </div>
       <PartyTravelerTabs party={party} activeIndex={activeIndex} onSelectTraveler={onSelectTraveler} testIdPrefix="docs-party-tab" />
+
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white/80 border border-border/80 shadow-xs mb-5">
+        <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
+          <span className="font-medium text-navy">
+            {uploadedCount} of {totalCount} uploaded
+          </span>
+          <span className="font-mono font-semibold text-teal text-xs tracking-wider">
+            {progressPct}%
+          </span>
+        </div>
+        <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
+          <div
+            className="h-full bg-teal rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </div>
+
       <div className="space-y-4">
         {(schema.documents || []).map((d) => (
           <DocUploader
             key={`${party?.[activeIndex]?.id || "solo"}-${d.doc_key}`}
             doc={d}
             value={uploads[d.doc_key]}
-            onUpload={(u) => setUploads((prev) => ({ ...prev, [d.doc_key]: u }))}
+            sessionId={sessionId}
+            onUpload={(u) => {
+              setUploads((prev) => {
+                const updated = { ...prev, [d.doc_key]: u };
+                if (sessionId) {
+                  api
+                    .post("/documents/notify-upload", {
+                      session_id: sessionId,
+                      doc_key: d.doc_key,
+                      document_type: d.doc_key,
+                      name: d.name,
+                      status: "uploaded",
+                      file_url: u.file_url || "",
+                      filename: u.filename || `${d.doc_key}.jpg`,
+                      storage_key: u.storage_key || null,
+                    })
+                    .catch(() => {});
+                }
+                return updated;
+              });
+            }}
           />
         ))}
       </div>
+
+      <div className="mt-6 pt-5 border-t border-border/70">
+        <div className="rounded-2xl border border-dashed border-border-strong/90 bg-surface-card/90 hover:bg-surface-card p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-xs hover:border-teal/60 hover:shadow-card">
+          <div className="flex items-center gap-3.5 text-center sm:text-left">
+            <div className="w-11 h-11 rounded-2xl bg-teal/10 text-teal flex items-center justify-center shrink-0 shadow-xs border border-teal/15">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                <h3 className="text-sm font-semibold text-navy">Upload from Mobile</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold uppercase bg-teal/10 text-teal border border-teal/20">
+                  Phone Camera
+                </span>
+              </div>
+              <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+                Scan a QR code to securely connect your phone and upload required documents in real time.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowMobileModal(true)}
+            data-testid="upload-from-mobile-trigger"
+            className="shrink-0 rounded-full px-5 py-2 text-xs font-medium border-border-strong hover:border-navy hover:text-navy hover:bg-navy/5 transition-all cursor-pointer shadow-xs"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            Upload from Mobile
+          </Button>
+        </div>
+      </div>
+
+      <MobileUploadModal
+        open={showMobileModal}
+        onOpenChange={setShowMobileModal}
+        productId={productId}
+        draftId={draftId}
+        sessionId={sessionId}
+        uploadedDocs={uploads}
+        totalCount={totalCount}
+      />
     </div>
   );
 }
 
-function DocUploader({ doc, value, onUpload }) {
+function DocUploader({ doc, value, sessionId, onUpload }) {
   const [busy, setBusy] = useState(false);
   const [showVault, setShowVault] = useState(false);
   const { data: vaultOptions = [] } = useVaultByKey(doc.doc_key, Boolean(doc.vault_eligible));
@@ -1288,6 +1513,19 @@ function DocUploader({ doc, value, onUpload }) {
       size_mb: 0,
       from_vault: true,
     });
+    if (sessionId) {
+      api
+        .post("/documents/notify-upload", {
+          session_id: sessionId,
+          doc_key: doc.doc_key,
+          document_type: doc.doc_key,
+          name: doc.name,
+          status: "uploaded",
+          file_url: v.file_url,
+          filename: v.filename,
+        })
+        .catch(() => {});
+    }
     setShowVault(false);
     track("vault_reuse", { doc_key: doc.doc_key, vault_id: v.id });
     toast.success(`Reused ${v.filename} from your vault`);
@@ -1311,7 +1549,10 @@ function DocUploader({ doc, value, onUpload }) {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await api.post(`/documents/upload?doc_key=${encodeURIComponent(doc.doc_key)}`, form, {
+      const url = `/documents/upload?doc_key=${encodeURIComponent(doc.doc_key)}${
+        sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""
+      }`;
+      const res = await api.post(url, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       onUpload(res.data);
