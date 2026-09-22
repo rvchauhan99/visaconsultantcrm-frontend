@@ -1396,6 +1396,8 @@ function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTra
   const uploadedCount = requiredDocs.filter((d) => uploads[d.doc_key]).length;
   const progressPct = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 100;
 
+  const showMobileUpload = (party?.length || 1) <= 1;
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="mb-4">
@@ -1406,6 +1408,44 @@ function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTra
         </p>
       </div>
       <PartyTravelerTabs party={party} activeIndex={activeIndex} onSelectTraveler={onSelectTraveler} testIdPrefix="docs-party-tab" />
+
+      {/* Multi-traveler: session is product-scoped and draft PATCH mirrors to travelers[0] only */}
+      {showMobileUpload && (
+        <div className="sticky top-2 z-20 mb-5 -mx-0.5 px-0.5">
+          <div className="rounded-2xl border border-teal/30 bg-gradient-to-br from-teal/10 via-white/95 to-white/90 backdrop-blur-md p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm ring-1 ring-teal/10">
+            <div className="flex items-center gap-3.5 text-center sm:text-left w-full sm:w-auto">
+              <div className="w-12 h-12 rounded-2xl bg-teal/15 text-teal flex items-center justify-center shrink-0 shadow-xs border border-teal/20">
+                <Smartphone className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                  <h3 className="text-sm font-semibold text-navy">Upload from Mobile</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold uppercase bg-teal/15 text-teal border border-teal/25">
+                    Recommended
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold uppercase bg-navy/5 text-navy/70 border border-navy/10">
+                    Phone Camera
+                  </span>
+                </div>
+                <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+                  Best for passport photos and scans — connect in seconds with a QR code. Your laptop updates live.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => setShowMobileModal(true)}
+              data-testid="upload-from-mobile-trigger"
+              aria-label="Upload documents from your mobile phone using a QR code"
+              className="shrink-0 w-full sm:w-auto rounded-full px-6 py-2.5 text-sm font-medium bg-navy text-white hover:bg-navy/90 shadow-xs transition-all cursor-pointer"
+            >
+              <QrCode className="w-4 h-4" aria-hidden="true" />
+              Upload from Mobile
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="p-3.5 sm:p-4 rounded-2xl bg-white/80 border border-border/80 shadow-xs mb-5">
         <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
@@ -1455,51 +1495,16 @@ function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTra
         ))}
       </div>
 
-      {/* Multi-traveler: session is product-scoped and draft PATCH mirrors to travelers[0] only */}
-      {(party?.length || 1) <= 1 && (
-        <>
-          <div className="mt-6 pt-5 border-t border-border/70">
-            <div className="rounded-2xl border border-dashed border-border-strong/90 bg-surface-card/90 hover:bg-surface-card p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-xs hover:border-teal/60 hover:shadow-card">
-              <div className="flex items-center gap-3.5 text-center sm:text-left">
-                <div className="w-11 h-11 rounded-2xl bg-teal/10 text-teal flex items-center justify-center shrink-0 shadow-xs border border-teal/15">
-                  <Smartphone className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold text-navy">Upload from Mobile</h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold uppercase bg-teal/10 text-teal border border-teal/20">
-                      Phone Camera
-                    </span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
-                    Scan a QR code to securely connect your phone and upload required documents in real time.
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowMobileModal(true)}
-                data-testid="upload-from-mobile-trigger"
-                className="shrink-0 rounded-full px-5 py-2 text-xs font-medium border-border-strong hover:border-navy hover:text-navy hover:bg-navy/5 transition-all cursor-pointer shadow-xs"
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                Upload from Mobile
-              </Button>
-            </div>
-          </div>
-
-          <MobileUploadModal
-            open={showMobileModal}
-            onOpenChange={setShowMobileModal}
-            productId={productId}
-            draftId={draftId}
-            sessionId={sessionId}
-            uploadedDocs={uploads}
-            totalCount={totalCount}
-          />
-        </>
+      {showMobileUpload && (
+        <MobileUploadModal
+          open={showMobileModal}
+          onOpenChange={setShowMobileModal}
+          productId={productId}
+          draftId={draftId}
+          sessionId={sessionId}
+          uploadedDocs={uploads}
+          totalCount={totalCount}
+        />
       )}
     </div>
   );
