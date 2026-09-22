@@ -13,7 +13,7 @@ function getBackendWsUrl(sessionId) {
   let backendHttp = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
   const host = window.location.hostname;
 
-  // If running on a LAN IP (e.g. 10.136.72.12), ensure we don't connect to localhost
+  // On LAN phone hosts, rewrite localhost backend env to the page hostname:8000
   if (!backendHttp || (backendHttp.includes("localhost") && host !== "localhost")) {
     backendHttp = `http://${host}:8000`;
   }

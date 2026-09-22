@@ -15,7 +15,7 @@ export function getBackendUrl() {
       return envBackend;
     }
   }
-  return envBackend || "http://10.136.72.12:8000";
+  return envBackend || "http://localhost:8000";
 }
 
 export const BACKEND_URL = getBackendUrl();

@@ -39,9 +39,13 @@ export function MobileUploadModal({
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [qrLoading, setQrLoading] = useState(true);
 
-  // Generate mobile-accessible target URL for the QR code (never localhost or 127.0.0.1)
+  // QR must open on a phone-reachable host (never baked-in LAN IPs).
+  // Prefer SITE_URL / APP_URL, then current origin when not localhost.
+  // For local dual-device QA set NEXT_PUBLIC_SITE_URL=http://<your-lan-ip>:3000
   const getMobileBaseUrl = () => {
-    const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, "");
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()?.replace(/\/$/, "");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, "");
+    const envUrl = siteUrl || appUrl;
     if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
       return envUrl;
     }
@@ -50,8 +54,9 @@ export function MobileUploadModal({
       if (!origin.includes("localhost") && !origin.includes("127.0.0.1")) {
         return origin;
       }
+      return origin;
     }
-    return "http://10.136.72.12:3000";
+    return envUrl || "http://localhost:3000";
   };
 
   const effectiveSessionId = sessionId || draftId || "mus_default";

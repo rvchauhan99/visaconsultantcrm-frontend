@@ -1455,47 +1455,52 @@ function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTra
         ))}
       </div>
 
-      <div className="mt-6 pt-5 border-t border-border/70">
-        <div className="rounded-2xl border border-dashed border-border-strong/90 bg-surface-card/90 hover:bg-surface-card p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-xs hover:border-teal/60 hover:shadow-card">
-          <div className="flex items-center gap-3.5 text-center sm:text-left">
-            <div className="w-11 h-11 rounded-2xl bg-teal/10 text-teal flex items-center justify-center shrink-0 shadow-xs border border-teal/15">
-              <Smartphone className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                <h3 className="text-sm font-semibold text-navy">Upload from Mobile</h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold uppercase bg-teal/10 text-teal border border-teal/20">
-                  Phone Camera
-                </span>
+      {/* Multi-traveler: session is product-scoped and draft PATCH mirrors to travelers[0] only */}
+      {(party?.length || 1) <= 1 && (
+        <>
+          <div className="mt-6 pt-5 border-t border-border/70">
+            <div className="rounded-2xl border border-dashed border-border-strong/90 bg-surface-card/90 hover:bg-surface-card p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-xs hover:border-teal/60 hover:shadow-card">
+              <div className="flex items-center gap-3.5 text-center sm:text-left">
+                <div className="w-11 h-11 rounded-2xl bg-teal/10 text-teal flex items-center justify-center shrink-0 shadow-xs border border-teal/15">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                    <h3 className="text-sm font-semibold text-navy">Upload from Mobile</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold uppercase bg-teal/10 text-teal border border-teal/20">
+                      Phone Camera
+                    </span>
+                  </div>
+                  <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+                    Scan a QR code to securely connect your phone and upload required documents in real time.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
-                Scan a QR code to securely connect your phone and upload required documents in real time.
-              </p>
+
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowMobileModal(true)}
+                data-testid="upload-from-mobile-trigger"
+                className="shrink-0 rounded-full px-5 py-2 text-xs font-medium border-border-strong hover:border-navy hover:text-navy hover:bg-navy/5 transition-all cursor-pointer shadow-xs"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                Upload from Mobile
+              </Button>
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setShowMobileModal(true)}
-            data-testid="upload-from-mobile-trigger"
-            className="shrink-0 rounded-full px-5 py-2 text-xs font-medium border-border-strong hover:border-navy hover:text-navy hover:bg-navy/5 transition-all cursor-pointer shadow-xs"
-          >
-            <QrCode className="w-3.5 h-3.5" />
-            Upload from Mobile
-          </Button>
-        </div>
-      </div>
-
-      <MobileUploadModal
-        open={showMobileModal}
-        onOpenChange={setShowMobileModal}
-        productId={productId}
-        draftId={draftId}
-        sessionId={sessionId}
-        uploadedDocs={uploads}
-        totalCount={totalCount}
-      />
+          <MobileUploadModal
+            open={showMobileModal}
+            onOpenChange={setShowMobileModal}
+            productId={productId}
+            draftId={draftId}
+            sessionId={sessionId}
+            uploadedDocs={uploads}
+            totalCount={totalCount}
+          />
+        </>
+      )}
     </div>
   );
 }
