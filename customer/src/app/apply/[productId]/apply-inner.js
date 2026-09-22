@@ -1,17 +1,19 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Archive,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronUp,
   ExternalLink,
   FileText,
   Loader2,
+  Pencil,
   Plus,
   QrCode,
   Save,
@@ -99,11 +101,27 @@ export default function ApplyPageInner() {
   const [uploads, setUploads] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
-  const [saveAsProfile, setSaveAsProfile] = useState(false);
+  const [saveAsProfile, setSaveAsProfile] = useState(true);
   const [draftId, setDraftId] = useState(draftParam || null);
-  const [draftLoaded, setDraftLoaded] = useState(!draftParam);
+  const [draftLoaded, setDraftLoaded] = useState(() => {
+    if (draftParam) return false;
+    if (typeof window !== "undefined" && productId) {
+      return !sessionStorage.getItem(draftKey(productId));
+    }
+    return true;
+  });
   const [pendingDraftStep, setPendingDraftStep] = useState(null);
   const [prefilledUser, setPrefilledUser] = useState(false);
+  const applyRootRef = useRef(null);
+
+  const syncDraftUrl = (id) => {
+    if (typeof window === "undefined" || !id || !productId) return;
+    sessionStorage.setItem(draftKey(productId), id);
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("draft") === id) return;
+    url.searchParams.set("draft", id);
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  };
 
   const loadWorkingFromMember = (member) => {
     const m = member || blankTravelerMember();
@@ -294,12 +312,20 @@ export default function ApplyPageInner() {
     track("apply_opened", { product_id: productId });
   }, [schema, draftParam, prefilledUser, productId]);
 
-  // Resume a saved draft when ?draft= is present.
+  // Resume a saved draft from ?draft= or sessionStorage (Continue-saved progress).
   useEffect(() => {
-    if (!draftParam) return;
+    const stored =
+      !draftParam && typeof window !== "undefined" && productId
+        ? sessionStorage.getItem(draftKey(productId))
+        : null;
+    const idToLoad = draftParam || stored;
+    if (!idToLoad) {
+      setDraftLoaded(true);
+      return;
+    }
     let cancelled = false;
     api
-      .get(`/cases/drafts/${draftParam}`)
+      .get(`/cases/drafts/${idToLoad}`)
       .then((r) => {
         if (cancelled) return;
         const d = r.data;
@@ -309,10 +335,16 @@ export default function ApplyPageInner() {
         loadWorkingFromMember(members[0]);
         setDraftId(d.id);
         setPendingDraftStep(d.step || "traveler");
+        syncDraftUrl(d.id);
         track("apply_draft_resumed", { product_id: productId, draft_id: d.id, step: d.step });
       })
       .catch(() => {
-        if (!cancelled) toast.error("Couldn't load your saved application — starting fresh.");
+        if (!cancelled) {
+          if (stored && typeof window !== "undefined") {
+            sessionStorage.removeItem(draftKey(productId));
+          }
+          toast.error("Couldn't load your saved application — starting fresh.");
+        }
       })
       .finally(() => {
         if (!cancelled) setDraftLoaded(true);
@@ -323,7 +355,7 @@ export default function ApplyPageInner() {
   }, [draftParam, productId]);
 
   useEffect(() => {
-    if (draftId && productId) sessionStorage.setItem(draftKey(productId), draftId);
+    if (draftId && productId) syncDraftUrl(draftId);
   }, [draftId, productId]);
 
   useEffect(() => {
@@ -344,6 +376,22 @@ export default function ApplyPageInner() {
       toast.error("This visa is no longer available.");
     }
   }, [productErr]);
+
+  // Reset viewport to the step heading whenever the wizard step changes (incl. draft resume).
+  useEffect(() => {
+    if (!draftLoaded) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const frame = requestAnimationFrame(() => {
+      const heading = document.querySelector("[data-apply-step-heading]");
+      if (heading) {
+        heading.scrollIntoView({ block: "start", behavior: "auto" });
+        if (typeof heading.focus === "function") heading.focus({ preventScroll: true });
+      } else if (applyRootRef.current) {
+        applyRootRef.current.scrollIntoView({ block: "start", behavior: "auto" });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [step, draftLoaded]);
 
   /** Create the draft on first save, then keep it in sync with a PATCH on every step change. */
   const persistDraft = async (stepKey) => {
@@ -382,6 +430,7 @@ export default function ApplyPageInner() {
       document_uploads: primary.document_uploads || [],
       step: stepKey,
     });
+    syncDraftUrl(id);
     return id;
   };
 
@@ -404,8 +453,7 @@ export default function ApplyPageInner() {
       if (e.response?.status === 410) {
         handleProductGone();
       } else {
-        toast.error("Couldn't save your progress, but you can continue.");
-        setStep(next);
+        toast.error("Couldn't save your progress. Check your connection and try again.");
       }
     } finally {
       setSavingDraft(false);
@@ -427,8 +475,7 @@ export default function ApplyPageInner() {
       if (e.response?.status === 410) {
         handleProductGone();
       } else {
-        toast.error("Couldn't save your progress, but you can go back.");
-        setStep(prev);
+        toast.error("Couldn't save your progress. Check your connection and try again.");
       }
     } finally {
       setSavingDraft(false);
@@ -570,7 +617,7 @@ export default function ApplyPageInner() {
   const activeSteps = buildApplySteps(schema);
   const currentStepKey = activeSteps[step]?.key || "traveler";
   const requiresPassport = productRequiresPassport(schema);
-  const requiredDocs = (schema.documents || []).filter((d) => d.required);
+  const requiredDocs = (schema.documents || []).filter((d) => d.required !== false);
   const requiredFields = (schema.fields || []).filter((f) => f.required);
   const passportMinMonths = schema.passport_min_validity_months || 6;
 
@@ -699,7 +746,7 @@ export default function ApplyPageInner() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-2 md:py-3 pb-20 md:pb-6">
+    <div ref={applyRootRef} className="max-w-4xl mx-auto px-4 md:px-6 py-2 md:py-3 pb-40 md:pb-6" data-testid="apply-root">
       <div className="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
           <span className="text-4xl md:text-5xl shrink-0 drop-shadow-sm">{schema.country_flag}</span>
@@ -718,61 +765,71 @@ export default function ApplyPageInner() {
           onClick={saveAndExit}
           disabled={savingDraft || submitting}
           data-testid="apply-save-exit"
-          className="shrink-0 rounded-full border-border/60 hover:bg-surface-card"
+          className="shrink-0 rounded-full border-border/60 hover:bg-surface-card hidden sm:inline-flex"
         >
           {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-          <span className="hidden sm:inline">Save &amp; exit</span>
+          <span>Save &amp; exit</span>
         </Button>
       </div>
 
-      <div className="relative overflow-hidden rounded-[24px] bg-[var(--glass)] backdrop-blur-xl border border-[var(--border-glass)] shadow-[var(--shadow-premium)]">
-        {/* Step Indicator inside the card */}
+      <div className="relative overflow-visible rounded-[24px] bg-[var(--glass)] backdrop-blur-xl border border-[var(--border-glass)] shadow-[var(--shadow-premium)]">
         <div className="px-5 md:px-8 py-3 md:py-4 border-b border-[var(--border-glass)] bg-white/40">
           <div className="flex items-center gap-2 md:gap-4 overflow-x-auto" data-testid="apply-steps">
-            {activeSteps.map((s, i) => (
-              <React.Fragment key={s.key}>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div
+            {activeSteps.map((s, i) => {
+              const isComplete = i < step;
+              const isCurrent = i === step;
+              const canJump = isComplete;
+              return (
+                <React.Fragment key={s.key}>
+                  <button
+                    type="button"
+                    disabled={!canJump}
+                    onClick={() => {
+                      if (!canJump) return;
+                      setStep(i);
+                    }}
+                    aria-label={canJump ? `Go back to ${s.label}` : s.label}
+                    aria-current={isCurrent ? "step" : undefined}
+                    data-testid={`apply-step-${s.key}`}
                     className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono font-semibold transition-colors duration-300",
-                      i < step ? "bg-navy text-white" : i === step ? "border-2 border-navy text-navy bg-white" : "border-2 border-border text-ink-muted bg-white/50"
+                      "flex items-center gap-2 shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-navy/40",
+                      canJump ? "cursor-pointer hover:opacity-90" : "cursor-default"
                     )}
                   >
-                    {i < step ? <Check className="w-4 h-4" /> : i + 1}
-                  </div>
-                  <span className={cn(
-                    "text-[11px] md:text-xs uppercase font-mono tracking-wider transition-colors duration-300",
-                    i === step ? "text-navy font-bold" : "text-ink-muted"
-                  )}>
-                    {s.label}
-                  </span>
-                </div>
-                {i < activeSteps.length - 1 && (
-                  <div className="flex-1 h-px min-w-[20px] bg-border/60 overflow-hidden rounded-full">
-                    <motion.div
-                      className="h-full bg-navy"
-                      initial={{ width: "0%" }}
-                      animate={{ width: i < step ? "100%" : "0%" }}
-                      transition={{ duration: 0.4 }}
-                    />
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono font-semibold transition-colors duration-300",
+                        isComplete ? "bg-navy text-white" : isCurrent ? "border-2 border-navy text-navy bg-white" : "border-2 border-border text-ink-muted bg-white/50"
+                      )}
+                    >
+                      {isComplete ? <Check className="w-4 h-4" /> : i + 1}
+                    </div>
+                    <span className={cn(
+                      "text-[11px] md:text-xs uppercase font-mono tracking-wider transition-colors duration-300",
+                      isCurrent ? "text-navy font-bold" : "text-ink-muted"
+                    )}>
+                      {s.label}
+                    </span>
+                  </button>
+                  {i < activeSteps.length - 1 && (
+                    <div className="flex-1 h-px min-w-[20px] bg-border/60 overflow-hidden rounded-full">
+                      <motion.div
+                        className="h-full bg-navy"
+                        initial={{ width: "0%" }}
+                        animate={{ width: isComplete ? "100%" : "0%" }}
+                        transition={{ duration: 0.4 }}
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
 
-        {/* Form Body with Animation */}
         <div className="p-5 md:p-8 pt-6">
           <div className="min-h-[300px]">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStepKey}
-                initial={{ opacity: 0, x: 15 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -15 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-              >
+              <div key={currentStepKey}>
                 {currentStepKey === "traveler" && (
                   <TravelerStep
                     key={party[activeIndex]?.id || "traveler"}
@@ -820,16 +877,20 @@ export default function ApplyPageInner() {
                     schema={schema}
                     party={partyForValidation}
                     requiresPassport={requiresPassport}
+                    activeSteps={activeSteps}
+                    onEditStep={(key) => {
+                      const idx = activeSteps.findIndex((s) => s.key === key);
+                      if (idx >= 0) setStep(idx);
+                    }}
                   />
                 )}
                 {currentStepKey === "payment" && (
                   <PaymentStep breakdown={feeBreakdown} submit={submit} submitting={submitting} />
                 )}
-              </motion.div>
-            </AnimatePresence>
+              </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-[var(--border-glass)]">
+          <div className="mt-6 pt-4 border-t border-[var(--border-glass)] hidden md:block">
             <div className="flex items-center justify-between">
               <Button type="button" variant="secondary" onClick={goBack} disabled={step === 0 || savingDraft} data-testid="apply-back" className="rounded-full px-6 bg-white/50 hover:bg-white">
                 ← Back
@@ -837,8 +898,7 @@ export default function ApplyPageInner() {
               {step < activeSteps.length - 1 && (
                 <div className="flex items-center gap-3">
                   <Button type="button" variant="outline" onClick={saveAndExit} disabled={savingDraft || submitting} data-testid="apply-save-exit-bottom" className="rounded-full px-6 border-border/60 hover:bg-surface-card">
-                    <span className="hidden sm:inline">Save &amp; exit</span>
-                    <span className="sm:hidden">Save</span>
+                    Save &amp; exit
                   </Button>
                   <Button type="button" onClick={goNext} disabled={savingDraft || continueBlocked} data-testid="apply-continue" className="rounded-full px-8 shadow-sm hover:shadow transition-shadow">
                     {savingDraft && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Continue →
@@ -858,12 +918,36 @@ export default function ApplyPageInner() {
         </div>
       </div>
 
-      <ApplyFeeSheet breakdown={feeBreakdown} processingDays={schema.processing_time_days} />
+      <ApplyMobileFooter
+        breakdown={feeBreakdown}
+        processingDays={schema.processing_time_days}
+        step={step}
+        lastStep={step >= activeSteps.length - 1}
+        savingDraft={savingDraft}
+        submitting={submitting}
+        continueBlocked={continueBlocked}
+        blockedHint={blockedHint}
+        onBack={goBack}
+        onSaveExit={saveAndExit}
+        onContinue={goNext}
+      />
     </div>
   );
 }
 
-function ApplyFeeSheet({ breakdown, processingDays }) {
+function ApplyMobileFooter({
+  breakdown,
+  processingDays,
+  step,
+  lastStep,
+  savingDraft,
+  submitting,
+  continueBlocked,
+  blockedHint,
+  onBack,
+  onSaveExit,
+  onContinue,
+}) {
   return (
     <div
       className="md:hidden fixed bottom-16 inset-x-0 z-40 border-t border-border bg-white/95 backdrop-blur safe-area-pb"
@@ -871,10 +955,10 @@ function ApplyFeeSheet({ breakdown, processingDays }) {
     >
       <Drawer>
         <DrawerTrigger asChild>
-          <button type="button" className="w-full flex items-center justify-between px-5 py-3 text-left" aria-label="Open fee summary">
+          <button type="button" className="w-full flex items-center justify-between px-5 py-2.5 text-left border-b border-border/60" aria-label="Open fee summary">
             <div>
               <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Fee summary</div>
-              <div className="font-display text-lg text-navy">{INR.format(breakdown.total)}</div>
+              <div className="font-display text-base text-navy leading-tight">{INR.format(breakdown.total)}</div>
               {breakdown.headcount > 1 && (
                 <div className="text-[10px] font-mono uppercase text-ink-muted">
                   {breakdown.headcount} × {INR.format(breakdown.unitTotal)}
@@ -917,17 +1001,40 @@ function ApplyFeeSheet({ breakdown, processingDays }) {
           </div>
         </DrawerContent>
       </Drawer>
+      <div className="px-4 py-2.5 flex items-center gap-2">
+        <Button type="button" variant="secondary" onClick={onBack} disabled={step === 0 || savingDraft} data-testid="apply-back-mobile" className="rounded-full px-4 shrink-0">
+          ←
+        </Button>
+        {!lastStep && (
+          <>
+            <Button type="button" variant="outline" onClick={onSaveExit} disabled={savingDraft || submitting} data-testid="apply-save-exit-mobile" className="rounded-full px-3 shrink-0 border-border/60">
+              <Save className="w-3.5 h-3.5" />
+            </Button>
+            <Button type="button" onClick={onContinue} disabled={savingDraft || continueBlocked} data-testid="apply-continue-mobile" className="rounded-full flex-1 shadow-sm">
+              {savingDraft && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Continue →
+            </Button>
+          </>
+        )}
+      </div>
+      {blockedHint && (
+        <p className="px-4 pb-2 text-[11px] font-medium text-danger/80 text-right" data-testid="apply-blocked-hint-mobile" role="status">
+          {blockedHint}
+        </p>
+      )}
     </div>
   );
 }
 
-function PartyTravelerTabs({ party, activeIndex, onSelectTraveler, testIdPrefix = "party-tab" }) {
+function PartyTravelerTabs({ party, activeIndex, onSelectTraveler, testIdPrefix = "party-tab", sticky = false }) {
   if (!party || party.length <= 1) return null;
   return (
     <div
       role="tablist"
       aria-label="Travelers in this application"
-      className="flex gap-2 overflow-x-auto mb-4 pb-1"
+      className={cn(
+        "flex gap-2 overflow-x-auto mb-4 pb-1",
+        sticky && "sticky top-16 z-10 -mx-1 px-1 py-2 bg-[var(--glass)]/95 backdrop-blur-sm"
+      )}
       data-testid={`${testIdPrefix}-list`}
     >
       {party.map((m, i) => {
@@ -1071,7 +1178,13 @@ function TravelerStep({
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="mb-4">
-        <h2 className="font-display text-xl text-navy mb-0.5">Traveler details</h2>
+        <h2
+          tabIndex={-1}
+          data-apply-step-heading
+          className="font-display text-xl text-navy mb-0.5 outline-none"
+        >
+          Traveler details
+        </h2>
         <p className="text-sm text-ink-muted">
           {requiresPassport
             ? "As per your passport. We only accept Indian passports. Add family members if traveling together."
@@ -1205,125 +1318,140 @@ function TravelerStep({
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
-        <Field label={requiresPassport ? "Full name (as on passport)" : "Full name"} required>
-          <Input data-testid="traveler-name" value={traveler.full_name || ""} onChange={(e) => upd("full_name", e.target.value)} />
-          <OCRFieldStatus status={ocrStatuses.full_name} />
-        </Field>
-        <Field label="Date of birth" required>
-          <DatePicker
-            data-testid="traveler-dob"
-            value={traveler.dob || null}
-            onChange={handleDobChange}
-            fromYear={1940}
-            toYear={new Date().getFullYear()}
-            clearable={false}
-          />
-          <OCRFieldStatus status={ocrStatuses.dob} />
-        </Field>
-        <Field label="Relationship">
-          <SearchableSelect
-            data-testid="traveler-relationship"
-            clearable={false}
-            value={traveler.relationship || (activeIndex === 0 ? "self" : "other")}
-            onChange={(v) => upd("relationship", v || "other")}
-            options={[
-              { value: "self", label: "Self" },
-              { value: "spouse", label: "Spouse" },
-              { value: "child", label: "Child" },
-              { value: "parent", label: "Parent" },
-              { value: "other", label: "Other" },
-            ]}
-          />
-        </Field>
-        {requiresPassport && (
-          <>
-            <Field label="Passport number" required>
-              <Input
-                data-testid="traveler-passport"
-                value={traveler.passport_number || ""}
-                onChange={(e) => upd("passport_number", e.target.value.toUpperCase())}
-              />
-              <OCRFieldStatus status={ocrStatuses.passport_number} />
+      <div className="space-y-6">
+        <section>
+          <h3 className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-3">Personal</h3>
+          <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
+            <Field label={requiresPassport ? "Full name (as on passport)" : "Full name"} required>
+              <Input data-testid="traveler-name" value={traveler.full_name || ""} onChange={(e) => upd("full_name", e.target.value)} />
+              <OCRFieldStatus status={ocrStatuses.full_name} />
             </Field>
-            <Field label="Passport expiry" required>
+            <Field label="Date of birth" required>
               <DatePicker
-                data-testid="traveler-passport-expiry"
-                value={traveler.passport_expiry_date || null}
-                onChange={handleExpiryChange}
-                fromYear={new Date().getFullYear() - 1}
-                toYear={new Date().getFullYear() + 20}
+                data-testid="traveler-dob"
+                value={traveler.dob || null}
+                onChange={handleDobChange}
+                fromYear={1940}
+                toYear={new Date().getFullYear()}
                 clearable={false}
               />
-              <OCRFieldStatus status={ocrStatuses.passport_expiry_date} />
-              {traveler.passport_expiry_date && !passportValid ? (
-                <p className="text-xs text-danger mt-1" data-testid="passport-validity-error">
-                  Must be valid at least {passportMinMonths} more month{passportMinMonths === 1 ? "" : "s"} — please renew before applying.
-                </p>
-              ) : (
-                <p className="text-xs text-ink-muted mt-1">
-                  Must be valid at least {passportMinMonths} month{passportMinMonths === 1 ? "" : "s"} from today.
-                </p>
-              )}
+              <OCRFieldStatus status={ocrStatuses.dob} />
             </Field>
-            <Field label="Passport issue date">
-              <DatePicker
-                data-testid="traveler-issue"
-                value={traveler.passport_issue_date || null}
-                onChange={handleIssueChange}
-                fromYear={1990}
-                toYear={new Date().getFullYear()}
-              />
-              <OCRFieldStatus status={ocrStatuses.passport_issue_date} />
-            </Field>
-            <Field label="Gender">
+            <Field label="Relationship">
               <SearchableSelect
-                data-testid="traveler-gender"
-                clearable
-                placeholder="Select…"
-                searchPlaceholder="Search…"
-                value={traveler.gender || null}
-                onChange={(v) => upd("gender", v || "")}
+                data-testid="traveler-relationship"
+                clearable={false}
+                value={traveler.relationship || (activeIndex === 0 ? "self" : "other")}
+                onChange={(v) => upd("relationship", v || "other")}
                 options={[
-                  { value: "Male", label: "Male" },
-                  { value: "Female", label: "Female" },
-                  { value: "Other", label: "Other" },
+                  { value: "self", label: "Self" },
+                  { value: "spouse", label: "Spouse" },
+                  { value: "child", label: "Child" },
+                  { value: "parent", label: "Parent" },
+                  { value: "other", label: "Other" },
                 ]}
               />
-              <OCRFieldStatus status={ocrStatuses.gender} />
             </Field>
-            <Field label="Nationality">
-              <SearchableSelect
-                data-testid="traveler-nationality"
-                clearable
-                placeholder="Select…"
-                searchPlaceholder="Search…"
-                value={traveler.nationality || null}
-                onChange={(v) => upd("nationality", v || "")}
-                options={[
-                  { value: "IND", label: "Indian (IND)" },
-                  { value: "NPL", label: "Nepalese (NPL)" },
-                  { value: "BGD", label: "Bangladeshi (BGD)" },
-                  { value: "LKA", label: "Sri Lankan (LKA)" },
-                  { value: "OTHER", label: "Other" },
-                ]}
-              />
-              <OCRFieldStatus status={ocrStatuses.nationality} />
-            </Field>
-          </>
+          </div>
+        </section>
+
+        {requiresPassport && (
+          <section>
+            <h3 className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-3">Passport</h3>
+            <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
+              <Field label="Passport number" required>
+                <Input
+                  data-testid="traveler-passport"
+                  value={traveler.passport_number || ""}
+                  onChange={(e) => upd("passport_number", e.target.value.toUpperCase())}
+                />
+                <OCRFieldStatus status={ocrStatuses.passport_number} />
+              </Field>
+              <Field label="Passport expiry" required>
+                <DatePicker
+                  data-testid="traveler-passport-expiry"
+                  value={traveler.passport_expiry_date || null}
+                  onChange={handleExpiryChange}
+                  fromYear={new Date().getFullYear() - 1}
+                  toYear={new Date().getFullYear() + 20}
+                  clearable={false}
+                />
+                <OCRFieldStatus status={ocrStatuses.passport_expiry_date} />
+                {traveler.passport_expiry_date && !passportValid ? (
+                  <p className="text-xs text-danger mt-1" data-testid="passport-validity-error">
+                    Must be valid at least {passportMinMonths} more month{passportMinMonths === 1 ? "" : "s"} — please renew before applying.
+                  </p>
+                ) : (
+                  <p className="text-xs text-ink-muted mt-1">
+                    Must be valid at least {passportMinMonths} month{passportMinMonths === 1 ? "" : "s"} from today.
+                  </p>
+                )}
+              </Field>
+              <Field label="Passport issue date">
+                <DatePicker
+                  data-testid="traveler-issue"
+                  value={traveler.passport_issue_date || null}
+                  onChange={handleIssueChange}
+                  fromYear={1990}
+                  toYear={new Date().getFullYear()}
+                />
+                <OCRFieldStatus status={ocrStatuses.passport_issue_date} />
+              </Field>
+              <Field label="Gender">
+                <SearchableSelect
+                  data-testid="traveler-gender"
+                  clearable
+                  placeholder="Select…"
+                  searchPlaceholder="Search…"
+                  value={traveler.gender || null}
+                  onChange={(v) => upd("gender", v || "")}
+                  options={[
+                    { value: "Male", label: "Male" },
+                    { value: "Female", label: "Female" },
+                    { value: "Other", label: "Other" },
+                  ]}
+                />
+                <OCRFieldStatus status={ocrStatuses.gender} />
+              </Field>
+              <Field label="Nationality">
+                <SearchableSelect
+                  data-testid="traveler-nationality"
+                  clearable
+                  placeholder="Select…"
+                  searchPlaceholder="Search…"
+                  value={traveler.nationality || null}
+                  onChange={(v) => upd("nationality", v || "")}
+                  options={[
+                    { value: "IND", label: "Indian (IND)" },
+                    { value: "NPL", label: "Nepalese (NPL)" },
+                    { value: "BGD", label: "Bangladeshi (BGD)" },
+                    { value: "LKA", label: "Sri Lankan (LKA)" },
+                    { value: "OTHER", label: "Other" },
+                  ]}
+                />
+                <OCRFieldStatus status={ocrStatuses.nationality} />
+              </Field>
+            </div>
+          </section>
         )}
-        <Field label="Phone" required>
-          <PhoneField
-            variant="static"
-            data-testid="traveler-phone"
-            value={traveler.phone || ""}
-            onChange={(v) => upd("phone", v)}
-            error={(traveler.phone || "").trim() && !isValidPhone(traveler.phone) ? "Invalid for selected country" : undefined}
-          />
-        </Field>
-        <Field label="Email" required>
-          <Input type="email" data-testid="traveler-email" value={traveler.email || ""} onChange={(e) => upd("email", e.target.value)} />
-        </Field>
+
+        <section>
+          <h3 className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-3">Contact</h3>
+          <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
+            <Field label="Phone" required>
+              <PhoneField
+                variant="static"
+                data-testid="traveler-phone"
+                value={traveler.phone || ""}
+                onChange={(v) => upd("phone", v)}
+                error={(traveler.phone || "").trim() && !isValidPhone(traveler.phone) ? "Invalid for selected country" : undefined}
+              />
+            </Field>
+            <Field label="Email" required>
+              <Input type="email" data-testid="traveler-email" value={traveler.email || ""} onChange={(e) => upd("email", e.target.value)} />
+            </Field>
+          </div>
+        </section>
       </div>
 
       <label className="flex items-center gap-2 mt-6 text-sm text-ink-muted cursor-pointer" data-testid="save-as-profile-wrap">
@@ -1343,13 +1471,19 @@ function FieldsStep({ schema, fields, setFields, party, activeIndex, onSelectTra
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="mb-4">
-        <h2 className="font-display text-xl text-navy mb-0.5">A few more details</h2>
+        <h2
+          tabIndex={-1}
+          data-apply-step-heading
+          className="font-display text-xl text-navy mb-0.5 outline-none"
+        >
+          A few more details
+        </h2>
         <p className="text-sm text-ink-muted">Specific to {schema.country_name}. Complete for each traveler.</p>
       </div>
-      <PartyTravelerTabs party={party} activeIndex={activeIndex} onSelectTraveler={onSelectTraveler} testIdPrefix="details-party-tab" />
+      <PartyTravelerTabs party={party} activeIndex={activeIndex} onSelectTraveler={onSelectTraveler} testIdPrefix="details-party-tab" sticky />
       <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
         {schema.fields.map((f) => (
-          <Field key={f.field_key} label={f.label} required={f.required}>
+          <Field key={f.field_key} label={f.label} required={Boolean(f.required)}>
             {f.type === "dropdown" ? (
               <SearchableSelect
                 data-testid={`field-${f.field_key}`}
@@ -1390,28 +1524,91 @@ function FieldsStep({ schema, fields, setFields, party, activeIndex, onSelectTra
 
 function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTraveler, productId, draftId, sessionId }) {
   const [showMobileModal, setShowMobileModal] = useState(false);
+  const [showOptional, setShowOptional] = useState(false);
+  const [showFloatingChip, setShowFloatingChip] = useState(false);
+  const mobileBandRef = useRef(null);
 
-  const requiredDocs = (schema.documents || []).filter((d) => d.required !== false);
-  const totalCount = requiredDocs.length || (schema.documents || []).length;
-  const uploadedCount = requiredDocs.filter((d) => uploads[d.doc_key]).length;
-  const progressPct = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 100;
+  const allDocs = schema.documents || [];
+  const requiredDocs = allDocs.filter((d) => d.required !== false);
+  const optionalDocs = allDocs.filter((d) => d.required === false);
+  const requiredTotal = requiredDocs.length;
+  const requiredUploaded = requiredDocs.filter((d) => uploads[d.doc_key]).length;
+  const progressPct = requiredTotal > 0 ? Math.round((requiredUploaded / requiredTotal) * 100) : 100;
+  const missingRequired = requiredDocs.filter((d) => !uploads[d.doc_key]);
+  const missingPreview = missingRequired.slice(0, 5);
+  const missingExtra = Math.max(0, missingRequired.length - missingPreview.length);
 
   const showMobileUpload = (party?.length || 1) <= 1;
+
+  useEffect(() => {
+    if (!showMobileUpload) {
+      setShowFloatingChip(false);
+      return undefined;
+    }
+    const el = mobileBandRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowFloatingChip(!entry.isIntersecting);
+      },
+      { root: null, threshold: 0, rootMargin: "-64px 0px 0px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showMobileUpload]);
+
+  const renderDocList = (docs) => (
+    <div className="space-y-3">
+      {docs.map((d) => (
+        <DocUploader
+          key={`${party?.[activeIndex]?.id || "solo"}-${d.doc_key}`}
+          doc={d}
+          value={uploads[d.doc_key]}
+          sessionId={sessionId}
+          onUpload={(u) => {
+            setUploads((prev) => {
+              const updated = { ...prev, [d.doc_key]: u };
+              if (sessionId) {
+                api
+                  .post("/documents/notify-upload", {
+                    session_id: sessionId,
+                    doc_key: d.doc_key,
+                    document_type: d.doc_key,
+                    name: d.name,
+                    status: "uploaded",
+                    file_url: u.file_url || "",
+                    filename: u.filename || `${d.doc_key}.jpg`,
+                    storage_key: u.storage_key || null,
+                  })
+                  .catch(() => {});
+              }
+              return updated;
+            });
+          }}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="mb-4">
-        <h2 className="font-display text-xl text-navy mb-0.5">Upload your documents</h2>
+        <h2
+          tabIndex={-1}
+          data-apply-step-heading
+          className="font-display text-xl text-navy mb-0.5 outline-none"
+        >
+          Upload your documents
+        </h2>
         <p className="text-sm text-ink-muted">
           Files are private and encrypted. Only your consultant sees them.
           {party?.length > 1 ? " Upload documents for each traveler." : ""}
         </p>
       </div>
-      <PartyTravelerTabs party={party} activeIndex={activeIndex} onSelectTraveler={onSelectTraveler} testIdPrefix="docs-party-tab" />
+      <PartyTravelerTabs party={party} activeIndex={activeIndex} onSelectTraveler={onSelectTraveler} testIdPrefix="docs-party-tab" sticky />
 
-      {/* Multi-traveler: session is product-scoped and draft PATCH mirrors to travelers[0] only */}
       {showMobileUpload && (
-        <div className="sticky top-2 z-20 mb-5 -mx-0.5 px-0.5">
+        <div ref={mobileBandRef} className="sticky top-16 md:top-20 z-20 mb-5 -mx-0.5 px-0.5">
           <div className="rounded-2xl border border-teal/30 bg-gradient-to-br from-teal/10 via-white/95 to-white/90 backdrop-blur-md p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm ring-1 ring-teal/10">
             <div className="flex items-center gap-3.5 text-center sm:text-left w-full sm:w-auto">
               <div className="w-12 h-12 rounded-2xl bg-teal/15 text-teal flex items-center justify-center shrink-0 shadow-xs border border-teal/20">
@@ -1447,10 +1644,10 @@ function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTra
         </div>
       )}
 
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-white/80 border border-border/80 shadow-xs mb-5">
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white/80 border border-border/80 shadow-xs mb-4">
         <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
-          <span className="font-medium text-navy">
-            {uploadedCount} of {totalCount} uploaded
+          <span className="font-medium text-navy" data-testid="docs-progress-label">
+            {requiredUploaded} of {requiredTotal} required uploaded
           </span>
           <span className="font-mono font-semibold text-teal text-xs tracking-wider">
             {progressPct}%
@@ -1462,38 +1659,58 @@ function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTra
             style={{ width: `${progressPct}%` }}
           />
         </div>
+        {missingRequired.length > 0 && (
+          <p className="text-xs text-ink-muted mt-2.5 leading-relaxed" data-testid="docs-missing-summary">
+            Still needed:{" "}
+            {missingPreview.map((d) => d.name).join(", ")}
+            {missingExtra > 0 ? ` and ${missingExtra} more` : ""}
+          </p>
+        )}
       </div>
 
-      <div className="space-y-4">
-        {(schema.documents || []).map((d) => (
-          <DocUploader
-            key={`${party?.[activeIndex]?.id || "solo"}-${d.doc_key}`}
-            doc={d}
-            value={uploads[d.doc_key]}
-            sessionId={sessionId}
-            onUpload={(u) => {
-              setUploads((prev) => {
-                const updated = { ...prev, [d.doc_key]: u };
-                if (sessionId) {
-                  api
-                    .post("/documents/notify-upload", {
-                      session_id: sessionId,
-                      doc_key: d.doc_key,
-                      document_type: d.doc_key,
-                      name: d.name,
-                      status: "uploaded",
-                      file_url: u.file_url || "",
-                      filename: u.filename || `${d.doc_key}.jpg`,
-                      storage_key: u.storage_key || null,
-                    })
-                    .catch(() => {});
-                }
-                return updated;
-              });
-            }}
-          />
-        ))}
-      </div>
+      {requiredDocs.length > 0 && (
+        <div className="mb-5">
+          <h3 className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-3">Required</h3>
+          {renderDocList(requiredDocs)}
+        </div>
+      )}
+
+      {optionalDocs.length > 0 && (
+        <div className="mb-2">
+          <button
+            type="button"
+            onClick={() => setShowOptional((v) => !v)}
+            data-testid="docs-optional-toggle"
+            aria-expanded={showOptional}
+            className="w-full flex items-center justify-between gap-2 rounded-xl border border-border bg-white/70 px-4 py-3 text-left text-sm text-navy hover:border-navy/30 transition-colors"
+          >
+            <span className="font-medium">
+              {showOptional ? "Hide" : "Show"} {optionalDocs.length} optional document{optionalDocs.length === 1 ? "" : "s"}
+            </span>
+            <ChevronDown className={cn("w-4 h-4 text-ink-muted transition-transform", showOptional && "rotate-180")} />
+          </button>
+          {showOptional && (
+            <div className="mt-3">
+              {renderDocList(optionalDocs)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {requiredDocs.length === 0 && optionalDocs.length === 0 && renderDocList(allDocs)}
+
+      {showMobileUpload && showFloatingChip && (
+        <button
+          type="button"
+          onClick={() => setShowMobileModal(true)}
+          data-testid="upload-from-mobile-floating"
+          aria-label="Upload documents from your mobile phone using a QR code"
+          className="fixed bottom-36 right-4 z-30 md:bottom-8 inline-flex items-center gap-2 rounded-full bg-navy text-white px-4 py-2.5 text-sm font-medium shadow-lg ring-1 ring-navy/20"
+        >
+          <QrCode className="w-4 h-4" aria-hidden="true" />
+          Upload from Mobile
+        </button>
+      )}
 
       {showMobileUpload && (
         <MobileUploadModal
@@ -1503,7 +1720,7 @@ function DocsStep({ schema, uploads, setUploads, party, activeIndex, onSelectTra
           draftId={draftId}
           sessionId={sessionId}
           uploadedDocs={uploads}
-          totalCount={totalCount}
+          totalCount={requiredTotal || allDocs.length}
         />
       )}
     </div>
@@ -1576,7 +1793,43 @@ function DocUploader({ doc, value, sessionId, onUpload }) {
     }
   };
 
-  const inp = "w-full h-9 px-4 border border-border rounded-lg bg-white/80 text-sm text-ink outline-none focus:bg-white focus:ring-2 focus:ring-navy focus:border-navy transition-all shadow-sm";
+  if (value) {
+    return (
+      <div className="px-4 py-3 bg-teal/5 border border-teal/20 rounded-xl" data-testid={`upload-${doc.doc_key}`}>
+        <div className="flex items-center gap-3">
+          <CheckCircle2 className="w-4 h-4 text-teal shrink-0" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-sm text-navy truncate">{doc.name}</span>
+              <Stamp tone="success" size="sm">Uploaded</Stamp>
+            </div>
+            <p className="text-xs text-teal truncate mt-0.5">
+              {value.filename}
+              {value.from_vault && <span className="text-ink-muted ml-1">(from vault)</span>}
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5">
+            <DocumentActions
+              fileUrl={value.file_url}
+              filename={value.filename}
+              testIdPrefix={`apply-doc-${doc.doc_key}`}
+            />
+            <label className="cursor-pointer inline-flex items-center justify-center gap-1 text-xs border border-ink/30 rounded-full px-3 py-1.5 hover:bg-ink hover:text-white transition-colors">
+              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              Replace
+              <input
+                type="file"
+                hidden
+                accept={(doc.formats || []).map((f) => "." + f).join(",")}
+                onChange={handle}
+                data-testid={`upload-input-${doc.doc_key}`}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 bg-surface border border-border rounded-xl" data-testid={`upload-${doc.doc_key}`}>
@@ -1585,12 +1838,7 @@ function DocUploader({ doc, value, sessionId, onUpload }) {
           <div className="flex items-center gap-2 flex-wrap">
             <FileText className="w-4 h-4 text-ink-muted shrink-0" />
             <span className="font-medium text-sm">{doc.name}</span>
-            {!doc.required && <span className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Optional</span>}
-            {value && (
-              <Stamp tone="success" size="sm">
-                Uploaded
-              </Stamp>
-            )}
+            {doc.required === false && <span className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Optional</span>}
           </div>
           {doc.description && <p className="text-xs text-ink-muted mt-1">{doc.description}</p>}
           <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -1609,19 +1857,6 @@ function DocUploader({ doc, value, sessionId, onUpload }) {
               </a>
             )}
           </div>
-          {value && (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <p className="text-xs text-teal truncate">
-                {value.filename}
-                {value.from_vault && <span className="text-ink-muted ml-1">(from vault)</span>}
-              </p>
-              <DocumentActions
-                fileUrl={value.file_url}
-                filename={value.filename}
-                testIdPrefix={`apply-doc-${doc.doc_key}`}
-              />
-            </div>
-          )}
         </div>
         <div className="shrink-0 flex flex-col gap-1.5">
           {vaultOptions.length > 0 && (
@@ -1631,7 +1866,7 @@ function DocUploader({ doc, value, sessionId, onUpload }) {
           )}
           <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 text-sm border border-ink rounded-full px-4 py-2 hover:bg-ink hover:text-white transition-colors">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            {value ? "Replace" : "Upload"}
+            Upload
             <input
               type="file"
               hidden
@@ -1675,17 +1910,46 @@ function DocUploader({ doc, value, sessionId, onUpload }) {
   );
 }
 
-function ReviewStep({ schema, party, requiresPassport }) {
+function ReviewStep({ schema, party, requiresPassport, activeSteps = [], onEditStep }) {
   const docs = schema.documents || [];
-  const requiredDocs = docs.filter((d) => d.required);
+  const requiredDocs = docs.filter((d) => d.required !== false);
+  const canEdit = (key) => activeSteps.some((s) => s.key === key) && typeof onEditStep === "function";
+
+  let missingDocCount = 0;
+  (party || []).forEach((m) => {
+    const um = uploadsMapFromArray(m.document_uploads);
+    missingDocCount += requiredDocs.filter((d) => !um[d.doc_key]).length;
+  });
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-start gap-3 mb-4">
         <div>
-          <h2 className="font-display text-xl text-navy mb-0.5">Review &amp; confirm</h2>
+          <h2
+            tabIndex={-1}
+            data-apply-step-heading
+            className="font-display text-xl text-navy mb-0.5 outline-none"
+          >
+            Review &amp; confirm
+          </h2>
           <p className="text-sm text-ink-muted">Please verify all details before payment. Incorrect info leads to rejection.</p>
         </div>
       </div>
+      {missingDocCount > 0 && (
+        <div className="mb-4 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger" data-testid="review-missing-docs" role="status">
+          {missingDocCount} required document{missingDocCount === 1 ? "" : "s"} still missing.
+          {canEdit("documents") && (
+            <button
+              type="button"
+              onClick={() => onEditStep("documents")}
+              className="ml-2 underline font-medium"
+              data-testid="review-edit-docs-banner"
+            >
+              Fix documents
+            </button>
+          )}
+        </div>
+      )}
       <div className="space-y-6">
         {(party || []).map((m, i) => {
           const um = uploadsMapFromArray(m.document_uploads);
@@ -1710,44 +1974,91 @@ function ReviewStep({ schema, party, requiresPassport }) {
           });
           return (
             <div key={m.id || i} data-testid={`review-traveler-${i}`}>
-              <ReviewBlock title={`${memberDisplayName(m, i)}${i === 0 ? " · Primary" : ""}`}>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">
+                  {memberDisplayName(m, i)}{i === 0 ? " · Primary" : ""}
+                </div>
+                {canEdit("traveler") && (
+                  <button
+                    type="button"
+                    onClick={() => onEditStep("traveler")}
+                    data-testid={`review-edit-traveler-${i}`}
+                    className="inline-flex items-center gap-1 text-xs text-teal hover:underline"
+                  >
+                    <Pencil className="w-3 h-3" /> Edit traveler
+                  </button>
+                )}
+              </div>
+              <div className="border border-border rounded-xl divide-y divide-border overflow-hidden">
                 {travelerEntries.map(([k, v]) => (
                   <ReviewRow key={k} label={humanizeKey(k)} value={v} />
                 ))}
-                {(schema.fields || []).length > 0 &&
-                  schema.fields.map((f) => (
-                    <ReviewRow key={f.field_key} label={f.label} value={(m.field_values || {})[f.field_key] || "—"} />
-                  ))}
-                {docs.length > 0 && (
-                  <div className="flex items-center justify-between px-4 py-3 text-sm gap-3">
-                    <span className="text-ink-muted">Documents</span>
-                    <span className="font-mono font-medium text-ink">
-                      {uploadedRequired}/{requiredDocs.length || docs.length} required uploaded
-                      {requiredDocs.length > 0 && uploadedRequired < requiredDocs.length ? " · incomplete" : ""}
-                    </span>
+              </div>
+
+              {(schema.fields || []).length > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Details</div>
+                    {canEdit("details") && (
+                      <button
+                        type="button"
+                        onClick={() => onEditStep("details")}
+                        data-testid={`review-edit-details-${i}`}
+                        className="inline-flex items-center gap-1 text-xs text-teal hover:underline"
+                      >
+                        <Pencil className="w-3 h-3" /> Edit details
+                      </button>
+                    )}
                   </div>
-                )}
-                {docs.map((d) => {
-                  const up = um[d.doc_key];
-                  return (
-                    <div key={d.doc_key} className="flex items-center justify-between px-4 py-3 text-sm gap-3 hover:bg-surface-card/50 transition-colors">
-                      <span className="text-ink-muted capitalize">{d.name}</span>
-                      <span className="flex flex-col items-end gap-1 min-w-0">
-                        <span className="text-ink font-mono truncate max-w-[40ch] text-right font-medium">
-                          {up?.filename || (d.required ? "MISSING" : "not provided")}
-                        </span>
-                        {up?.file_url && (
-                          <DocumentActions
-                            fileUrl={up.file_url}
-                            filename={up.filename}
-                            testIdPrefix={`review-doc-${i}-${d.doc_key}`}
-                          />
-                        )}
-                      </span>
+                  <div className="border border-border rounded-xl divide-y divide-border overflow-hidden">
+                    {schema.fields.map((f) => (
+                      <ReviewRow key={f.field_key} label={f.label} value={(m.field_values || {})[f.field_key] || "—"} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {docs.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">
+                      Documents · {uploadedRequired}/{requiredDocs.length || docs.length} required
                     </div>
-                  );
-                })}
-              </ReviewBlock>
+                    {canEdit("documents") && (
+                      <button
+                        type="button"
+                        onClick={() => onEditStep("documents")}
+                        data-testid={`review-edit-documents-${i}`}
+                        className="inline-flex items-center gap-1 text-xs text-teal hover:underline"
+                      >
+                        <Pencil className="w-3 h-3" /> Edit documents
+                      </button>
+                    )}
+                  </div>
+                  <div className="border border-border rounded-xl divide-y divide-border overflow-hidden">
+                    {docs.map((d) => {
+                      const up = um[d.doc_key];
+                      return (
+                        <div key={d.doc_key} className="flex items-center justify-between px-4 py-3 text-sm gap-3 hover:bg-surface-card/50 transition-colors">
+                          <span className="text-ink-muted capitalize">{d.name}</span>
+                          <span className="flex flex-col items-end gap-1 min-w-0">
+                            <span className={cn("font-mono truncate max-w-[40ch] text-right font-medium", !up && d.required !== false ? "text-danger" : "text-ink")}>
+                              {up?.filename || (d.required !== false ? "MISSING" : "not provided")}
+                            </span>
+                            {up?.file_url && (
+                              <DocumentActions
+                                fileUrl={up.file_url}
+                                filename={up.filename}
+                                testIdPrefix={`review-doc-${i}-${d.doc_key}`}
+                              />
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -1777,7 +2088,13 @@ function ReviewRow({ label, value }) {
 function PaymentStep({ breakdown, submit, submitting }) {
   return (
     <div>
-      <h2 className="font-display text-xl text-navy mb-1">Payment</h2>
+      <h2
+        tabIndex={-1}
+        data-apply-step-heading
+        className="font-display text-xl text-navy mb-1 outline-none"
+      >
+        Payment
+      </h2>
       <p className="text-sm text-ink-muted mb-4">Government fee includes GST; service fee excludes GST and is shown separately. No hidden charges.</p>
       <div className="bg-surface border border-border rounded-xl p-6 max-w-md mx-auto">
         {breakdown.headcount > 1 && (
