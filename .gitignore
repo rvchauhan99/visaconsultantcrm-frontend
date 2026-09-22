@@ -7,6 +7,10 @@ crm/build/
 **/build/
 **/coverage/
 
+# Local QA scratch (never commit)
+qa-evidence/
+test_reports/
+
 # Env / secrets
 .env
 .env.*
