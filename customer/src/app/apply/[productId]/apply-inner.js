@@ -749,7 +749,7 @@ export default function ApplyPageInner() {
     <div ref={applyRootRef} className="max-w-4xl mx-auto px-4 md:px-6 py-2 md:py-3 pb-40 md:pb-6" data-testid="apply-root">
       <div className="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
-          <span className="text-4xl md:text-5xl shrink-0 drop-shadow-sm">{schema.country_flag}</span>
+          {/* <span className="text-4xl md:text-5xl shrink-0 drop-shadow-sm">{schema.country_flag}</span> */}
           <div className="min-w-0">
             <h1 className="font-display text-3xl md:text-4xl text-navy leading-tight truncate">{schema.title}</h1>
             <div className="text-xs font-mono uppercase tracking-widest text-ink-muted mt-1.5 hidden md:block">
@@ -890,6 +890,115 @@ export default function ApplyPageInner() {
               </div>
           </div>
 
+          {/* Mobile-only: On Documents step, keep Fee Summary, Back, Save, Continue inside the same card */}
+          {currentStepKey === "documents" && (
+            <div className="md:hidden -mx-5 -mb-5 mt-6 border-t border-border/80 rounded-b-[24px] bg-white/60 overflow-hidden divide-y divide-border/60">
+              {/* Fee summary row */}
+              <Drawer>
+                <DrawerTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/80 transition-colors"
+                    aria-label="Open fee summary"
+                  >
+                    <div>
+                      <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">
+                        Fee summary
+                      </div>
+                      <div className="font-display text-base text-navy leading-tight">
+                        {INR.format(feeBreakdown.total)}
+                      </div>
+                      {feeBreakdown.headcount > 1 && (
+                        <div className="text-[10px] font-mono uppercase text-ink-muted">
+                          {feeBreakdown.headcount} × {INR.format(feeBreakdown.unitTotal)}
+                        </div>
+                      )}
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-xs text-teal font-medium">
+                      Details <ChevronDown className="w-4 h-4" />
+                    </span>
+                  </button>
+                </DrawerTrigger>
+                <DrawerContent className="px-5 pb-8">
+                  <DrawerHeader>
+                    <DrawerTitle className="font-display text-navy">Fee breakdown</DrawerTitle>
+                  </DrawerHeader>
+                  <div className="space-y-2 text-sm">
+                    {feeBreakdown.headcount > 1 && (
+                      <div className="flex justify-between text-ink-muted pb-2 border-b border-border">
+                        <span>{feeBreakdown.headcount} travelers × unit fee</span>
+                        <span className="font-mono">{feeBreakdown.headcount} × {INR.format(feeBreakdown.unitTotal)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-ink-muted">Government fee (incl. GST)</span>
+                      <span className="font-mono">{INR.format(feeBreakdown.govtFee)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-ink-muted">Service fee (excl. GST)</span>
+                      <span className="font-mono">{INR.format(feeBreakdown.serviceFee)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-ink-muted">GST on service ({feeBreakdown.gstPercent}%)</span>
+                      <span className="font-mono">{INR.format(feeBreakdown.serviceGst)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-border font-medium">
+                      <span>Total</span>
+                      <span className="font-display text-xl text-navy">{INR.format(feeBreakdown.total)}</span>
+                    </div>
+                    <p className="text-xs text-ink-muted pt-2">Processing about {schema.processing_time_days} days · no hidden charges</p>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+
+              {/* Controls row: Back icon, Save icon, Continue button */}
+              <div className="px-5 pt-3 pb-4 space-y-2 bg-white/40">
+                <div className="flex items-center gap-2.5">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={goBack}
+                    disabled={step === 0 || savingDraft}
+                    data-testid="apply-back-mobile"
+                    aria-label="Go back"
+                    className="w-10 h-10 rounded-full p-0 flex items-center justify-center shrink-0 bg-white border border-border hover:bg-surface-card disabled:opacity-30"
+                  >
+                    ←
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={saveAndExit}
+                    disabled={savingDraft || submitting}
+                    data-testid="apply-save-exit-mobile"
+                    aria-label="Save and exit"
+                    className="w-10 h-10 rounded-xl p-0 flex items-center justify-center shrink-0 bg-white border border-border hover:bg-surface-card disabled:opacity-30"
+                  >
+                    <Save className="w-4 h-4 text-ink" />
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={goNext}
+                    disabled={savingDraft || continueBlocked}
+                    data-testid="apply-continue-mobile"
+                    className="rounded-full flex-1 h-10 text-sm font-medium shadow-sm transition-all"
+                  >
+                    {savingDraft && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Continue →
+                  </Button>
+                </div>
+                {blockedHint && (
+                  <p
+                    className="text-xs font-medium text-danger/90 text-right pr-1"
+                    data-testid="apply-blocked-hint-mobile-inline"
+                    role="status"
+                  >
+                    {blockedHint}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 pt-4 border-t border-[var(--border-glass)] hidden md:block">
             <div className="flex items-center justify-between">
               <Button type="button" variant="secondary" onClick={goBack} disabled={step === 0 || savingDraft} data-testid="apply-back" className="rounded-full px-6 bg-white/50 hover:bg-white">
@@ -930,6 +1039,7 @@ export default function ApplyPageInner() {
         onBack={goBack}
         onSaveExit={saveAndExit}
         onContinue={goNext}
+        hideOnMobile={currentStepKey === "documents"}
       />
     </div>
   );
@@ -947,7 +1057,9 @@ function ApplyMobileFooter({
   onBack,
   onSaveExit,
   onContinue,
+  hideOnMobile,
 }) {
+  if (hideOnMobile) return null;
   return (
     <div
       className="md:hidden fixed bottom-16 inset-x-0 z-40 border-t border-border bg-white/95 backdrop-blur safe-area-pb"
@@ -1326,17 +1438,18 @@ function TravelerStep({
               <Input data-testid="traveler-name" value={traveler.full_name || ""} onChange={(e) => upd("full_name", e.target.value)} />
               <OCRFieldStatus status={ocrStatuses.full_name} />
             </Field>
-            <Field label="Date of birth" required>
-              <DatePicker
-                data-testid="traveler-dob"
-                value={traveler.dob || null}
-                onChange={handleDobChange}
-                fromYear={1940}
-                toYear={new Date().getFullYear()}
-                clearable={false}
-              />
-              <OCRFieldStatus status={ocrStatuses.dob} />
-            </Field>
+      <Field label="Date of birth" required>
+  <DatePicker
+    data-testid="traveler-dob"
+    value={traveler.dob || null}
+    onChange={handleDobChange}
+    fromYear={1940}
+    toYear={new Date().getFullYear()}
+    max={new Date()}
+    clearable={false}
+  />
+  <OCRFieldStatus status={ocrStatuses.dob} />
+</Field>
             <Field label="Relationship">
               <SearchableSelect
                 data-testid="traveler-relationship"
@@ -1368,14 +1481,15 @@ function TravelerStep({
                 <OCRFieldStatus status={ocrStatuses.passport_number} />
               </Field>
               <Field label="Passport expiry" required>
-                <DatePicker
-                  data-testid="traveler-passport-expiry"
-                  value={traveler.passport_expiry_date || null}
-                  onChange={handleExpiryChange}
-                  fromYear={new Date().getFullYear() - 1}
-                  toYear={new Date().getFullYear() + 20}
-                  clearable={false}
-                />
+            <DatePicker
+  data-testid="traveler-passport-expiry"
+  value={traveler.passport_expiry_date || null}
+  onChange={handleExpiryChange}
+  min={new Date()}
+  fromYear={new Date().getFullYear()}
+  toYear={new Date().getFullYear() + 20}
+  clearable={false}
+/>
                 <OCRFieldStatus status={ocrStatuses.passport_expiry_date} />
                 {traveler.passport_expiry_date && !passportValid ? (
                   <p className="text-xs text-danger mt-1" data-testid="passport-validity-error">
@@ -1388,13 +1502,15 @@ function TravelerStep({
                 )}
               </Field>
               <Field label="Passport issue date">
-                <DatePicker
-                  data-testid="traveler-issue"
-                  value={traveler.passport_issue_date || null}
-                  onChange={handleIssueChange}
-                  fromYear={1990}
-                  toYear={new Date().getFullYear()}
-                />
+               <DatePicker
+  data-testid="traveler-issue"
+  value={traveler.passport_issue_date || null}
+  onChange={handleIssueChange}
+  min={new Date("1990-01-01")}
+  max={new Date()}
+  fromYear={1990}
+  toYear={new Date().getFullYear()}
+/>
                 <OCRFieldStatus status={ocrStatuses.passport_issue_date} />
               </Field>
               <Field label="Gender">
@@ -1495,13 +1611,22 @@ function FieldsStep({ schema, fields, setFields, party, activeIndex, onSelectTra
                 options={(f.options || []).map((o) => ({ value: o, label: o }))}
               />
             ) : f.type === "date" ? (
-              <DatePicker
-                data-testid={`field-${f.field_key}`}
-                value={fields[f.field_key] || null}
-                onChange={(v) => upd(f.field_key, v || "")}
-                clearable={!f.required}
-              />
-            ) : f.type === "number" ? (
+  <DatePicker
+    data-testid={`field-${f.field_key}`}
+    value={fields[f.field_key] || null}
+    onChange={(v) => upd(f.field_key, v || "")}
+    min={
+      f.field_key === "intended_departure_date"
+        ? fields["intended_arrival_date"] || new Date()
+        : new Date()
+    }
+    disabled={
+      f.field_key === "intended_departure_date" &&
+      !fields["intended_arrival_date"]
+    }
+    clearable={!f.required}
+  />
+): f.type === "number" ? (
               <Input
                 type="number"
                 data-testid={`field-${f.field_key}`}

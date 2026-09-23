@@ -230,7 +230,7 @@ export default function Apply() {
                 {step === 3 && <ReviewStep schema={schema} traveler={traveler} fields={fields} uploads={uploads} />}
                 {step === 4 && <PaymentStep schema={schema} total={total} submit={submit} submitting={submitting} />}
 
-                <div className="mt-4 flex items-center justify-between pt-3 border-t border-border">
+                <div className={`mt-4 flex items-center justify-between pt-3 border-t border-border${step === 2 ? " hidden md:flex" : ""}`}>
                     <button
                         onClick={() => setStep((s) => Math.max(0, s - 1))}
                         disabled={step === 0}
@@ -261,16 +261,84 @@ export default function Apply() {
                         </div>
                     )}
                 </div>
+
+                {/* Mobile-only: Fee summary + nav controls fused to bottom of card on Documents step */}
+                {step === 2 && (
+                    <div className="md:hidden -mx-4 -mb-4 mt-3 border-t border-border rounded-b-xl overflow-hidden">
+                        {/* Fee Summary row */}
+                        <Drawer>
+                            <DrawerTrigger asChild>
+                                <button type="button" className="w-full flex items-center justify-between px-5 py-3 text-left">
+                                    <div>
+                                        <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted">Fee summary</div>
+                                        <div className="font-display text-lg text-navy">{INR.format(total)}</div>
+                                    </div>
+                                    <span className="inline-flex items-center gap-1 text-xs text-teal">
+                                        Details <ChevronUp className="w-4 h-4" />
+                                    </span>
+                                </button>
+                            </DrawerTrigger>
+                            <DrawerContent className="px-5 pb-8">
+                                <DrawerHeader>
+                                    <DrawerTitle className="font-display text-navy">Fee breakdown</DrawerTitle>
+                                </DrawerHeader>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between"><span className="text-ink-muted">Government fee (incl. GST)</span><span className="font-mono">{INR.format(schema.fees?.govt_fee || 0)}</span></div>
+                                    <div className="flex justify-between"><span className="text-ink-muted">Service fee (excl. GST)</span><span className="font-mono">{INR.format(schema.fees?.service_fee || 0)}</span></div>
+                                    <div className="flex justify-between pt-2 border-t border-border font-medium"><span>Total</span><span className="font-display text-xl text-navy">{INR.format(total)}</span></div>
+                                    <p className="text-xs text-ink-muted pt-2">Processing about {schema.processing_time_days} days · no hidden charges</p>
+                                </div>
+                            </DrawerContent>
+                        </Drawer>
+
+                        {/* Nav controls row — Back, Save, Continue */}
+                        <div className="border-t border-border px-4 pt-3 pb-4 space-y-2 bg-white/40">
+                            <div className="flex items-center gap-2.5">
+                                <button
+                                    onClick={() => setStep((s) => Math.max(0, s - 1))}
+                                    disabled={step === 0}
+                                    data-testid="apply-back-mobile"
+                                    aria-label="Go back"
+                                    className="w-10 h-10 rounded-full border border-border bg-white text-ink-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                                >
+                                    ←
+                                </button>
+                                <button
+                                    onClick={saveAndExit}
+                                    disabled={savingDraft || submitting}
+                                    data-testid="apply-save-exit-mobile"
+                                    aria-label="Save and exit"
+                                    className="w-10 h-10 rounded-xl border border-border bg-white text-ink hover:bg-surface-card disabled:opacity-30 flex items-center justify-center shrink-0"
+                                >
+                                    <Save className="w-4 h-4 text-ink" />
+                                </button>
+                                <button
+                                    onClick={goNext}
+                                    data-testid="apply-continue-mobile"
+                                    disabled={savingDraft || !allRequiredUploaded}
+                                    className="flex-1 h-10 text-sm px-6 rounded-full bg-navy text-white hover:bg-navy-hover disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-sm"
+                                >
+                                    {savingDraft && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Continue →
+                                </button>
+                            </div>
+                            {!allRequiredUploaded && (
+                                <p className="text-xs text-right text-danger pr-1" data-testid="docs-required-hint">Upload all required documents to continue</p>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            <ApplyFeeSheet schema={schema} total={total} processingDays={schema.processing_time_days} />
+            <ApplyFeeSheet schema={schema} total={total} processingDays={schema.processing_time_days} hideOnMobile={step === 2} />
+
+            {/* Mobile nav buttons are now inside the card above — nothing needed here */}
         </div>
     );
 }
 
-function ApplyFeeSheet({ schema, total, processingDays }) {
+function ApplyFeeSheet({ schema, total, processingDays, hideOnMobile }) {
     return (
-        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-white/95 backdrop-blur safe-area-pb" data-testid="apply-fee-sheet">
+        <div className={`md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-white/95 backdrop-blur safe-area-pb${hideOnMobile ? " hidden" : ""}`} data-testid="apply-fee-sheet">
             <Drawer>
                 <DrawerTrigger asChild>
                     <button type="button" className="w-full flex items-center justify-between px-5 py-3 text-left">

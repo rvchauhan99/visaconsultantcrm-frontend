@@ -463,35 +463,37 @@ export default function CustomerShell({ children }) {
         <FooterContent />
       </footer>
 
-      <nav
-        className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40"
-        aria-label="Mobile navigation"
-      >
-        <div className="atlys-fab">
-          <MobileBottomLink
-            href="/"
-            icon={
-              <Image
-                src="/brand/explore-icon.png"
-                alt=""
-                width={20}
-                height={20}
-                className="w-5 h-5 object-contain"
-                aria-hidden
-              />
-            }
-            active={pathname === "/"}
-            testid="mobile-nav-visas"
-          />
-          <div className="w-px h-5 bg-border/80" />
-          <MobileBottomLink
-            href={customer ? "/account" : "/auth"}
-            icon={<Briefcase className="w-4 h-4" />}
-            active={pathname.startsWith("/account") || pathname.startsWith("/status")}
-            testid="mobile-nav-apps"
-          />
-        </div>
-      </nav>
+      {!pathname.startsWith("/apply") && (
+        <nav
+          className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40"
+          aria-label="Mobile navigation"
+        >
+          <div className="atlys-fab">
+            <MobileBottomLink
+              href="/"
+              icon={
+                <Image
+                  src="/brand/explore-icon.png"
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="w-5 h-5 object-contain"
+                  aria-hidden
+                />
+              }
+              active={pathname === "/"}
+              testid="mobile-nav-visas"
+            />
+            <div className="w-px h-5 bg-border/80" />
+            <MobileBottomLink
+              href={customer ? "/account" : "/auth"}
+              icon={<Briefcase className="w-4 h-4" />}
+              active={pathname.startsWith("/account") || pathname.startsWith("/status")}
+              testid="mobile-nav-apps"
+            />
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
