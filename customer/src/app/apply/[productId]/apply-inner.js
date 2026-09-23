@@ -4,6 +4,8 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { Copy } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Archive,
   Check,
@@ -100,8 +102,10 @@ export default function ApplyPageInner() {
   const [fields, setFields] = useState({});
   const [uploads, setUploads] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [bankDetails, setBankDetails] = useState(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [saveAsProfile, setSaveAsProfile] = useState(true);
+ 
   const [draftId, setDraftId] = useState(draftParam || null);
   const [draftLoaded, setDraftLoaded] = useState(() => {
     if (draftParam) return false;
@@ -527,6 +531,20 @@ export default function ApplyPageInner() {
     }
   };
 
+  const fetchBankDetails = async () => {
+  try {
+    const r = await api.get("/payment/bank-details");
+    setBankDetails(r.data);
+  } catch (error) {
+    console.error("Failed to load bank details", error);
+    toast.error("Couldn't load payment bank details");
+  }
+};
+
+ useEffect(() => {
+    fetchBankDetails();
+  }, []);
+
   const handleAddTraveler = async (fromProfileId = null) => {
     if (party.length >= APPLY_MAX_TRAVELERS) {
       toast.error(`You can add up to ${APPLY_MAX_TRAVELERS} travelers`);
@@ -885,7 +903,12 @@ export default function ApplyPageInner() {
                   />
                 )}
                 {currentStepKey === "payment" && (
-                  <PaymentStep breakdown={feeBreakdown} submit={submit} submitting={submitting} />
+                  <PaymentStep
+breakdown={feeBreakdown}
+  submit={submit}
+  submitting={submitting}
+  bankDetails={bankDetails}
+/>
                 )}
               </div>
           </div>
@@ -2210,58 +2233,348 @@ function ReviewRow({ label, value }) {
   );
 }
 
-function PaymentStep({ breakdown, submit, submitting }) {
+function PaymentStep({ breakdown, submit, submitting, bankDetails }) {
+  const [paymentProof, setPaymentProof] = useState(null);
+  const [showUpiQr, setShowUpiQr] = useState(false);
   return (
-    <div>
-      <h2
-        tabIndex={-1}
-        data-apply-step-heading
-        className="font-display text-xl text-navy mb-1 outline-none"
+   <div>
+  <h2
+    tabIndex={-1}
+    data-apply-step-heading
+    className="font-display text-xl text-navy mb-1 outline-none"
+  >
+    Payment
+  </h2>
+
+  <p className="text-sm text-ink-muted mb-4">
+    Government fee includes GST; service fee excludes GST and is shown separately.
+    No hidden charges.
+  </p>
+
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 max-w-4xl mx-auto items-start">
+
+  {/* LEFT - Fee Breakdown */}
+  <div className="bg-surface border border-border rounded-xl p-4 lg:p-4">
+
+    {breakdown.headcount > 1 && (
+      <div
+        className="flex justify-between text-sm mb-3 pb-3 border-b border-border"
+        data-testid="payment-headcount"
       >
-        Payment
-      </h2>
-      <p className="text-sm text-ink-muted mb-4">Government fee includes GST; service fee excludes GST and is shown separately. No hidden charges.</p>
-      <div className="bg-surface border border-border rounded-xl p-6 max-w-md mx-auto">
-        {breakdown.headcount > 1 && (
-          <div className="flex justify-between text-sm mb-3 pb-3 border-b border-border" data-testid="payment-headcount">
-            <span className="text-ink-muted">{breakdown.headcount} travelers × unit fee</span>
-            <span className="font-mono">{breakdown.headcount} × {INR.format(breakdown.unitTotal)}</span>
-          </div>
-        )}
-        <div className="flex justify-between text-sm mb-2">
-          <span className="text-ink-muted">Government fee (incl. GST)</span>
-          <span className="font-mono">{INR.format(breakdown.govtFee)}</span>
-        </div>
-        <div className="flex justify-between text-sm mb-2">
-          <span className="text-ink-muted">Service fee (excl. GST)</span>
-          <span className="font-mono">{INR.format(breakdown.serviceFee)}</span>
-        </div>
-        <div className="flex justify-between text-sm mb-4 pb-4 border-b border-border">
-          <span className="text-ink-muted">GST on service ({breakdown.gstPercent}%)</span>
-          <span className="font-mono">{INR.format(breakdown.serviceGst)}</span>
-        </div>
-        <div className="flex justify-between items-baseline">
-          <span className="font-medium">Total</span>
-          <span className="font-display text-3xl text-navy">{INR.format(breakdown.total)}</span>
-        </div>
+        <span className="text-ink-muted">
+          {breakdown.headcount} travelers × unit fee
+        </span>
+
+        <span className="font-mono">
+          {breakdown.headcount} × {INR.format(breakdown.unitTotal)}
+        </span>
       </div>
-      <div className="mt-6 max-w-md mx-auto space-y-3">
-        <div className="text-center text-xs font-mono uppercase text-ink-muted">Mock payment · replace with real gateway later</div>
-        <Button type="button" onClick={() => submit("success")} disabled={submitting} data-testid="pay-success" className="w-full" size="lg">
-          {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Pay {INR.format(breakdown.total)}
-        </Button>
-        {ALLOW_MOCK_PAYMENT && (
-          <button
-            type="button"
-            onClick={() => submit("failure")}
-            disabled={submitting}
-            data-testid="pay-failure"
-            className="w-full py-2 text-sm text-ink-muted underline hover:text-ink"
-          >
-            Simulate a failed payment
-          </button>
-        )}
+    )}
+
+    <div className="flex justify-between text-sm mb-2">
+      <span className="text-ink-muted">
+        Government fee (incl. GST)
+      </span>
+
+      <span className="font-mono">
+        {INR.format(breakdown.govtFee)}
+      </span>
+    </div>
+
+    <div className="flex justify-between text-sm mb-2">
+      <span className="text-ink-muted">
+        Service fee (excl. GST)
+      </span>
+
+      <span className="font-mono">
+        {INR.format(breakdown.serviceFee)}
+      </span>
+    </div>
+
+    <div className="flex justify-between text-sm mb-4 pb-4 border-b border-border">
+      <span className="text-ink-muted">
+        GST on service ({breakdown.gstPercent}%)
+      </span>
+
+      <span className="font-mono">
+        {INR.format(breakdown.serviceGst)}
+      </span>
+    </div>
+
+    {/* Total */}
+    <div className="flex justify-between items-baseline">
+      <span className="font-medium">
+        Total
+      </span>
+
+      <span className="font-display text-3xl text-navy">
+        {INR.format(breakdown.total)}
+      </span>
+    </div>
+
+
+    
+
+  </div>
+
+{/* RIGHT - Bank Payment Details */}
+<div className="bg-surface border border-border rounded-xl p-4 lg:p-4">
+
+  <h3 className="font-display text-lg text-navy mb-4">
+    Bank Payment Details
+  </h3>
+
+  <div className="space-y-0">
+
+    {/* Bank Name */}
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border">
+      <span className="text-sm text-ink-muted">
+        Bank Name
+      </span>
+
+      <span className="text-sm font-medium text-right">
+        {bankDetails?.bank_name || "-"}
+      </span>
+    </div>
+
+    {/* Account Name */}
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border">
+      <span className="text-sm text-ink-muted">
+        Account Name
+      </span>
+
+      <span className="text-sm font-medium text-right">
+        {bankDetails?.account_name || "-"}
+      </span>
+    </div>
+
+    {/* Account Number */}
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border">
+      <span className="text-sm text-ink-muted">
+        Account Number
+      </span>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-mono font-medium">
+          {bankDetails?.account_number || "-"}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(
+              bankDetails?.account_number || ""
+            );
+            toast.success("Account number copied");
+          }}
+          className="p-1 rounded hover:bg-muted cursor-pointer transition"
+          title="Copy account number"
+        >
+          <Copy className="w-4 h-4" />
+        </button>
       </div>
     </div>
+
+    {/* IFSC Code */}
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border">
+      <span className="text-sm text-ink-muted">
+        IFSC Code
+      </span>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-mono font-medium uppercase">
+          {bankDetails?.ifsc || "-"}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(
+              bankDetails?.ifsc || ""
+            );
+            toast.success("IFSC code copied");
+          }}
+          className="p-1 rounded hover:bg-muted cursor-pointer transition"
+          title="Copy IFSC code"
+        >
+          <Copy className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+
+   {/* UPI ID / QR Code */}
+<div className="flex items-center justify-between gap-4 py-2 border-b border-border">
+
+  <span className="text-sm text-ink-muted">
+    UPI ID
+  </span>
+
+  <div className="flex items-center gap-2 min-w-0">
+
+    {!showUpiQr ? (
+      <>
+        <span className="text-sm font-mono font-medium break-all text-right">
+          {bankDetails?.upi_id || "-"}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => setShowUpiQr(true)}
+          className="text-xs font-medium text-navy underline hover:opacity-70 cursor-pointer whitespace-nowrap"
+        >
+          See QR Code
+        </button>
+      </>
+    ) : (
+      <button
+        type="button"
+        onClick={() => setShowUpiQr(false)}
+        className="flex items-center gap-2 cursor-pointer"
+        title="Click to hide QR code"
+      >
+        <QRCodeSVG
+  value={`upi://pay?pa=${encodeURIComponent(
+    bankDetails?.upi_id || ""
+  )}&pn=${encodeURIComponent(
+    bankDetails?.account_name || ""
+  )}&am=${Number(breakdown?.total || 0).toFixed(2)}&cu=INR`}
+  size={80}
+  level="M"
+/>
+
+        <span className="text-xs text-ink-muted underline">
+          Hide QR
+        </span>
+      </button>
+    )}
+
+  </div>
+
+</div>
+
+  </div>
+
+ 
+
+  {/* Payment Instruction */}
+  <div className="mt-3 p-2.5 rounded-lg bg-muted text-xs text-ink-muted">
+    Please make the payment using the above bank details or scan the
+    QR code and upload your payment receipt/proof below.
+  </div>
+
+</div>
+
+</div>
+
+{/* Payment Proof Upload */}
+<div className="mt-3">
+  <label
+    htmlFor="payment-proof"
+    className="block text-sm font-medium text-navy mb-1"
+  >
+    Payment Screenshot / Receipt
+  </label>
+
+  <label
+    htmlFor="payment-proof"
+    className="flex items-center gap-3 w-full min-h-[70px] border-2 border-dashed border-border rounded-lg bg-surface hover:bg-muted cursor-pointer transition px-4"
+  >
+    <div className="flex items-center justify-center w-9 h-9 rounded-full bg-muted shrink-0">
+      <span className="text-lg">📤</span>
+    </div>
+
+    <div className="min-w-0">
+      <p className="text-sm font-medium text-navy">
+        Click to upload payment proof
+      </p>
+
+      <p className="text-xs text-ink-muted">
+        JPG, PNG or PDF • Max 5MB
+      </p>
+    </div>
+
+    <input
+      id="payment-proof"
+      type="file"
+      accept="image/png,image/jpeg,image/jpg,application/pdf"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+
+        if (!file) return;
+
+        const maxSize = 5 * 1024 * 1024;
+
+        if (file.size > maxSize) {
+          toast.error("File size must be less than 5MB");
+          e.target.value = "";
+          return;
+        }
+
+        setPaymentProof(file);
+      }}
+    />
+  </label>
+
+  {/* Selected File */}
+  {paymentProof && (
+    <div className="mt-1.5 flex items-center justify-between gap-2 rounded-lg border border-border bg-muted px-3 py-1.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-sm">📄</span>
+
+        <span className="text-xs font-medium truncate">
+          {paymentProof.name}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setPaymentProof(null)}
+        className="shrink-0 text-xs text-ink-muted underline hover:text-ink cursor-pointer"
+      >
+        Remove
+      </button>
+    </div>
+  )}
+
+  <p className="mt-1 text-[11px] text-ink-muted">
+    Upload your payment screenshot or receipt.
+  </p>
+</div>
+
+  <div className="mt-6 max-w-md mx-auto space-y-3">
+    {/* <div className="text-center text-xs font-mono uppercase text-ink-muted">
+      Mock payment · replace with real gateway later
+    </div> */}
+
+    <Button
+      type="button"
+      onClick={() => submit("success")}
+      disabled={submitting}
+      data-testid="pay-success"
+      className="w-full"
+      size="lg"
+    >
+      {submitting && (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      )}
+
+      {/* Pay {INR.format(breakdown.total)} */}
+      Continue
+    </Button>
+
+    {ALLOW_MOCK_PAYMENT && (
+      <button
+        type="button"
+        onClick={() => submit("failure")}
+        disabled={submitting}
+        data-testid="pay-failure"
+        className="w-full py-2 text-sm text-ink-muted underline hover:text-ink"
+      >
+        Simulate a failed payment
+      </button>
+    )}
+  </div>
+</div>
   );
 }
