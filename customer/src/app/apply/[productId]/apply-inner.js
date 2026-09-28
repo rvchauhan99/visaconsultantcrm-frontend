@@ -4,12 +4,14 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import QRCode from "qrcode";
 import {
   Archive,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Copy,
   ExternalLink,
   FileText,
   Loader2,
@@ -56,8 +58,6 @@ import {
   uploadsArrayFromMap,
   uploadsMapFromArray,
 } from "@/lib/applyParty";
-
-const ALLOW_MOCK_PAYMENT = process.env.NEXT_PUBLIC_ALLOW_MOCK_PAYMENT === "true";
 
 function isTravelerMemberReady(member, requiresPassport, passportMinMonths) {
   const required = requiresPassport
@@ -668,16 +668,25 @@ export default function ApplyPageInner() {
     return null;
   })();
 
-  const submit = async (outcome = "success") => {
+  const submit = async (opts = {}) => {
+    const proof = opts.proof;
+    if (!proof?.file_url || !proof?.filename) {
+      toast.error("Upload a payment receipt before submitting");
+      return;
+    }
     setSubmitting(true);
     try {
       const did = await persistDraft("payment");
-      const payload = { draft_id: did, outcome };
-      if (outcome === "success") {
-        const order = await api.post("/cases/checkout/create-order", { draft_id: did });
-        payload.order_id = order.data.order_id;
-      }
-      const checkout = await api.post("/cases/checkout", payload);
+      const checkout = await api.post("/cases/checkout", {
+        draft_id: did,
+        outcome: "success",
+        payment_method: "neft",
+        payment_proof: {
+          file_url: proof.file_url,
+          filename: proof.filename,
+          storage_key: proof.storage_key || proof.key || null,
+        },
+      });
       if (checkout.data.status === "success") {
         const members = buildPartyPayload();
         if (saveAsProfile) {
@@ -712,13 +721,13 @@ export default function ApplyPageInner() {
         });
         toast.success(
           members.length > 1
-            ? `Payment confirmed. ${members.length} applications have been created.`
-            : "Payment confirmed. Your case has been created."
+            ? `Application submitted for ${members.length} travelers. Payment is awaiting confirmation.`
+            : "We received your application. Payment is awaiting confirmation."
         );
         router.push(`/status/${primaryCaseId}`);
       } else {
         track("apply_payment_failure", { product_id: productId, draft_id: did });
-        toast.error("Payment failed. You can try again.");
+        toast.error("Could not submit the application. You can try again.");
       }
     } catch (e) {
       if (e.response?.status === 410) {
@@ -2085,7 +2094,89 @@ function ReviewRow({ label, value }) {
   );
 }
 
+function copyText(value, successLabel) {
+  if (!value) return;
+  const write = navigator.clipboard?.writeText
+    ? navigator.clipboard.writeText(value)
+    : Promise.reject(new Error("clipboard unavailable"));
+  write.then(() => toast.success(successLabel)).catch(() => toast.error("Couldn't copy — select the text instead"));
+}
+
+function BankCopyRow({ label, value, testId, copyLabel }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border" data-testid={testId}>
+      <span className="text-sm text-ink-muted">{label}</span>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-sm font-mono font-medium truncate">{value}</span>
+        <button
+          type="button"
+          onClick={() => copyText(value, copyLabel)}
+          aria-label={`Copy ${label}`}
+          className="p-1 rounded hover:bg-muted cursor-pointer transition"
+        >
+          <Copy className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PaymentStep({ breakdown, submit, submitting }) {
+  const [bankDetails, setBankDetails] = useState(null);
+  const [showUpiQr, setShowUpiQr] = useState(false);
+  const [upiQrUrl, setUpiQrUrl] = useState("");
+  const [proof, setProof] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const canSubmit = Boolean(proof?.file_url) && !submitting && !uploading;
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/payment/bank-details")
+      .then((r) => {
+        if (!cancelled) setBankDetails(r.data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setBankDetails(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasBankDetails = Boolean(
+    bankDetails &&
+      (bankDetails.bank_name ||
+        bankDetails.account_name ||
+        bankDetails.account_number ||
+        bankDetails.ifsc ||
+        bankDetails.branch_name ||
+        bankDetails.upi_id)
+  );
+
+  useEffect(() => {
+    if (!showUpiQr || !bankDetails?.upi_id) {
+      setUpiQrUrl("");
+      return undefined;
+    }
+    const amount = Number(breakdown?.total || 0).toFixed(2);
+    const uri = `upi://pay?pa=${encodeURIComponent(bankDetails.upi_id)}&pn=${encodeURIComponent(
+      bankDetails.account_name || ""
+    )}&am=${amount}&cu=INR`;
+    let cancelled = false;
+    QRCode.toDataURL(uri, { width: 160, margin: 1, errorCorrectionLevel: "M" })
+      .then((url) => {
+        if (!cancelled) setUpiQrUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setUpiQrUrl("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showUpiQr, bankDetails, breakdown?.total]);
+
   return (
     <div>
       <h2
@@ -2096,47 +2187,213 @@ function PaymentStep({ breakdown, submit, submitting }) {
         Payment
       </h2>
       <p className="text-sm text-ink-muted mb-4">Government fee includes GST; service fee excludes GST and is shown separately. No hidden charges.</p>
-      <div className="bg-surface border border-border rounded-xl p-6 max-w-md mx-auto">
-        {breakdown.headcount > 1 && (
-          <div className="flex justify-between text-sm mb-3 pb-3 border-b border-border" data-testid="payment-headcount">
-            <span className="text-ink-muted">{breakdown.headcount} travelers × unit fee</span>
-            <span className="font-mono">{breakdown.headcount} × {INR.format(breakdown.unitTotal)}</span>
+
+      <div className={cn("grid gap-4 max-w-4xl mx-auto items-start", hasBankDetails && "lg:grid-cols-2")}>
+        <div className="bg-surface border border-border rounded-xl p-6">
+          {breakdown.headcount > 1 && (
+            <div className="flex justify-between text-sm mb-3 pb-3 border-b border-border" data-testid="payment-headcount">
+              <span className="text-ink-muted">{breakdown.headcount} travelers × unit fee</span>
+              <span className="font-mono">{breakdown.headcount} × {INR.format(breakdown.unitTotal)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-ink-muted">Government fee (incl. GST)</span>
+            <span className="font-mono">{INR.format(breakdown.govtFee)}</span>
+          </div>
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-ink-muted">Service fee (excl. GST)</span>
+            <span className="font-mono">{INR.format(breakdown.serviceFee)}</span>
+          </div>
+          <div className="flex justify-between text-sm mb-4 pb-4 border-b border-border">
+            <span className="text-ink-muted">GST on service ({breakdown.gstPercent}%)</span>
+            <span className="font-mono">{INR.format(breakdown.serviceGst)}</span>
+          </div>
+          <div className="flex justify-between items-baseline">
+            <span className="font-medium">Total</span>
+            <span className="font-display text-3xl text-navy">{INR.format(breakdown.total)}</span>
+          </div>
+        </div>
+
+        {hasBankDetails && (
+          <div className="bg-surface border border-border rounded-xl p-6" data-testid="payment-bank-details">
+            <h3 className="font-display text-lg text-navy mb-3">Bank payment details</h3>
+            {bankDetails.bank_name && (
+              <div className="flex items-center justify-between gap-4 py-2 border-b border-border">
+                <span className="text-sm text-ink-muted">Bank name</span>
+                <span className="text-sm font-medium text-right">{bankDetails.bank_name}</span>
+              </div>
+            )}
+            {bankDetails.account_name && (
+              <div className="flex items-center justify-between gap-4 py-2 border-b border-border">
+                <span className="text-sm text-ink-muted">Account name</span>
+                <span className="text-sm font-medium text-right">{bankDetails.account_name}</span>
+              </div>
+            )}
+            {bankDetails.branch_name && (
+              <div className="flex items-center justify-between gap-4 py-2 border-b border-border" data-testid="payment-branch">
+                <span className="text-sm text-ink-muted">Branch</span>
+                <span className="text-sm font-medium text-right">{bankDetails.branch_name}</span>
+              </div>
+            )}
+            <BankCopyRow
+              label="Account number"
+              value={bankDetails.account_number}
+              testId="payment-account-number"
+              copyLabel="Account number copied"
+            />
+            <BankCopyRow
+              label="IFSC"
+              value={bankDetails.ifsc}
+              testId="payment-ifsc"
+              copyLabel="IFSC copied"
+            />
+            {bankDetails.upi_id && (
+              <div className="py-2" data-testid="payment-upi">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm text-ink-muted">UPI ID</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm font-mono font-medium break-all text-right">{bankDetails.upi_id}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyText(bankDetails.upi_id, "UPI ID copied")}
+                      aria-label="Copy UPI ID"
+                      className="p-1 rounded hover:bg-muted cursor-pointer transition"
+                    >
+                      <Copy className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowUpiQr((v) => !v)}
+                  data-testid="payment-upi-qr-toggle"
+                  aria-expanded={showUpiQr}
+                  className="mt-2 text-xs font-medium text-navy underline hover:opacity-70"
+                >
+                  {showUpiQr ? "Hide QR code" : "See QR code"}
+                </button>
+                {showUpiQr && upiQrUrl && (
+                  <img
+                    src={upiQrUrl}
+                    alt={`UPI QR for ${bankDetails.upi_id}`}
+                    width={160}
+                    height={160}
+                    className="mt-3 rounded-lg border border-border bg-white p-2"
+                    data-testid="payment-upi-qr"
+                  />
+                )}
+              </div>
+            )}
+            <p className="mt-3 text-xs text-ink-muted">
+              Transfer the total using these details, then upload your receipt and submit. We confirm payment before embassy filing.
+            </p>
           </div>
         )}
-        <div className="flex justify-between text-sm mb-2">
-          <span className="text-ink-muted">Government fee (incl. GST)</span>
-          <span className="font-mono">{INR.format(breakdown.govtFee)}</span>
-        </div>
-        <div className="flex justify-between text-sm mb-2">
-          <span className="text-ink-muted">Service fee (excl. GST)</span>
-          <span className="font-mono">{INR.format(breakdown.serviceFee)}</span>
-        </div>
-        <div className="flex justify-between text-sm mb-4 pb-4 border-b border-border">
-          <span className="text-ink-muted">GST on service ({breakdown.gstPercent}%)</span>
-          <span className="font-mono">{INR.format(breakdown.serviceGst)}</span>
-        </div>
-        <div className="flex justify-between items-baseline">
-          <span className="font-medium">Total</span>
-          <span className="font-display text-3xl text-navy">{INR.format(breakdown.total)}</span>
-        </div>
       </div>
+
+      <PaymentProofUploader proof={proof} setProof={setProof} uploading={uploading} setUploading={setUploading} />
+
       <div className="mt-6 max-w-md mx-auto space-y-3">
-        <div className="text-center text-xs font-mono uppercase text-ink-muted">Mock payment · replace with real gateway later</div>
-        <Button type="button" onClick={() => submit("success")} disabled={submitting} data-testid="pay-success" className="w-full" size="lg">
-          {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Pay {INR.format(breakdown.total)}
+        <Button
+          type="button"
+          onClick={() => submit({ proof })}
+          disabled={!canSubmit}
+          data-testid="submit-application"
+          className="w-full"
+          size="lg"
+        >
+          {(submitting || uploading) && <Loader2 className="w-4 h-4 animate-spin" />} Submit application
         </Button>
-        {ALLOW_MOCK_PAYMENT && (
-          <button
-            type="button"
-            onClick={() => submit("failure")}
-            disabled={submitting}
-            data-testid="pay-failure"
-            className="w-full py-2 text-sm text-ink-muted underline hover:text-ink"
-          >
-            Simulate a failed payment
-          </button>
+        {!proof && (
+          <p className="text-center text-xs text-ink-muted">Upload a receipt to enable submit</p>
         )}
       </div>
+    </div>
+  );
+}
+
+const PROOF_FORMATS = ["jpg", "jpeg", "png", "pdf"];
+const PROOF_MAX_MB = 5;
+
+function PaymentProofUploader({ proof, setProof, uploading, setUploading }) {
+  const handleProof = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!PROOF_FORMATS.includes(ext)) {
+      toast.error("Use JPG, PNG, or PDF");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > PROOF_MAX_MB * 1024 * 1024) {
+      toast.error(`File too large — max ${PROOF_MAX_MB}MB`);
+      e.target.value = "";
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await api.post("/documents/upload?doc_key=payment_proof", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setProof({
+        file_url: res.data.file_url,
+        filename: res.data.filename,
+        storage_key: res.data.storage_key || res.data.key || null,
+      });
+      toast.success("Receipt uploaded");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="mt-6 max-w-md mx-auto" data-testid="payment-proof">
+      <h3 className="font-display text-lg text-navy mb-2">Payment receipt</h3>
+      <p className="text-sm text-ink-muted mb-3">
+        Upload a screenshot or PDF of your NEFT / IMPS / UPI transfer (UTR visible). JPG, PNG or PDF, max {PROOF_MAX_MB}MB.
+      </p>
+      {proof ? (
+        <div className="px-4 py-3 bg-teal/5 border border-teal/20 rounded-xl flex items-center gap-3">
+          <CheckCircle2 className="w-4 h-4 text-teal shrink-0" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-navy truncate">{proof.filename}</div>
+            {proof.file_url && (
+              <DocumentActions fileUrl={proof.file_url} filename={proof.filename} testIdPrefix="payment-proof" />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setProof(null)}
+            aria-label="Remove receipt"
+            className="text-xs text-ink-muted underline hover:text-ink"
+          >
+            Replace
+          </button>
+        </div>
+      ) : (
+        <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl px-4 py-8 cursor-pointer hover:border-navy/40 hover:bg-muted/40 transition">
+          <input
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+            className="sr-only"
+            onChange={handleProof}
+            disabled={uploading}
+            data-testid="payment-proof-input"
+            aria-label="Upload payment receipt"
+          />
+          {uploading ? (
+            <Loader2 className="w-6 h-6 animate-spin text-navy" aria-hidden="true" />
+          ) : (
+            <Upload className="w-6 h-6 text-navy" aria-hidden="true" />
+          )}
+          <span className="text-sm font-medium text-navy">{uploading ? "Uploading…" : "Upload receipt"}</span>
+        </label>
+      )}
     </div>
   );
 }

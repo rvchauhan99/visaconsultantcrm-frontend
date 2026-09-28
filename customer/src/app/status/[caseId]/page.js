@@ -208,11 +208,24 @@ function StatusTracker() {
 
       <Card className="p-6 md:p-8">
         <h3 className="font-display text-lg text-navy mb-4">Payment</h3>
+        {c.payment_status === "pending" && (
+          <p className="text-sm text-ink-muted mb-4" data-testid="payment-pending-copy">
+            We received your application. Payment is awaiting confirmation.
+          </p>
+        )}
+        {c.payment_proof_rejection?.reason && c.payment_status !== "paid" && (
+          <div className="mb-4 bg-danger/5 border border-danger/20 rounded-xl p-4" data-testid="payment-proof-rejected">
+            <div className="font-medium text-sm text-danger mb-1">Receipt needs a re-upload</div>
+            <p className="text-sm text-ink-muted mb-3">Reason: {c.payment_proof_rejection.reason}</p>
+            <PaymentProofResubmit caseId={c.id} onDone={() => refetch()} />
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-display text-ink">₹{(c.total_amount || 0).toLocaleString("en-IN")}</div>
             <div className="text-xs font-mono uppercase text-ink-muted">
-              {c.payment_method} · {c.payment_reference}
+              {c.payment_method || "bank transfer"}
+              {c.payment_reference ? ` · ${c.payment_reference}` : ""}
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -230,6 +243,16 @@ function StatusTracker() {
             )}
           </div>
         </div>
+        {c.payment_proof?.file_url && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="text-xs font-mono uppercase text-ink-muted mb-1">Uploaded receipt</div>
+            <DocumentActions
+              fileUrl={c.payment_proof.file_url}
+              filename={c.payment_proof.filename}
+              testIdPrefix="status-payment-proof"
+            />
+          </div>
+        )}
       </Card>
 
       {!data.on_hold && <SupportCard source="status" caseId={c.id} caseNumber={c.case_number} />}
@@ -320,5 +343,58 @@ function ResubmitDoc({ doc, caseId, snapshot, onDone }) {
         <input type="file" hidden onChange={handle} data-testid={`resubmit-${doc.doc_key}`} accept={(schemaDoc?.formats || []).map((f) => `.${f}`).join(",") || undefined} />
       </label>
     </div>
+  );
+}
+
+function PaymentProofResubmit({ caseId, onDone }) {
+  const [busy, setBusy] = useState(false);
+
+  const handle = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!["jpg", "jpeg", "png", "pdf"].includes(ext)) {
+      toast.error("Use JPG, PNG, or PDF");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large — max 5MB");
+      e.target.value = "";
+      return;
+    }
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const up = await api.post("/documents/upload?doc_key=payment_proof", form);
+      await api.post(`/cases/${caseId}/payment-proof`, {
+        file_url: up.data.file_url,
+        filename: up.data.filename,
+        storage_key: up.data.storage_key || up.data.key || null,
+      });
+      toast.success("Receipt re-uploaded — we'll review shortly.");
+      onDone();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Upload failed");
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <label className="cursor-pointer inline-flex items-center gap-1.5 text-sm border border-danger text-danger rounded-full px-3 py-1.5 hover:bg-danger hover:text-white transition-colors">
+      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+      Re-upload receipt
+      <input
+        type="file"
+        hidden
+        onChange={handle}
+        data-testid="resubmit-payment-proof"
+        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+        aria-label="Re-upload payment receipt"
+      />
+    </label>
   );
 }

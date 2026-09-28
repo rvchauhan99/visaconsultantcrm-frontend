@@ -10,7 +10,7 @@ import { ConsultantSelect } from "@/components/forms/selects";
 import { SearchableSelect } from "@/components/forms/AsyncSelect";
 import { CrmCard, CrmTableCard, CrmCardHeader, CrmEmptyState } from "@/components/ui/crm-card";
 import { CrmButton } from "@/components/ui/crm-button";
-import { CrmField, CrmInput, CrmTextarea } from "@/components/ui/crm-field";
+import { CrmField, CrmInput, CrmTextarea, CrmSelect } from "@/components/ui/crm-field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn, formatCaseNumber } from "@/lib/utils";
 
@@ -27,6 +27,9 @@ export default function CaseDetail() {
   const { caseId } = useParams();
   const [data, setData] = useState(null);
   const [noteBody, setNoteBody] = useState("");
+  const [payRef, setPayRef] = useState("");
+  const [payMethod, setPayMethod] = useState("neft");
+  const [payBusy, setPayBusy] = useState(false);
   const user = getUser();
 
   const load = () => api.get(`/crm/cases/${caseId}`).then((r) => setData(r.data));
@@ -97,6 +100,37 @@ export default function CaseDetail() {
       await api.post(`/crm/cases/${caseId}/notes`, { body });
       setNoteBody(""); load();
     } catch (e) { toast.error(e.response?.data?.detail || "Failed to add note"); }
+  };
+  const confirmPayment = async () => {
+    const reference = payRef.trim();
+    if (!reference) {
+      toast.error("Enter UTR / reference");
+      return;
+    }
+    setPayBusy(true);
+    try {
+      await api.post(`/crm/cases/${caseId}/payment/confirm`, { reference, method: payMethod });
+      toast.success("Payment confirmed");
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed");
+    } finally {
+      setPayBusy(false);
+    }
+  };
+  const rejectProof = async () => {
+    const reason = window.prompt("Reason for rejecting this proof:");
+    if (!reason || !reason.trim()) return;
+    setPayBusy(true);
+    try {
+      await api.post(`/crm/cases/${caseId}/payment/reject-proof`, { reason: reason.trim() });
+      toast.success("Proof rejected — customer can re-upload");
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed");
+    } finally {
+      setPayBusy(false);
+    }
   };
   const editField = async (fieldKey, value) => {
     try {
@@ -435,7 +469,7 @@ export default function CaseDetail() {
         {/* Payment */}
         <TabsContent value="payment">
           <CrmCard className="mt-3 p-5" data-testid="payment-panel">
-            <div className="grid grid-cols-2 gap-3 text-sm max-w-xs">
+            <div className="grid grid-cols-2 gap-3 text-sm max-w-md">
               <span className="text-ink-muted">Status</span>
               <Stamp tone={PAY_STAMP[c.payment_status] ?? "muted"} size="sm">{c.payment_status}</Stamp>
               <span className="text-ink-muted">Amount</span>
@@ -445,6 +479,81 @@ export default function CaseDetail() {
               <span className="text-ink-muted">Reference</span>
               <span className="font-mono text-xs">{c.payment_reference || "—"}</span>
             </div>
+
+            {c.payment_proof?.file_url && (
+              <div className="mt-5 pt-4 border-t border-border max-w-md" data-testid="payment-proof">
+                <div className="text-xs font-semibold text-ink-muted mb-2">Transfer receipt</div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm truncate" title={c.payment_proof.filename}>{c.payment_proof.filename}</span>
+                  <a
+                    href={viewUrl(c.payment_proof.file_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-navy hover:underline"
+                    data-testid="crm-payment-proof-view"
+                  >
+                    <Eye className="w-3 h-3" /> View
+                  </a>
+                  <a
+                    href={downloadUrl(c.payment_proof.file_url, c.payment_proof.filename)}
+                    className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-ink-muted hover:text-ink"
+                    data-testid="crm-payment-proof-download"
+                  >
+                    <Download className="w-3 h-3" /> Download
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {c.payment_proof_rejection?.reason && c.payment_status !== "paid" && (
+              <p className="mt-3 text-xs text-danger max-w-md" data-testid="payment-proof-rejection">
+                Last rejection: {c.payment_proof_rejection.reason}
+              </p>
+            )}
+
+            {c.payment_status !== "paid" && (
+              <div className="mt-5 pt-4 border-t border-border max-w-md space-y-3">
+                <CrmField label="UTR / reference" required>
+                  <CrmInput
+                    value={payRef}
+                    onChange={(e) => setPayRef(e.target.value)}
+                    placeholder="Enter bank UTR"
+                    data-testid="payment-utr"
+                    aria-label="UTR or payment reference"
+                  />
+                </CrmField>
+                <CrmField label="Method">
+                  <CrmSelect
+                    value={payMethod}
+                    onChange={(e) => setPayMethod(e.target.value)}
+                    data-testid="payment-method"
+                    aria-label="Payment method"
+                  >
+                    <option value="neft">NEFT</option>
+                    <option value="imps">IMPS</option>
+                    <option value="upi">UPI</option>
+                  </CrmSelect>
+                </CrmField>
+                <div className="flex flex-wrap gap-2">
+                  <CrmButton
+                    variant="solid"
+                    onClick={confirmPayment}
+                    disabled={payBusy}
+                    data-testid="payment-confirm"
+                  >
+                    Confirm payment
+                  </CrmButton>
+                  <CrmButton
+                    variant="outline"
+                    onClick={rejectProof}
+                    disabled={payBusy || !c.payment_proof?.file_url}
+                    data-testid="payment-reject-proof"
+                  >
+                    Reject proof
+                  </CrmButton>
+                </div>
+              </div>
+            )}
           </CrmCard>
         </TabsContent>
 
