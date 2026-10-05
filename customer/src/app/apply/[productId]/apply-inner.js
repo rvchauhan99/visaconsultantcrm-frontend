@@ -114,6 +114,8 @@ export default function ApplyPageInner() {
   const [pendingDraftStep, setPendingDraftStep] = useState(null);
   const [prefilledUser, setPrefilledUser] = useState(false);
   const applyRootRef = useRef(null);
+  const cashfreeReturnStarted = useRef(false);
+  const cashfreeHandlersRef = useRef({ finishCheckout: null, buildPartyPayload: null });
 
   const syncDraftUrl = (id) => {
     if (typeof window === "undefined" || !id || !productId) return;
@@ -393,6 +395,35 @@ export default function ApplyPageInner() {
     });
     return () => cancelAnimationFrame(frame);
   }, [step, draftLoaded]);
+
+  // Must stay above early returns — continue-draft starts with draftLoaded=false.
+  useEffect(() => {
+    if (productLoading || !draftLoaded) return undefined;
+    const cfOrderId = searchParams.get("cashfree_order_id") || searchParams.get("order_id");
+    const cfDraft = searchParams.get("draft_id");
+    if (!cfOrderId || !cfDraft || cashfreeReturnStarted.current) return undefined;
+    cashfreeReturnStarted.current = true;
+    let cancelled = false;
+    setSubmitting(true);
+    api
+      .post("/cases/checkout/cashfree/verify", { draft_id: cfDraft, order_id: cfOrderId })
+      .then((checkout) => {
+        if (cancelled) return;
+        const { finishCheckout: finish, buildPartyPayload: buildParty } = cashfreeHandlersRef.current;
+        if (checkout.data.status === "success" && finish && buildParty) {
+          finish(checkout, buildParty());
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) toast.error(e.response?.data?.detail || "Could not confirm the payment");
+      })
+      .finally(() => {
+        if (!cancelled) setSubmitting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, productLoading, draftLoaded]);
 
   /** Create the draft on first save, then keep it in sync with a PATCH on every step change. */
   const persistDraft = async (stepKey) => {
@@ -689,6 +720,7 @@ export default function ApplyPageInner() {
     );
     router.push(`/status/${primaryCaseId}`);
   };
+  cashfreeHandlersRef.current = { finishCheckout, buildPartyPayload };
 
   const submit = async (opts = {}) => {
     if (opts.cashfree) {
@@ -805,31 +837,6 @@ export default function ApplyPageInner() {
       setSubmitting(false);
     }
   };
-
-  const cashfreeReturnStarted = useRef(false);
-  useEffect(() => {
-    const cfOrderId = searchParams.get("cashfree_order_id") || searchParams.get("order_id");
-    const cfDraft = searchParams.get("draft_id");
-    if (!cfOrderId || !cfDraft || cashfreeReturnStarted.current) return undefined;
-    cashfreeReturnStarted.current = true;
-    let cancelled = false;
-    setSubmitting(true);
-    api
-      .post("/cases/checkout/cashfree/verify", { draft_id: cfDraft, order_id: cfOrderId })
-      .then((checkout) => {
-        if (cancelled) return;
-        if (checkout.data.status === "success") finishCheckout(checkout, buildPartyPayload());
-      })
-      .catch((e) => {
-        if (!cancelled) toast.error(e.response?.data?.detail || "Could not confirm the payment");
-      })
-      .finally(() => {
-        if (!cancelled) setSubmitting(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams]);
 
   const isMobileConnect = searchParams.get("mobile_connect") === "1";
   if (isMobileConnect) {
