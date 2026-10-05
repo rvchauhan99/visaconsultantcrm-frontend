@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  CreditCard,
   ExternalLink,
   FileText,
   Loader2,
@@ -61,6 +62,22 @@ import {
 
 const ALLOW_MOCK_PAYMENT = process.env.NEXT_PUBLIC_ALLOW_MOCK_PAYMENT === "true";
 
+function loadCashfreeSdk() {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") return resolve(null);
+    if (window.Cashfree) return resolve(window.Cashfree);
+    const existing = document.getElementById("cashfree-js-sdk");
+    if (existing && window.Cashfree) return resolve(window.Cashfree);
+    const script = document.createElement("script");
+    script.id = "cashfree-js-sdk";
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    script.onload = () => resolve(window.Cashfree);
+    script.onerror = () => reject(new Error("Unable to load Cashfree checkout SDK"));
+    document.body.appendChild(script);
+  });
+}
+
 function isTravelerMemberReady(member, requiresPassport, passportMinMonths) {
   const required = requiresPassport
     ? ["full_name", "dob", "passport_number", "passport_expiry_date", "phone", "email"]
@@ -102,6 +119,7 @@ export default function ApplyPageInner() {
   const [fields, setFields] = useState({});
   const [uploads, setUploads] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [cashfreeLoading, setCashfreeLoading] = useState(false);
   const [bankDetails, setBankDetails] = useState(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [saveAsProfile, setSaveAsProfile] = useState(true);
@@ -545,6 +563,171 @@ export default function ApplyPageInner() {
     fetchBankDetails();
   }, []);
 
+  const handlePaymentSuccess = async (checkoutData) => {
+    const members = buildPartyPayload();
+    if (saveAsProfile) {
+      for (const m of members) {
+        if (!m.passport_number) continue;
+        try {
+          await api.post("/customers/me/traveler-profiles", {
+            full_name: m.full_name,
+            relationship: m.relationship || "self",
+            dob: m.dob,
+            passport_number: m.passport_number,
+            passport_issue_date: m.passport_issue_date,
+            passport_expiry_date: m.passport_expiry_date,
+            gender: m.gender,
+            nationality: m.nationality || null,
+            phone: m.phone,
+            email: m.email,
+          });
+        } catch {
+          /* non-blocking */
+        }
+      }
+    }
+    sessionStorage.removeItem(draftKey(productId));
+    const primaryCaseId = checkoutData.primary_case_id || checkoutData.case_id;
+    const caseIds = checkoutData.case_ids || (primaryCaseId ? [primaryCaseId] : []);
+    track("apply_payment_success", {
+      product_id: productId,
+      case_id: primaryCaseId,
+      case_ids: caseIds,
+      traveler_count: checkoutData.traveler_count || members.length,
+      gateway: checkoutData.payment_mode || "cashfree",
+    });
+    toast.success(
+      members.length > 1
+        ? `Payment confirmed. ${members.length} applications have been created.`
+        : "Payment confirmed. Your case has been created."
+    );
+    router.push(`/status/${primaryCaseId}`);
+  };
+
+  const submit = async (outcome = "success") => {
+    setSubmitting(true);
+    try {
+      const did = await persistDraft("payment");
+      const payload = { draft_id: did, outcome };
+      if (outcome === "success") {
+        const order = await api.post("/cases/checkout/create-order", { draft_id: did });
+        payload.order_id = order.data.order_id;
+      }
+      const checkout = await api.post("/cases/checkout", payload);
+      if (checkout.data.status === "success") {
+        await handlePaymentSuccess(checkout.data);
+      } else {
+        track("apply_payment_failure", { product_id: productId, draft_id: did });
+        toast.error("Payment failed. You can try again.");
+      }
+    } catch (e) {
+      if (e.response?.status === 410) {
+        handleProductGone();
+      } else {
+        toast.error(e.response?.data?.detail || "Something went wrong");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const payWithCashfree = async () => {
+    setCashfreeLoading(true);
+    try {
+      const did = await persistDraft("payment");
+      await loadCashfreeSdk();
+
+      const isHttps = typeof window !== "undefined" && window.location.protocol === "https:" && !window.location.hostname.includes("localhost");
+      const returnUrl = isHttps
+        ? `${window.location.origin}/apply/${productId}?cashfree_order_id={order_id}&draft_id=${did}`
+        : null;
+
+      const orderRes = await api.post("/cases/checkout/cashfree/create-order", {
+        draft_id: did,
+        return_url: returnUrl,
+      });
+
+      const { payment_session_id, order_id, environment } = orderRes.data;
+      if (!payment_session_id) {
+        throw new Error("Could not initialize Cashfree payment session");
+      }
+
+      if (typeof window === "undefined" || !window.Cashfree) {
+        throw new Error("Cashfree SDK failed to initialize. Please refresh the page.");
+      }
+
+      const cashfree = window.Cashfree({
+        mode: environment === "production" ? "production" : "sandbox",
+      });
+
+      const checkoutOptions = {
+        paymentSessionId: payment_session_id,
+        redirectTarget: "_modal",
+      };
+
+      const result = await cashfree.checkout(checkoutOptions);
+      if (result?.error) {
+        console.warn("Cashfree checkout notice:", result.error);
+      }
+
+      // Verify payment with backend
+      toast.loading("Verifying payment with Cashfree...", { id: "cf-verify" });
+      const verifyRes = await api.post("/cases/checkout/cashfree/verify", {
+        draft_id: did,
+        order_id: order_id,
+      });
+
+      toast.dismiss("cf-verify");
+      if (verifyRes.data?.status === "success") {
+        await handlePaymentSuccess(verifyRes.data);
+      } else {
+        toast.info("Payment not completed. You can try again whenever you are ready.");
+      }
+    } catch (e) {
+      toast.dismiss("cf-verify");
+      if (e.response?.status === 410) {
+        handleProductGone();
+      } else {
+        const msg = e.response?.data?.detail || e.message || "Something went wrong with Cashfree payment";
+        if (msg.toLowerCase().includes("not been completed") || msg.toLowerCase().includes("pending")) {
+          toast.info("Payment not completed. You can try again.");
+        } else {
+          toast.error(msg);
+        }
+      }
+    } finally {
+      setCashfreeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const cfOrderId = searchParams.get("cashfree_order_id") || searchParams.get("order_id");
+    const cfDraftId = searchParams.get("draft_id") || draftId;
+    if (cfOrderId && cfDraftId && !submitting) {
+      let isSubscribed = true;
+      (async () => {
+        toast.loading("Verifying your payment...", { id: "cf-verify-redirect" });
+        try {
+          const res = await api.post("/cases/checkout/cashfree/verify", {
+            draft_id: cfDraftId,
+            order_id: cfOrderId,
+          });
+          toast.dismiss("cf-verify-redirect");
+          if (res.data?.status === "success" && isSubscribed) {
+            await handlePaymentSuccess(res.data);
+          }
+        } catch (err) {
+          toast.dismiss("cf-verify-redirect");
+          const msg = err.response?.data?.detail || "Payment verification pending or unconfirmed.";
+          toast.error(msg);
+        }
+      })();
+      return () => {
+        isSubscribed = false;
+      };
+    }
+  }, [searchParams, draftId, submitting]);
+
   const handleAddTraveler = async (fromProfileId = null) => {
     if (party.length >= APPLY_MAX_TRAVELERS) {
       toast.error(`You can add up to ${APPLY_MAX_TRAVELERS} travelers`);
@@ -685,69 +868,6 @@ export default function ApplyPageInner() {
     }
     return null;
   })();
-
-  const submit = async (outcome = "success") => {
-    setSubmitting(true);
-    try {
-      const did = await persistDraft("payment");
-      const payload = { draft_id: did, outcome };
-      if (outcome === "success") {
-        const order = await api.post("/cases/checkout/create-order", { draft_id: did });
-        payload.order_id = order.data.order_id;
-      }
-      const checkout = await api.post("/cases/checkout", payload);
-      if (checkout.data.status === "success") {
-        const members = buildPartyPayload();
-        if (saveAsProfile) {
-          for (const m of members) {
-            if (!m.passport_number) continue;
-            try {
-              await api.post("/customers/me/traveler-profiles", {
-                full_name: m.full_name,
-                relationship: m.relationship || "self",
-                dob: m.dob,
-                passport_number: m.passport_number,
-                passport_issue_date: m.passport_issue_date,
-                passport_expiry_date: m.passport_expiry_date,
-                gender: m.gender,
-                nationality: m.nationality || null,
-                phone: m.phone,
-                email: m.email,
-              });
-            } catch {
-              /* non-blocking */
-            }
-          }
-        }
-        sessionStorage.removeItem(draftKey(productId));
-        const primaryCaseId = checkout.data.primary_case_id || checkout.data.case_id;
-        const caseIds = checkout.data.case_ids || (primaryCaseId ? [primaryCaseId] : []);
-        track("apply_payment_success", {
-          product_id: productId,
-          case_id: primaryCaseId,
-          case_ids: caseIds,
-          traveler_count: checkout.data.traveler_count || members.length,
-        });
-        toast.success(
-          members.length > 1
-            ? `Payment confirmed. ${members.length} applications have been created.`
-            : "Payment confirmed. Your case has been created."
-        );
-        router.push(`/status/${primaryCaseId}`);
-      } else {
-        track("apply_payment_failure", { product_id: productId, draft_id: did });
-        toast.error("Payment failed. You can try again.");
-      }
-    } catch (e) {
-      if (e.response?.status === 410) {
-        handleProductGone();
-      } else {
-        toast.error(e.response?.data?.detail || "Something went wrong");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const isMobileConnect = searchParams.get("mobile_connect") === "1";
   if (isMobileConnect) {
@@ -904,11 +1024,13 @@ export default function ApplyPageInner() {
                 )}
                 {currentStepKey === "payment" && (
                   <PaymentStep
-breakdown={feeBreakdown}
-  submit={submit}
-  submitting={submitting}
-  bankDetails={bankDetails}
-/>
+                    breakdown={feeBreakdown}
+                    submit={submit}
+                    submitting={submitting}
+                    bankDetails={bankDetails}
+                    onPayCashfree={payWithCashfree}
+                    cashfreeLoading={cashfreeLoading}
+                  />
                 )}
               </div>
           </div>
@@ -2233,7 +2355,7 @@ function ReviewRow({ label, value }) {
   );
 }
 
-function PaymentStep({ breakdown, submit, submitting, bankDetails }) {
+function PaymentStep({ breakdown, submit, submitting, bankDetails, onPayCashfree, cashfreeLoading }) {
   const [paymentProof, setPaymentProof] = useState(null);
   const [showUpiQr, setShowUpiQr] = useState(false);
   return (
@@ -2312,13 +2434,11 @@ function PaymentStep({ breakdown, submit, submitting, bankDetails }) {
       </span>
     </div>
 
-
-    
-
   </div>
 
 {/* RIGHT - Bank Payment Details */}
-<div className="bg-surface border border-border rounded-xl p-4 lg:p-4">
+<div className="space-y-4">
+  <div className="bg-surface border border-border rounded-xl p-4 lg:p-4">
 
   <h3 className="font-display text-lg text-navy mb-4">
     Bank Payment Details
@@ -2454,12 +2574,58 @@ function PaymentStep({ breakdown, submit, submitting, bankDetails }) {
 
   </div>
 
- 
-
   {/* Payment Instruction */}
   <div className="mt-3 p-2.5 rounded-lg bg-muted text-xs text-ink-muted">
     Please make the payment using the above bank details or scan the
     QR code and upload your payment receipt/proof below.
+  </div>
+
+</div>
+
+  {/* Below Bank Information: Pay via Cashfree Button */}
+  <div className="bg-surface border border-blue-200/90 rounded-xl p-4 lg:p-4 bg-gradient-to-br from-blue-50/70 via-indigo-50/40 to-white shadow-xs">
+    <div className="flex items-center justify-between gap-2 mb-2.5">
+      <div className="flex items-center gap-1.5">
+        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="text-xs font-semibold text-navy tracking-wide uppercase">
+          Online Payment
+        </span>
+      </div>
+      <span className="text-[11px] font-semibold text-[#0052cc] bg-blue-100/80 border border-blue-200 px-2.5 py-0.5 rounded-full">
+        Cashfree Gateway
+      </span>
+    </div>
+
+    <Button
+      type="button"
+      onClick={onPayCashfree}
+      disabled={cashfreeLoading || submitting}
+      data-testid="pay-cashfree-btn"
+      className="w-full bg-[#0052cc] hover:bg-[#0747a6] text-white font-medium py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2 cursor-pointer text-sm"
+      size="lg"
+    >
+      {cashfreeLoading ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Opening Cashfree Payment...
+        </>
+      ) : (
+        <>
+          <CreditCard className="w-4 h-4 mr-1" />
+          Pay via Cashfree ({INR.format(breakdown.total)})
+        </>
+      )}
+    </Button>
+
+    <div className="mt-2.5 flex items-center justify-center gap-2 text-[11px] text-ink-muted">
+      <span>UPI</span>
+      <span>•</span>
+      <span>Debit / Credit Cards</span>
+      <span>•</span>
+      <span>Net Banking</span>
+      <span>•</span>
+      <span>Wallets</span>
+    </div>
   </div>
 
 </div>

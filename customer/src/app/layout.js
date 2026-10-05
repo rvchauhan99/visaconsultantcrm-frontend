@@ -1,3 +1,4 @@
+import Script from "next/script";
 import Providers from "@/components/providers";
 import CustomerShell from "@/components/layout/customer-shell";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
@@ -79,6 +80,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="antialiased">
+        <Script
+          src="https://sdk.cashfree.com/js/v3/cashfree.js"
+          strategy="lazyOnload"
+          id="cashfree-js-sdk"
+        />
         <GoogleAnalytics />
         <Providers>
           <CustomerShell>{children}</CustomerShell>

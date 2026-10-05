@@ -65,7 +65,7 @@
     "zod": "3.24.4"
   },
   "scripts": {
-    "dev": "PORT=3001 craco start",
+    "dev": "set PORT=3001&& craco start",
     "start": "PORT=3001 craco start",
     "build": "craco build",
     "test": "craco test"
