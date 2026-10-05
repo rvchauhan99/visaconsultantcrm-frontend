@@ -29,6 +29,7 @@ import MobileUploadModal from "@/components/customer/mobile-upload-modal";
 import MobileConnectFlow from "@/components/customer/mobile-connect-flow";
 import { useDocumentSync } from "@/hooks/use-document-sync";
 import api from "@/lib/api";
+import { openCashfreeCheckout } from "@/lib/cashfree-checkout";
 import DocumentActions from "@/components/ui/document-actions";
 import { draftKey, getUser } from "@/lib/session";
 import { INR, humanizeKey, cn } from "@/lib/utils";
@@ -668,7 +669,86 @@ export default function ApplyPageInner() {
     return null;
   })();
 
+  const finishCheckout = (checkout, members) => {
+    sessionStorage.removeItem(draftKey(productId));
+    const primaryCaseId = checkout.data.primary_case_id || checkout.data.case_id;
+    const caseIds = checkout.data.case_ids || (primaryCaseId ? [primaryCaseId] : []);
+    track("apply_payment_success", {
+      product_id: productId,
+      case_id: primaryCaseId,
+      case_ids: caseIds,
+      traveler_count: checkout.data.traveler_count || members.length,
+    });
+    const paid = checkout.data.payment_status === "paid";
+    toast.success(
+      paid
+        ? "Payment received. Your application is submitted."
+        : members.length > 1
+          ? `Application submitted for ${members.length} travelers. Payment is awaiting confirmation.`
+          : "We received your application. Payment is awaiting confirmation."
+    );
+    router.push(`/status/${primaryCaseId}`);
+  };
+
   const submit = async (opts = {}) => {
+    if (opts.cashfree) {
+      setSubmitting(true);
+      try {
+        const did = await persistDraft("payment");
+        const returnUrl = `${window.location.origin}/apply/${productId}?cashfree_order_id={order_id}&draft_id=${did}`;
+        const created = await api.post("/cases/checkout/cashfree/create-order", {
+          draft_id: did,
+          return_url: returnUrl,
+        });
+        const order = created.data || {};
+        if (!order.payment_session_id) {
+          toast.error("Card payment is not available right now.");
+          return;
+        }
+        await openCashfreeCheckout(order.payment_session_id, order.environment || order.cashfree_env);
+        const checkout = await api.post("/cases/checkout/cashfree/verify", {
+          draft_id: did,
+          order_id: order.order_id,
+        });
+        if (checkout.data.status === "success") {
+          const members = buildPartyPayload();
+          if (saveAsProfile) {
+            for (const m of members) {
+              if (!m.passport_number) continue;
+              try {
+                await api.post("/customers/me/traveler-profiles", {
+                  full_name: m.full_name,
+                  relationship: m.relationship || "self",
+                  dob: m.dob,
+                  passport_number: m.passport_number,
+                  passport_issue_date: m.passport_issue_date,
+                  passport_expiry_date: m.passport_expiry_date,
+                  gender: m.gender,
+                  nationality: m.nationality || null,
+                  phone: m.phone,
+                  email: m.email,
+                });
+              } catch {
+                /* non-blocking */
+              }
+            }
+          }
+          finishCheckout(checkout, members);
+        } else {
+          track("apply_payment_failure", { product_id: productId, draft_id: did });
+          toast.error("Could not confirm the payment. You can try again.");
+        }
+      } catch (e) {
+        if (e.response?.status === 410) {
+          handleProductGone();
+        } else {
+          toast.error(e.response?.data?.detail || e.message || "Payment was not completed");
+        }
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
     const proof = opts.proof;
     if (!proof?.file_url || !proof?.filename) {
       toast.error("Upload a payment receipt before submitting");
@@ -710,21 +790,7 @@ export default function ApplyPageInner() {
             }
           }
         }
-        sessionStorage.removeItem(draftKey(productId));
-        const primaryCaseId = checkout.data.primary_case_id || checkout.data.case_id;
-        const caseIds = checkout.data.case_ids || (primaryCaseId ? [primaryCaseId] : []);
-        track("apply_payment_success", {
-          product_id: productId,
-          case_id: primaryCaseId,
-          case_ids: caseIds,
-          traveler_count: checkout.data.traveler_count || members.length,
-        });
-        toast.success(
-          members.length > 1
-            ? `Application submitted for ${members.length} travelers. Payment is awaiting confirmation.`
-            : "We received your application. Payment is awaiting confirmation."
-        );
-        router.push(`/status/${primaryCaseId}`);
+        finishCheckout(checkout, members);
       } else {
         track("apply_payment_failure", { product_id: productId, draft_id: did });
         toast.error("Could not submit the application. You can try again.");
@@ -739,6 +805,31 @@ export default function ApplyPageInner() {
       setSubmitting(false);
     }
   };
+
+  const cashfreeReturnStarted = useRef(false);
+  useEffect(() => {
+    const cfOrderId = searchParams.get("cashfree_order_id") || searchParams.get("order_id");
+    const cfDraft = searchParams.get("draft_id");
+    if (!cfOrderId || !cfDraft || cashfreeReturnStarted.current) return undefined;
+    cashfreeReturnStarted.current = true;
+    let cancelled = false;
+    setSubmitting(true);
+    api
+      .post("/cases/checkout/cashfree/verify", { draft_id: cfDraft, order_id: cfOrderId })
+      .then((checkout) => {
+        if (cancelled) return;
+        if (checkout.data.status === "success") finishCheckout(checkout, buildPartyPayload());
+      })
+      .catch((e) => {
+        if (!cancelled) toast.error(e.response?.data?.detail || "Could not confirm the payment");
+      })
+      .finally(() => {
+        if (!cancelled) setSubmitting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   const isMobileConnect = searchParams.get("mobile_connect") === "1";
   if (isMobileConnect) {
@@ -894,7 +985,12 @@ export default function ApplyPageInner() {
                   />
                 )}
                 {currentStepKey === "payment" && (
-                  <PaymentStep breakdown={feeBreakdown} submit={submit} submitting={submitting} />
+                  <PaymentStep
+                    breakdown={feeBreakdown}
+                    submit={submit}
+                    submitting={submitting}
+                    persistDraft={persistDraft}
+                  />
                 )}
               </div>
           </div>
@@ -2122,12 +2218,15 @@ function BankCopyRow({ label, value, testId, copyLabel }) {
   );
 }
 
-function PaymentStep({ breakdown, submit, submitting }) {
+function PaymentStep({ breakdown, submit, submitting, persistDraft }) {
   const [bankDetails, setBankDetails] = useState(null);
   const [showUpiQr, setShowUpiQr] = useState(false);
   const [upiQrUrl, setUpiQrUrl] = useState("");
   const [proof, setProof] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [payOrder, setPayOrder] = useState(null);
+  const [payOrderError, setPayOrderError] = useState("");
+  const isCashfree = payOrder?.mode === "cashfree";
   const canSubmit = Boolean(proof?.file_url) && !submitting && !uploading;
 
   useEffect(() => {
@@ -2139,6 +2238,24 @@ function PaymentStep({ breakdown, submit, submitting }) {
       })
       .catch(() => {
         if (!cancelled) setBankDetails(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const persistDraftRef = useRef(persistDraft);
+  persistDraftRef.current = persistDraft;
+
+  useEffect(() => {
+    let cancelled = false;
+    persistDraftRef.current("payment")
+      .then((did) => api.post("/cases/checkout/create-order", { draft_id: did, outcome: "success" }))
+      .then((r) => {
+        if (!cancelled) setPayOrder(r.data || { mode: "bank_transfer" });
+      })
+      .catch((err) => {
+        if (!cancelled) setPayOrderError(err.response?.data?.detail || "Couldn't start payment");
       });
     return () => {
       cancelled = true;
@@ -2188,7 +2305,11 @@ function PaymentStep({ breakdown, submit, submitting }) {
       </h2>
       <p className="text-sm text-ink-muted mb-4">Government fee includes GST; service fee excludes GST and is shown separately. No hidden charges.</p>
 
-      <div className={cn("grid gap-4 max-w-4xl mx-auto items-start", hasBankDetails && "lg:grid-cols-2")}>
+      {payOrderError && (
+        <p className="mb-4 text-sm text-danger" role="alert">{payOrderError}</p>
+      )}
+
+      <div className={cn("grid gap-4 max-w-4xl mx-auto items-start", hasBankDetails && payOrder && !isCashfree && "lg:grid-cols-2")}>
         <div className="bg-surface border border-border rounded-xl p-6">
           {breakdown.headcount > 1 && (
             <div className="flex justify-between text-sm mb-3 pb-3 border-b border-border" data-testid="payment-headcount">
@@ -2214,7 +2335,7 @@ function PaymentStep({ breakdown, submit, submitting }) {
           </div>
         </div>
 
-        {hasBankDetails && (
+        {hasBankDetails && payOrder && !isCashfree && (
           <div className="bg-surface border border-border rounded-xl p-6" data-testid="payment-bank-details">
             <h3 className="font-display text-lg text-navy mb-3">Bank payment details</h3>
             {bankDetails.bank_name && (
@@ -2291,23 +2412,47 @@ function PaymentStep({ breakdown, submit, submitting }) {
         )}
       </div>
 
-      <PaymentProofUploader proof={proof} setProof={setProof} uploading={uploading} setUploading={setUploading} />
+      {!payOrder && !payOrderError && (
+        <p className="mt-6 text-center text-sm text-ink-muted">Checking payment options…</p>
+      )}
 
-      <div className="mt-6 max-w-md mx-auto space-y-3">
-        <Button
-          type="button"
-          onClick={() => submit({ proof })}
-          disabled={!canSubmit}
-          data-testid="submit-application"
-          className="w-full"
-          size="lg"
-        >
-          {(submitting || uploading) && <Loader2 className="w-4 h-4 animate-spin" />} Submit application
-        </Button>
-        {!proof && (
-          <p className="text-center text-xs text-ink-muted">Upload a receipt to enable submit</p>
-        )}
-      </div>
+      {isCashfree ? (
+        <div className="mt-6 max-w-md mx-auto space-y-3" data-testid="payment-cashfree">
+          <p className="text-sm text-ink-muted text-center">
+            Pay the total by card, UPI, or netbanking. The application is submitted after Cashfree confirms the payment.
+          </p>
+          <Button
+            type="button"
+            onClick={() => submit({ cashfree: true })}
+            disabled={submitting || !payOrder}
+            data-testid="pay-cashfree"
+            className="w-full"
+            size="lg"
+          >
+            {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Pay {INR.format(breakdown.total)}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <PaymentProofUploader proof={proof} setProof={setProof} uploading={uploading} setUploading={setUploading} />
+
+          <div className="mt-6 max-w-md mx-auto space-y-3">
+            <Button
+              type="button"
+              onClick={() => submit({ proof })}
+              disabled={!canSubmit || !payOrder}
+              data-testid="submit-application"
+              className="w-full"
+              size="lg"
+            >
+              {(submitting || uploading) && <Loader2 className="w-4 h-4 animate-spin" />} Submit application
+            </Button>
+            {!proof && (
+              <p className="text-center text-xs text-ink-muted">Upload a receipt to enable submit</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
