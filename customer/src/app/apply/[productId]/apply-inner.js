@@ -2423,7 +2423,7 @@ function PaymentStep({ breakdown, submit, submitting, persistDraft }) {
         <p className="mt-6 text-center text-sm text-ink-muted">Checking payment options…</p>
       )}
 
-      {isCashfree ? (
+      {payOrder && isCashfree && (
         <div className="mt-6 max-w-md mx-auto space-y-3" data-testid="payment-cashfree">
           <p className="text-sm text-ink-muted text-center">
             Pay the total by card, UPI, or netbanking. The application is submitted after Cashfree confirms the payment.
@@ -2431,7 +2431,7 @@ function PaymentStep({ breakdown, submit, submitting, persistDraft }) {
           <Button
             type="button"
             onClick={() => submit({ cashfree: true })}
-            disabled={submitting || !payOrder}
+            disabled={submitting}
             data-testid="pay-cashfree"
             className="w-full"
             size="lg"
@@ -2439,7 +2439,9 @@ function PaymentStep({ breakdown, submit, submitting, persistDraft }) {
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Pay {INR.format(breakdown.total)}
           </Button>
         </div>
-      ) : (
+      )}
+
+      {payOrder && !isCashfree && (
         <>
           <PaymentProofUploader proof={proof} setProof={setProof} uploading={uploading} setUploading={setUploading} />
 
@@ -2447,7 +2449,7 @@ function PaymentStep({ breakdown, submit, submitting, persistDraft }) {
             <Button
               type="button"
               onClick={() => submit({ proof })}
-              disabled={!canSubmit || !payOrder}
+              disabled={!canSubmit}
               data-testid="submit-application"
               className="w-full"
               size="lg"
