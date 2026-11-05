@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import NotificationBell from "@/components/crm/NotificationBell";
 import CrmSearch from "@/components/crm/CrmSearch";
-import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
+import AmaravisaLogo from "@/components/brand/amaravisa-logo";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
@@ -138,11 +138,11 @@ export default function CrmLayout() {
           <Link to="/" className={cn("flex items-center min-w-0", showLabels ? "gap-3" : "gap-0")} data-testid="crm-logo">
             {showLabels ? (
               <div className="min-w-0 transition-opacity duration-200">
-                <AmaraVisaLogo size="sm" invert className="opacity-95 max-w-[150px]" />
+                <AmaravisaLogo size="sm" invert className="opacity-95 max-w-[150px]" />
                 <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[rgba(255,252,247,0.3)] mt-1">Ops desk</div>
               </div>
             ) : (
-              <AmaraVisaLogo size="sm" invert className="opacity-95 max-w-[36px] overflow-hidden" />
+              <AmaravisaLogo size="sm" invert className="opacity-95 max-w-[36px] overflow-hidden" />
             )}
           </Link>
           {/* Close button for mobile only */}
@@ -337,7 +337,7 @@ export default function CrmLayout() {
               <Menu className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2 text-sm text-ink-muted min-w-0">
-              <span className="text-ink-muted/40 font-medium">AmaraVisa</span>
+              <span className="text-ink-muted/40 font-medium">amaravisa</span>
               <span className="text-border-strong">/</span>
               <span className="text-ink font-semibold truncate">{breadcrumb}</span>
             </div>

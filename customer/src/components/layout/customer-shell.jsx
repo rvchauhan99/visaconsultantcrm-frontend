@@ -13,7 +13,7 @@ import { clearSession, getUser } from "@/lib/session";
 import { signOutCustomer } from "@/lib/firebase";
 import { SUPPORT, cn } from "@/lib/utils";
 import NotificationBell from "@/components/customer/notification-bell";
-import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
+import AmaravisaLogo from "@/components/brand/amaravisa-logo";
 import CatalogFilters from "@/components/catalog/catalog-filters";
 import { useCatalogSearch } from "@/context/catalog-search";
 import { track } from "@/lib/telemetry";
@@ -145,7 +145,7 @@ export default function CustomerShell({ children }) {
           {/* Left: logo + Get directions + guarantee — keep full size on scroll */}
           <div className="catalog-header-left flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
             <Link href="/" data-testid="brand-logo" className="flex items-center group shrink-0 max-w-[46vw] xs:max-w-none sm:max-w-none">
-              <AmaraVisaLogo
+              <AmaravisaLogo
                 size="lg"
                 priority
                 className="transition-opacity duration-300 group-hover:opacity-90"
@@ -509,11 +509,11 @@ function FooterContent() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-8">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-4">
-            <Link href="/" className="inline-flex mb-4 sm:mb-5" aria-label="AmaraVisa home">
-              <AmaraVisaLogo size="md" />
+            <Link href="/" className="inline-flex mb-4 sm:mb-5" aria-label="amaravisa home">
+              <AmaravisaLogo size="md" />
             </Link>
             <p className="text-sm sm:text-[15px] text-ink-muted leading-relaxed max-w-[280px]">
-              AmaraVisa helps you plan, apply, and track visas seamlessly — with transparent fees and expert review.
+              amaravisa helps you plan, apply, and track visas seamlessly — with transparent fees and expert review.
             </p>
             <p className="mt-3 text-xs text-ink-muted leading-relaxed max-w-[280px]">
               {OFFICE.legalName}
@@ -638,8 +638,8 @@ function FooterContent() {
           <span className="mx-2 text-border-strong">·</span>
           <span>All rights reserved</span>
         </p>
-        <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity" aria-label="AmaraVisa">
-          <AmaraVisaLogo size="sm" />
+        <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity" aria-label="amaravisa">
+          <AmaravisaLogo size="sm" />
         </Link>
       </div>
     </div>

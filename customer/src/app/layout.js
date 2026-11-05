@@ -23,7 +23,7 @@ export const metadata = {
     "visa",
     "visa consultancy",
     "Indian passport",
-    "AmaraVisa",
+    "amaravisa",
     "Gandhinagar",
     "tourist visa",
     "business visa",

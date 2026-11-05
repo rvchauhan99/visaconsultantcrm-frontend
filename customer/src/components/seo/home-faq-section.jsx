@@ -11,7 +11,7 @@ export default function HomeFaqSection() {
         Frequently asked questions
       </h2>
       <p className="text-sm text-ink-muted mb-8 max-w-2xl">
-        Clear answers about AmaraVisa services, our Gandhinagar office, and how applications work.
+        Clear answers about amaravisa services, our Gandhinagar office, and how applications work.
       </p>
       <dl className="space-y-4 max-w-3xl">
         {HOME_FAQS.map((faq) => (

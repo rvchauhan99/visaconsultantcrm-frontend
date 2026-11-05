@@ -2,7 +2,7 @@
  * SEO / GEO helpers for the customer portal (server-safe).
  */
 
-export const SITE_NAME = "AmaraVisa"
+export const SITE_NAME = "amaravisa"
 export const SITE_TAGLINE = "Visas without the guesswork"
 
 export function getSiteUrl() {
@@ -24,7 +24,7 @@ export const OFFICE = {
 }
 
 export const DEFAULT_DESCRIPTION =
-  "Premium visa consultancy for Indian passport holders. Transparent fees, human consultants, and on-time filing with AmaraVisa."
+  "Premium visa consultancy for Indian passport holders. Transparent fees, human consultants, and on-time filing with amaravisa."
 
 export function absoluteUrl(path = "/") {
   const base = getSiteUrl()

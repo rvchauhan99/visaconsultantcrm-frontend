@@ -25,7 +25,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import GoogleSignInButton from "@/components/auth/google-sign-in-button";
 import { SUPPORT, cn } from "@/lib/utils";
 import { isValidPhoneOptional } from "@/lib/phone";
-import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
+import AmaravisaLogo from "@/components/brand/amaravisa-logo";
 import { track } from "@/lib/telemetry";
 
 const ease = [0.16, 1, 0.3, 1];
@@ -127,7 +127,7 @@ export default function AuthPage() {
       finishAuth(
         r.data.access_token,
         r.data.user,
-        r.data.is_new_user ? "Welcome to AmaraVisa" : "Welcome back",
+        r.data.is_new_user ? "Welcome to amaravisa" : "Welcome back",
       );
       track("google_auth_success");
     } catch (err) {
@@ -318,7 +318,7 @@ export default function AuthPage() {
         <div className="hidden md:flex flex-col relative p-5 lg:p-8 xl:p-10 min-h-0">
           <div className="auth-glass-panel flex flex-col h-full min-h-[min(640px,calc(100dvh-6rem))] p-7 lg:p-10 xl:p-12 rounded-[24px] lg:rounded-[28px]">
             <div className="mb-8 lg:mb-12">
-              <AmaraVisaLogo size="lg" className="opacity-95" />
+              <AmaravisaLogo size="lg" className="opacity-95" />
             </div>
 
             <div className="flex-1 flex flex-col justify-center min-w-0">
@@ -366,7 +366,7 @@ export default function AuthPage() {
         <div className="flex flex-col items-center justify-center px-4 sm:px-8 md:px-10 lg:px-14 py-8 sm:py-12 pb-[max(2rem,env(safe-area-inset-bottom))]">
           <div className="auth-glass-card w-full max-w-md p-5 sm:p-7 md:p-8 rounded-[22px] sm:rounded-[28px]">
           <div className="md:hidden text-center mb-6 sm:mb-8 flex justify-center">
-            <AmaraVisaLogo size="md" />
+            <AmaravisaLogo size="md" />
           </div>
 
           {showModeTabs && (

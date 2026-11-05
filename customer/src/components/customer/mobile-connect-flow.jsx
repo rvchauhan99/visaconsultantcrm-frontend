@@ -27,7 +27,7 @@ import {
   File,
 } from "lucide-react";
 import { toast } from "sonner";
-import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
+import AmaravisaLogo from "@/components/brand/amaravisa-logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { detectFaceInImage } from "@/lib/face-detection";
@@ -629,7 +629,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
           >
             {/* Top Brand Header */}
             <header className="flex items-center justify-between pb-6 border-b border-border/50">
-              <AmaraVisaLogo size="sm" />
+              <AmaravisaLogo size="sm" />
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium bg-teal/10 text-teal border border-teal/20">
                 <span className="w-2 h-2 rounded-full bg-teal animate-pulse" />
                 Live sync active
@@ -810,7 +810,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
                 className="p-6 rounded-3xl bg-white border border-border/80 shadow-md flex items-center justify-center"
               >
-                <AmaraVisaLogo size="lg" priority />
+                <AmaravisaLogo size="lg" priority />
               </motion.div>
             </div>
             <div className="flex items-center gap-2 text-navy font-display text-lg font-semibold mb-1.5">
@@ -845,7 +845,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to documents</span>
               </button>
-              <AmaraVisaLogo size="sm" />
+              <AmaravisaLogo size="sm" />
             </div>
 
             {/* Header */}
@@ -928,7 +928,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 <ArrowLeft className="w-4 h-4" />
                 <span>Retake</span>
               </button>
-              <AmaraVisaLogo size="sm" />
+              <AmaravisaLogo size="sm" />
             </div>
 
             {/* Photo Card Preview */}
@@ -1066,7 +1066,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
                 className="p-6 rounded-3xl bg-white border border-border/80 shadow-md flex items-center justify-center"
               >
-                <AmaraVisaLogo size="lg" priority />
+                <AmaravisaLogo size="lg" priority />
               </motion.div>
             </div>
             <div className="flex items-center gap-2 text-navy font-display text-lg font-semibold mb-1.5">
@@ -1101,7 +1101,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to documents</span>
               </button>
-              <AmaraVisaLogo size="sm" />
+              <AmaravisaLogo size="sm" />
             </div>
 
             {/* Header */}
@@ -1184,7 +1184,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 <ArrowLeft className="w-4 h-4" />
                 <span>Retake</span>
               </button>
-              <AmaraVisaLogo size="sm" />
+              <AmaravisaLogo size="sm" />
             </div>
 
             {/* Passport Preview Card */}
@@ -1264,7 +1264,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
                 className="p-6 rounded-3xl bg-white border border-border/80 shadow-md flex items-center justify-center"
               >
-                <AmaraVisaLogo size="lg" priority />
+                <AmaravisaLogo size="lg" priority />
               </motion.div>
             </div>
             <div className="flex items-center gap-2 text-navy font-display text-lg font-semibold mb-1.5">
@@ -1299,7 +1299,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to documents</span>
               </button>
-              <AmaraVisaLogo size="sm" />
+              <AmaravisaLogo size="sm" />
             </div>
 
             {/* Header */}
@@ -1389,7 +1389,7 @@ export default function MobileConnectFlow({ productId, draftId, sessionId: propS
                 <ArrowLeft className="w-4 h-4" />
                 <span>Retake</span>
               </button>
-              <AmaraVisaLogo size="sm" />
+              <AmaravisaLogo size="sm" />
             </div>
 
             {/* Document Preview Card */}

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import api, { saveSession, isStaffSessionValid } from "@/lib/api";
 import { Loader2, Mail, Lock, ShieldCheck, Clock, BarChart3 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import AmaraVisaLogo from "@/components/brand/AmaraVisaLogo";
+import AmaravisaLogo from "@/components/brand/amaravisa-logo";
 import { cn } from "@/lib/utils";
 
 const FEATURES = [
@@ -133,9 +133,9 @@ export default function CrmLogin() {
         <div className="relative flex flex-col h-full p-10 lg:p-14">
           {/* Logo */}
           <div className="mb-20">
-            <AmaraVisaLogo size="lg" invert className="opacity-95" />
+            <AmaravisaLogo size="lg" invert className="opacity-95" />
             <div className="mt-3 text-[10px] font-mono uppercase tracking-[0.22em] text-[rgba(255,252,247,0.3)]">
-              AmaraVisa CRM · Ops desk
+              amaravisa CRM · Ops desk
             </div>
           </div>
 
@@ -169,8 +169,8 @@ export default function CrmLogin() {
 
           {/* Mobile logo */}
           <div className="md:hidden mb-10">
-            <AmaraVisaLogo size="md" className="mb-1" />
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-ink-muted">AmaraVisa CRM · Ops desk</div>
+            <AmaravisaLogo size="md" className="mb-1" />
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-ink-muted">amaravisa CRM · Ops desk</div>
           </div>
 
           <div className="mb-8">

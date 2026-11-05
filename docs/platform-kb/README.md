@@ -1,4 +1,4 @@
-# AmaraVisa Frontend — Platform KB
+# amaravisa Frontend — Platform KB
 
 Token-efficient reference for the frontend monorepo. Read targeted files only — do not scan the full repo unless KB is stale or incomplete.
 

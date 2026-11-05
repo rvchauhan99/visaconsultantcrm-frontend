@@ -1,4 +1,4 @@
-# AmaraVisa CRM — Team guide
+# amaravisa CRM — Team guide
 
 A short guide for consultants and admins. Use this to find the right screen and know what to do there.
 

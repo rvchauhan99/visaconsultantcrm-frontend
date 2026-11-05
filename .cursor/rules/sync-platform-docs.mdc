@@ -1,13 +1,15 @@
 ---
-description: Keep platform-docs in sync with CRM, customer, and API changes
+description: Mandatory — keep amaravisa platform-docs in sync on every change or enhancement
 alwaysApply: true
 ---
 
-# Sync platform-docs with every platform change
+# Platform-docs are mandatory (amaravisa)
 
-Partner docs live in `platform-docs/` (sibling of the CRM and backend repos; GitHub `rvchauhan99/amaravisa-platform-docs`). They are **not** the frontend/backend remotes.
+When the workspace is **amaravisa**, `visaconsultantcrm-*`, or `platform-docs`, updating `platform-docs/` is **required by default** for every feature, enhancement, bugfix, UX change, route, payload, auth, menu, env, or stack change.
 
-After any feature, bugfix, route, payload, auth, menu, env, or stack change — **update platform-docs in the same task**. Do not mark the work done while those files are stale.
+Do **not** mark the task done while those files are stale. A plan, “implement”, or a passing test is not a waiver.
+
+Partner docs live in `platform-docs/` (sibling of CRM/backend; GitHub `rvchauhan99/amaravisa-platform-docs`). They are **not** the frontend/backend remotes. If you opened only a child repo, write `../platform-docs/...`.
 
 ## What to update
 
@@ -20,6 +22,7 @@ After any feature, bugfix, route, payload, auth, menu, env, or stack change — 
 | Request/response fields | `07-payloads-and-models.md` |
 | Env, CORS, hosts | `08-environment-and-hosts.md` |
 | Any API change | `openapi/openapi.json` and `openapi/api-examples.json` |
+| Client-visible product change | `releases/YYYY-MM-DD-<slug>.md` plus a README link |
 
 Dummy `request_body` / `response_body` in `api-examples.json` must include **every** new or changed operation.
 
@@ -31,11 +34,14 @@ python3 platform-docs/scripts/generate_catalogs.py
 python3 platform-docs/scripts/generate_examples.py
 ```
 
-If you opened only a child repo, use `../platform-docs/...`. If the API is down, edit markdown and example overrides from the code — do not skip docs.
+If the API is down, edit markdown and example overrides from the code — **do not skip docs**.
 
-## Example
+## Skip only when
 
-Adding `POST /api/crm/foo` → update `05-api-catalog-crm.md`, `07-payloads-and-models.md`, regenerate OpenAPI + `api-examples.json` (dummy payload and 200 body), mention the CRM page in `02` if it has a screen.
+- Comment-only / internal rename with **no** behaviour, screen, API, or env change
+- The user **explicitly** says skip platform-docs in **this** conversation
+
+Never skip for “small enhancement”, “UI only”, “backend only”, or “we’ll document later”.
 
 ## Do not
 

@@ -1,8 +1,8 @@
 /**
- * AmaraVisa · Editorial Luxe design tokens v2 (Premium Glass)
+ * amaravisa · Editorial Luxe design tokens v2 (Premium Glass)
  * Shared by customer (spacious) and CRM (dense).
  * Token NAMES stay stable so Tailwind utilities (text-navy, bg-gold, …) keep working;
- * VALUES are the Editorial Luxe palette plus AmaraVisa brand accents.
+ * VALUES are the Editorial Luxe palette plus amaravisa brand accents.
  */
 module.exports = {
   colors: {
@@ -21,7 +21,7 @@ module.exports = {
     teal: "#2F6B5A", // forest accent
     gold: "#B08D57", // brass foil — seal only
 
-    // AmaraVisa logo accents
+    // amaravisa logo accents
     "brand-blue": "#2B5CFF",
     "brand-purple": "#7B3FE4",
 

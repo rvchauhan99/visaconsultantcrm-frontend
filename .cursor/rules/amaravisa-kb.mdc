@@ -1,9 +1,9 @@
 ---
-description: AmaraVisa platform KB — read before full repo scan
+description: amaravisa platform KB — read before full repo scan
 alwaysApply: true
 ---
 
-# AmaraVisa / Passage platform
+# amaravisa / Passage platform
 
 Frontend monorepo: CRM (staff), customer portal (Next.js), shared `@passage/ui`.
 

@@ -1,5 +1,5 @@
 /**
- * AmaraVisa · Editorial Luxe — shared theme CSS v4 (Premium Glass)
+ * amaravisa · Editorial Luxe — shared theme CSS v4 (Premium Glass)
  * Import from both customer (Next/Tailwind v4) and CRM (CRA/Tailwind v3).
  */
 
@@ -27,7 +27,7 @@
   --gold-light: #c9a96e;
   --gold-pale: #f5e8c8;
 
-  /* ── AmaraVisa logo accents ── */
+  /* ── amaravisa logo accents ── */
   --brand-blue: #2b5cff;
   --brand-purple: #7b3fe4;
   --glow-brand: rgba(43, 92, 255, 0.18);

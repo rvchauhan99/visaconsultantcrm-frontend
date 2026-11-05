@@ -65,7 +65,7 @@ export default function CustomerLayout() {
             <footer className="mt-24 border-t border-border">
                 <div className="max-w-7xl mx-auto px-6 md:px-10 py-10 grid md:grid-cols-3 gap-8 text-sm text-ink-muted">
                     <div>
-                        <div className="font-display text-navy text-lg mb-2">AmaraVisa</div>
+                        <div className="font-display text-navy text-lg mb-2">amaravisa</div>
                         <p className="max-w-xs leading-relaxed">Visa guidance for Indian passport holders. Real people, careful review, on time — or we make it right.</p>
                     </div>
                     <div>

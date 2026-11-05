@@ -81,7 +81,7 @@ function AccountHub() {
                         {user?.full_name || "Traveller"}
                       </h1>
                       <Stamp tone="gold" size="sm" className="hidden xs:inline-flex sm:inline-flex">
-                        AmaraVisa member
+                        amaravisa member
                       </Stamp>
                     </div>
                     <p className="text-sm text-ink-muted truncate">{user?.email}</p>

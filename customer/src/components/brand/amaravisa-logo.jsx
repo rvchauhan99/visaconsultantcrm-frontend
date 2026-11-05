@@ -9,9 +9,9 @@ const SIZES = {
 };
 
 /**
- * AmaraVisa brand wordmark from /public/brand PNG assets.
+ * amaravisa brand wordmark from /public/brand PNG assets.
  */
-export default function AmaraVisaLogo({
+export default function AmaravisaLogo({
   size = "md",
   invert = false,
   className,

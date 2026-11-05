@@ -1,7 +1,7 @@
 import React from "react";
 
 /**
- * Seal (formerly Stamp) — foil seal motif for AmaraVisa · Editorial Luxe.
+ * Seal (formerly Stamp) — foil seal motif for amaravisa · Editorial Luxe.
  * tone: ink | gold | teal | success | warning | danger | muted
  * size: sm | md | lg
  * fill: outline | filled
