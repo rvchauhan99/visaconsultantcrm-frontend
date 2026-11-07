@@ -174,6 +174,17 @@ export default function VisaDetailInner({ initialProduct = null }) {
             <p className="text-xs text-ink-muted mt-3 leading-relaxed text-center">
               No hidden fees. Pay securely via Razorpay after document review.
             </p>
+            {product?.country_code ? (
+              <p className="text-xs text-center mt-3">
+                <Link
+                  href={`/transparency/price-change-log?search=${encodeURIComponent(product.country_code)}`}
+                  className="text-navy underline-offset-2 hover:underline"
+                  data-testid="visa-fee-history-link"
+                >
+                  Fee change history
+                </Link>
+              </p>
+            ) : null}
           </Card>
         </aside>
       </div>

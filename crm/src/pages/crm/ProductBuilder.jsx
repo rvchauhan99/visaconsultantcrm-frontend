@@ -523,12 +523,24 @@ function FieldsTab({ schema, reload }) {
 function PricingTab({ schema, reload }) {
     const [gov, setGov] = useState(schema.fees?.govt_fee || 0);
     const [srv, setSrv] = useState(schema.fees?.service_fee || 0);
+    const [reason, setReason] = useState("");
+    const reasonOk = reason.trim().length >= 10;
     const save = async () => {
+        if (!reasonOk) {
+            toast.error("Enter a reason (at least 10 characters) — shown on the public fee change log");
+            return;
+        }
         try {
-            await api.post(`/admin/visa-products/${schema.visa_product_id}/fees`, { govt_fee: Number(gov), service_fee: Number(srv), currency: "INR" });
+            await api.post(`/admin/visa-products/${schema.visa_product_id}/fees`, {
+                govt_fee: Number(gov),
+                service_fee: Number(srv),
+                currency: "INR",
+                reason: reason.trim(),
+            });
             toast.success("New fees active — existing cases unaffected (snapshot rule)");
+            setReason("");
             reload();
-        } catch (e) { toast.error("Failed"); }
+        } catch (e) { toast.error(e?.response?.data?.detail?.[0]?.msg || e?.response?.data?.detail || "Failed"); }
     };
     const perPersonTotal = computeLineTotal({
         govtFee: gov,
@@ -539,17 +551,34 @@ function PricingTab({ schema, reload }) {
     const serviceGst = Math.round((Number(srv) || 0) * DEFAULT_GST_PERCENT / 100);
     return (
         <div className="bg-surface-card border border-border rounded-sm p-4 mt-3 space-y-3" data-testid="pricing-tab">
-            <div className="text-xs text-ink-muted">Changing pricing does NOT affect existing cases — snapshot rule §8.3.</div>
+            <div className="text-xs text-ink-muted">Changing pricing does NOT affect existing cases — snapshot rule §8.3. Reason appears on the customer fee change history page.</div>
             <div className="grid grid-cols-2 gap-3">
                 <F label={FEE_LABELS.govt}><input type="number" className={inp} value={gov} onChange={(e) => setGov(e.target.value)} data-testid="fee-govt" /></F>
                 <F label={FEE_LABELS.service}><input type="number" className={inp} value={srv} onChange={(e) => setSrv(e.target.value)} data-testid="fee-service" /></F>
             </div>
+            <F label="Reason for fee change (required, public)">
+                <textarea
+                    className={inp}
+                    rows={2}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="e.g. Govt fee updated by the Consulate"
+                    data-testid="fee-reason"
+                />
+            </F>
             <div className="flex justify-between items-center flex-wrap gap-2">
                 <div className="text-sm text-ink-muted space-y-0.5">
                     <div>Per person: <span className="font-mono">{INR.format(perPersonTotal)}</span></div>
                     <div className="text-[11px]">Includes {INR.format(serviceGst)} GST on service fee ({DEFAULT_GST_PERCENT}%)</div>
                 </div>
-                <button onClick={save} className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover" data-testid="fee-save">Save new pricing</button>
+                <button
+                    onClick={save}
+                    disabled={!reasonOk}
+                    className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover disabled:opacity-40 disabled:cursor-not-allowed"
+                    data-testid="fee-save"
+                >
+                    Save new pricing
+                </button>
             </div>
         </div>
     );

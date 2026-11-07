@@ -54,7 +54,8 @@ Open state persisted: `crm_sidebar_groups`, collapse: `crm_sidebar_collapsed`
 | Path | Page |
 |------|------|
 | `/` | Landing (SSR H1 + catalog client + FAQs) |
-| `/visa/[productId]` | Visa detail (generateMetadata + JSON-LD) |
+| `/visa/[productId]` | Visa detail (generateMetadata + JSON-LD); link to fee change history |
+| `/transparency/price-change-log` | Public fee change history (Atlys-parity 6-column table; country search); `GET /visa-products/fee-change-log` |
 | `/auth` | Login (email OTP / Google) — noindex |
 | `/apply/[productId]` | 5-step apply wizard — noindex |
 | `/status/[caseId]` | Case status tracking — noindex |

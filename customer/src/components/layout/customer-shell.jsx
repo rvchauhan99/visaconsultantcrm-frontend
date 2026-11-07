@@ -548,6 +548,11 @@ function FooterContent() {
             <FooterHeading>Company</FooterHeading>
             <ul className="space-y-3">
               <li><FooterLink href="/">All destinations</FooterLink></li>
+              <li>
+                <FooterLink href="/transparency/price-change-log" testId="footer-fee-history">
+                  Fee change history
+                </FooterLink>
+              </li>
               <li><FooterLink href="/auth">Sign in</FooterLink></li>
               <li><FooterLink href="/account">My applications</FooterLink></li>
               <li>
@@ -654,9 +659,13 @@ function FooterHeading({ children }) {
   );
 }
 
-function FooterLink({ href, children }) {
+function FooterLink({ href, children, testId }) {
   return (
-    <Link href={href} className="text-[15px] text-ink/80 hover:text-ink transition-colors">
+    <Link
+      href={href}
+      className="text-[15px] text-ink/80 hover:text-ink transition-colors"
+      data-testid={testId}
+    >
       {children}
     </Link>
   );

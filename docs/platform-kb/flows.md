@@ -7,6 +7,8 @@ End-to-end user journeys. Backend details in backend KB `flows.md`.
 ```mermaid
 flowchart LR
   Landing["/"] --> Visa["/visa/:productId"]
+  Landing --> FeeLog["/transparency/price-change-log"]
+  Visa --> FeeLog
   Visa --> Auth["/auth"]
   Auth --> Apply["/apply/:productId"]
   Apply --> Step1["Traveler"]

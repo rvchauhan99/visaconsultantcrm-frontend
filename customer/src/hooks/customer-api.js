@@ -26,6 +26,35 @@ export function useVisaProduct(productId) {
   });
 }
 
+export function useFeeChangeLog(search) {
+  const q = (search || "").trim();
+  return useQuery({
+    queryKey: queryKeys.feeChangeLog(q),
+    queryFn: async () => {
+      const r = await api.get("/visa-products/fee-change-log", {
+        params: { search: q },
+      });
+      return r.data || { country: null, items: [] };
+    },
+    enabled: Boolean(q),
+  });
+}
+
+export function useCountries(q = "", { enabled = true } = {}) {
+  return useQuery({
+    queryKey: queryKeys.countries(q),
+    queryFn: async () => {
+      const r = await api.get("/visa-products/countries", {
+        params: q ? { q, limit: 20 } : undefined,
+      });
+      const data = r.data;
+      if (Array.isArray(data)) return data;
+      return data?.items || [];
+    },
+    enabled,
+  });
+}
+
 export function useCustomerMe(enabled = true) {
   return useQuery({
     queryKey: queryKeys.me,

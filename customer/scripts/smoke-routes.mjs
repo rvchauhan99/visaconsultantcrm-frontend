@@ -4,7 +4,7 @@
  */
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 
-const routes = ["/", "/auth", "/account", "/visa/does-not-exist"];
+const routes = ["/", "/auth", "/account", "/visa/does-not-exist", "/transparency/price-change-log"];
 
 async function main() {
   let failed = 0;
