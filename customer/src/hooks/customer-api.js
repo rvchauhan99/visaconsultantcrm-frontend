@@ -40,13 +40,14 @@ export function useFeeChangeLog(search) {
   });
 }
 
-export function useCountries(q = "", { enabled = true } = {}) {
+export function useCountries(q = "", { enabled = true, limit = 50 } = {}) {
+  const query = (q || "").trim();
   return useQuery({
-    queryKey: queryKeys.countries(q),
+    queryKey: queryKeys.countries(`${query}|${limit}`),
     queryFn: async () => {
-      const r = await api.get("/visa-products/countries", {
-        params: q ? { q, limit: 20 } : undefined,
-      });
+      const params = { limit };
+      if (query) params.q = query;
+      const r = await api.get("/visa-products/countries", { params });
       const data = r.data;
       if (Array.isArray(data)) return data;
       return data?.items || [];

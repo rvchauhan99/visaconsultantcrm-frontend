@@ -91,9 +91,10 @@ export default function PriceChangeLogInner() {
     setActiveSearch(next);
   }, [searchParams]);
 
-  const suggestQ = draft.trim().length >= 1 ? draft.trim() : "";
+  const suggestQ = draft.trim();
   const { data: countrySuggestions = [] } = useCountries(suggestQ, {
-    enabled: suggestOpen && suggestQ.length >= 1,
+    enabled: suggestOpen,
+    limit: 50,
   });
   const { data, isLoading, isFetching, isError, refetch } = useFeeChangeLog(activeSearch);
 
@@ -129,14 +130,14 @@ export default function PriceChangeLogInner() {
   const showEmpty = Boolean(activeSearch) && !isLoading && !isError && items.length === 0 && country;
 
   const suggestionList = useMemo(() => {
-    if (!suggestOpen || !suggestQ) return [];
-    return countrySuggestions.slice(0, 8);
-  }, [countrySuggestions, suggestOpen, suggestQ]);
+    if (!suggestOpen) return [];
+    return countrySuggestions.slice(0, 50);
+  }, [countrySuggestions, suggestOpen]);
 
   return (
     <div className="fee-log-page min-h-[70vh] bg-[#F7F7F5]" data-testid="transparency-page">
-      {/* Hero — Atlys composition */}
-      <section className="relative overflow-hidden">
+      {/* Hero — Atlys composition; z-20 keeps country dropdown above the white results band */}
+      <section className="relative z-20">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_40%,rgba(201,164,108,0.12),transparent_55%)]" />
         <div className="relative mx-auto max-w-[1120px] px-5 md:px-8 pt-12 md:pt-16 pb-12 md:pb-14">
           <p className="mb-6 text-[11px] font-bold uppercase tracking-[0.14em]">
@@ -160,7 +161,7 @@ export default function PriceChangeLogInner() {
             <CurrencyHeroArt />
           </div>
 
-          <div ref={boxRef} className="relative mt-10 max-w-[520px]">
+          <div ref={boxRef} className="relative z-50 mt-10 max-w-[520px]">
             <form
               className="flex items-center rounded-full border border-black/[0.06] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.06)]"
               onSubmit={(e) => {
@@ -205,8 +206,9 @@ export default function PriceChangeLogInner() {
 
             {suggestionList.length > 0 && (
               <ul
-                className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-[0_16px_40px_rgba(0,0,0,0.1)]"
+                className="absolute left-0 right-0 z-50 mt-2 max-h-[320px] w-full overflow-y-auto rounded-2xl border border-black/[0.06] bg-white shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
                 role="listbox"
+                data-testid="transparency-country-dropdown"
               >
                 {suggestionList.map((c) => (
                   <li key={c.code}>
@@ -227,8 +229,8 @@ export default function PriceChangeLogInner() {
         </div>
       </section>
 
-      {/* Results */}
-      <section className="bg-white border-t border-black/[0.04]">
+      {/* Results — keep below hero stacking so dropdown overlays this band */}
+      <section className="relative z-0 bg-white border-t border-black/[0.04]">
         <div className="mx-auto max-w-[1120px] px-5 md:px-8 py-10 md:py-12">
           {!activeSearch && (
             <p className="text-[#6B6B6B] text-[15px]" data-testid="transparency-prompt">
