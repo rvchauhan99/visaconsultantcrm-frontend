@@ -19,6 +19,8 @@ import {
 } from "@/lib/documentsProfile";
 
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+/** Matches backend VisaProductFeesIn.reason min_length */
+const FEE_REASON_MIN_LEN = 10;
 
 export default function ProductBuilder() {
     const { productId } = useParams();
@@ -524,10 +526,11 @@ function PricingTab({ schema, reload }) {
     const [gov, setGov] = useState(schema.fees?.govt_fee || 0);
     const [srv, setSrv] = useState(schema.fees?.service_fee || 0);
     const [reason, setReason] = useState("");
-    const reasonOk = reason.trim().length >= 10;
+    const reasonLen = reason.trim().length;
+    const reasonOk = reasonLen >= FEE_REASON_MIN_LEN;
     const save = async () => {
         if (!reasonOk) {
-            toast.error("Enter a reason (at least 10 characters) — shown on the public fee change log");
+            toast.error(`Enter a reason (minimum ${FEE_REASON_MIN_LEN} characters) — shown on the public fee change log`);
             return;
         }
         try {
@@ -565,6 +568,14 @@ function PricingTab({ schema, reload }) {
                     placeholder="e.g. Govt fee updated by the Consulate"
                     data-testid="fee-reason"
                 />
+                <div
+                    className="mt-1 text-[11px] font-mono text-ink-muted"
+                    data-testid="fee-reason-guideline"
+                >
+                    {reasonOk
+                        ? `Ready (${reasonLen}/${FEE_REASON_MIN_LEN})`
+                        : `Minimum ${FEE_REASON_MIN_LEN} characters (${reasonLen}/${FEE_REASON_MIN_LEN})`}
+                </div>
             </F>
             <div className="flex justify-between items-center flex-wrap gap-2">
                 <div className="text-sm text-ink-muted space-y-0.5">
