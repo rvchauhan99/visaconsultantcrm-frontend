@@ -172,6 +172,16 @@ export default function Products() {
       render: (row) => <span className="font-mono text-xs">{row.processing_time_days}d</span>,
     },
     {
+      key: "variant_count",
+      label: "SKUs",
+      sortable: false,
+      render: (row) => {
+        const n = Number(row.variant_count || 1);
+        if (n <= 1) return <span className="text-xs text-ink-muted">—</span>;
+        return <Stamp tone="ink" size="sm">{n} variants</Stamp>;
+      },
+    },
+    {
       key: "status",
       label: "Status",
       sortable: false,

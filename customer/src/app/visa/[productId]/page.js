@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import JsonLd from "@/components/seo/json-ld";
 import { countryCoverUrl } from "@/lib/utils";
 import {
@@ -54,7 +55,9 @@ export default async function VisaDetailPage({ params }) {
     <>
       <JsonLd data={buildVisaServiceJsonLd(product)} />
       <JsonLd data={buildBreadcrumbJsonLd(product)} />
-      <VisaDetailInner initialProduct={product} />
+      <Suspense fallback={null}>
+        <VisaDetailInner initialProduct={product} />
+      </Suspense>
     </>
   );
 }

@@ -445,8 +445,10 @@ export default function ApplyPageInner() {
 
     let id = draftId;
     if (!id) {
+      const variantFromUrl = searchParams.get("variant");
       const res = await api.post("/cases", {
         visa_product_id: productId,
+        ...(variantFromUrl ? { variant_id: variantFromUrl } : {}),
         travelers,
         traveler: primaryTraveler,
         field_values: primary.field_values || {},

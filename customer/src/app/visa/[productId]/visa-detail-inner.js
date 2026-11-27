@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { Calendar, CheckCircle2, FileText, Shield, ArrowRight, Clock, HeadphonesIcon } from "lucide-react";
 import Stamp from "@/components/ui/stamp";
@@ -12,13 +13,43 @@ import { isCustomer, setNextPath } from "@/lib/session";
 import { INR, formatVisaType, formatValidity, cn } from "@/lib/utils";
 import { computeFeeBreakdown } from "@/lib/productPricing";
 import { track } from "@/lib/telemetry";
+import {
+  activeVariants,
+  entryTypeLabel,
+  groupVariantsByValidity,
+  isMultiSku,
+  pricePerYearLabel,
+  variantUnitTotal,
+} from "@/lib/visa-variants";
 
 export default function VisaDetailInner({ initialProduct = null }) {
   const { productId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const reduce = useReducedMotion();
   const { data: schema, isLoading, isError, error, refetch } = useVisaProduct(productId);
   const product = schema || initialProduct;
+
+  const variants = useMemo(() => activeVariants(product), [product]);
+  const multi = isMultiSku(product);
+  const groups = useMemo(() => groupVariantsByValidity(variants), [variants]);
+
+  const initialVariantId =
+    searchParams.get("variant") ||
+    product?.variant_id ||
+    variants.find((v) => v.is_default)?.id ||
+    variants[0]?.id ||
+    null;
+
+  const [selectedId, setSelectedId] = useState(initialVariantId);
+
+  useEffect(() => {
+    if (!variants.length) return;
+    const stillValid = variants.some((v) => v.id === selectedId);
+    if (!stillValid) {
+      setSelectedId(variants.find((v) => v.is_default)?.id || variants[0].id);
+    }
+  }, [variants, selectedId]);
 
   if (isLoading && !product) {
     return (
@@ -49,18 +80,31 @@ export default function VisaDetailInner({ initialProduct = null }) {
     );
   }
 
+  const selected =
+    variants.find((v) => v.id === selectedId) ||
+    variants.find((v) => v.is_default) ||
+    variants[0] ||
+    null;
+
+  const displayValidity = selected?.validity_days ?? product.validity_days;
+  const displayProcessing = selected?.processing_time_days ?? product.processing_time_days;
+  const displayMaxStay = selected?.max_stay_days;
+  const displayEntry = selected?.entry_type;
+
   const feeBreakdown = computeFeeBreakdown({
-    govtFee: product.fees?.govt_fee,
-    serviceFee: product.fees?.service_fee,
+    govtFee: selected?.fees?.govt_fee ?? product.fees?.govt_fee,
+    serviceFee: selected?.fees?.service_fee ?? product.fees?.service_fee,
   });
 
   const startApply = () => {
-    track("apply_start_click", { product_id: productId });
+    track("apply_start_click", { product_id: productId, variant_id: selected?.id });
+    const qs = selected?.id ? `?variant=${encodeURIComponent(selected.id)}` : "";
+    const path = `/apply/${productId}${qs}`;
     if (!isCustomer()) {
-      setNextPath(`/apply/${productId}`);
+      setNextPath(path);
       router.push("/auth");
     } else {
-      router.push(`/apply/${productId}`);
+      router.push(path);
     }
   };
 
@@ -70,7 +114,6 @@ export default function VisaDetailInner({ initialProduct = null }) {
         ← All destinations
       </Link>
 
-      {/* Hero header */}
       <motion.div
         initial={reduce ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -86,21 +129,107 @@ export default function VisaDetailInner({ initialProduct = null }) {
           <h1 className="font-display text-3xl md:text-4xl text-navy leading-tight">{product.title}</h1>
           <p className="text-ink-muted mt-2 max-w-2xl">
             For Indian passport holders · {product.country_name}. Typical processing{" "}
-            {product.processing_time_days} days with dedicated consultant review and transparent fees.
+            {displayProcessing} days with dedicated consultant review and transparent fees.
           </p>
         </div>
       </motion.div>
 
       <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
         <div className="md:col-span-2 space-y-8">
-          {/* Quick stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <Metric label="Processing" value={`${product.processing_time_days} days`} icon={<Clock className="w-4 h-4" />} />
-            <Metric label="Validity" value={formatValidity(product.validity_days)} icon={<Shield className="w-4 h-4" />} />
-            <Metric label="Visa type" value={formatVisaType(product)} icon={<FileText className="w-4 h-4" />} />
-          </div>
+          {multi ? (
+            <div data-testid="visa-variant-picker">
+              <h2 className="font-display text-2xl text-navy mb-1">Choose your visa option</h2>
+              <p className="text-sm text-ink-muted mb-4">Validity and processing affect the fee</p>
+              <div className="space-y-3">
+                {groups.map((group) => {
+                  const selectedInGroup = group.options.some((o) => o.id === selected?.id);
+                  const shown = selectedInGroup
+                    ? group.options.find((o) => o.id === selected?.id)
+                    : group.options[0];
+                  const perYear = pricePerYearLabel(shown);
+                  return (
+                    <div
+                      key={group.key}
+                      role="button"
+                      tabIndex={0}
+                      data-testid={`variant-group-${group.key}`}
+                      onClick={() => setSelectedId(shown.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedId(shown.id);
+                        }
+                      }}
+                      className={cn(
+                        "w-full text-left rounded-2xl border p-4 transition-colors cursor-pointer",
+                        selectedInGroup ? "border-navy bg-navy/5 shadow-sm" : "border-border bg-white hover:border-navy/30"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-navy">{group.label}</div>
+                          <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-ink-muted">
+                            <span>Valid for <strong className="text-ink">{formatValidity(group.validity_days)}</strong></span>
+                            {group.max_stay_days != null ? (
+                              <span>Max stay <strong className="text-ink">{formatValidity(group.max_stay_days)}</strong></span>
+                            ) : null}
+                            <span>Entry <strong className="text-ink">{entryTypeLabel(group.entry_type)}</strong></span>
+                            <span>Visa in <strong className="text-ink">{shown.processing_time_days} days</strong></span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-display text-xl text-navy">{INR.format(variantUnitTotal(shown))}</div>
+                          {perYear ? (
+                            <div className="text-[11px] text-ink-muted">{INR.format(perYear)} / year</div>
+                          ) : null}
+                        </div>
+                      </div>
+                      {group.options.length > 1 ? (
+                        <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                          {group.options.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              data-testid={`variant-opt-${opt.id}`}
+                              onClick={() => setSelectedId(opt.id)}
+                              className={cn(
+                                "text-xs px-3 py-1.5 rounded-full border",
+                                selected?.id === opt.id
+                                  ? "bg-navy text-white border-navy"
+                                  : "bg-white border-border text-ink-muted hover:border-navy/40"
+                              )}
+                            >
+                              Visa in {opt.processing_time_days} days · {INR.format(variantUnitTotal(opt))}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              <Metric label="Processing" value={`${displayProcessing} days`} icon={<Clock className="w-4 h-4" />} />
+              <Metric label="Validity" value={formatValidity(displayValidity)} icon={<Shield className="w-4 h-4" />} />
+              <Metric label="Visa type" value={formatVisaType(product)} icon={<FileText className="w-4 h-4" />} />
+            </div>
+          )}
 
-          {/* Banner */}
+          {multi ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Metric label="Processing" value={`${displayProcessing} days`} icon={<Clock className="w-4 h-4" />} />
+              <Metric label="Validity" value={formatValidity(displayValidity)} icon={<Shield className="w-4 h-4" />} />
+              {displayMaxStay != null ? (
+                <Metric label="Max stay" value={formatValidity(displayMaxStay)} icon={<Calendar className="w-4 h-4" />} />
+              ) : null}
+              {displayEntry ? (
+                <Metric label="Entry" value={entryTypeLabel(displayEntry)} icon={<FileText className="w-4 h-4" />} />
+              ) : null}
+            </div>
+          ) : null}
+
           {product.banner_image_url && (
             <div className="relative rounded-2xl overflow-hidden shadow-[var(--shadow-card)] aspect-[21/9]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -109,7 +238,6 @@ export default function VisaDetailInner({ initialProduct = null }) {
             </div>
           )}
 
-          {/* Documents checklist */}
           <div>
             <h2 className="font-display text-2xl text-navy mb-1">What you&apos;ll need</h2>
             <p className="text-sm text-ink-muted mb-5">Prepare these documents before starting your application</p>
@@ -134,7 +262,6 @@ export default function VisaDetailInner({ initialProduct = null }) {
             </ul>
           </div>
 
-          {/* Trust note */}
           <div className="flex items-start gap-4 p-5 rounded-2xl bg-teal/5 border border-teal/15">
             <HeadphonesIcon className="w-5 h-5 text-teal shrink-0 mt-0.5" />
             <div>
@@ -146,11 +273,10 @@ export default function VisaDetailInner({ initialProduct = null }) {
           </div>
         </div>
 
-        {/* Sticky sidebar */}
         <aside className="md:sticky md:top-24 md:self-start">
           <Card className="p-6 shadow-[var(--shadow-premium)] border-navy/10">
             <div className="text-[10px] uppercase font-mono tracking-widest text-ink-muted mb-1">Total fees</div>
-            <div className="font-display text-4xl text-navy mb-4">{INR.format(feeBreakdown.total)}</div>
+            <div className="font-display text-4xl text-navy mb-4" data-testid="detail-total-fee">{INR.format(feeBreakdown.total)}</div>
 
             <div className="space-y-2.5 py-4 border-y border-border text-sm">
               <FeeRow label="Government fee (incl. GST)" amount={feeBreakdown.govtFee} />
@@ -158,9 +284,15 @@ export default function VisaDetailInner({ initialProduct = null }) {
               <FeeRow label={`GST on service (${feeBreakdown.gstPercent}%)`} amount={feeBreakdown.serviceGst} />
             </div>
 
+            {multi && selected ? (
+              <div className="py-3 text-xs text-ink-muted" data-testid="detail-selected-variant">
+                Selected: <span className="text-ink font-medium">{selected.label}</span>
+              </div>
+            ) : null}
+
             <div className="flex items-center gap-2 py-4 text-xs text-ink-muted">
               <Calendar className="w-3.5 h-3.5 shrink-0" />
-              Estimated delivery in {product.processing_time_days} business days
+              Estimated delivery in {displayProcessing} business days
             </div>
 
             <Button onClick={startApply} data-testid="apply-now" className="w-full gap-2">
@@ -172,7 +304,7 @@ export default function VisaDetailInner({ initialProduct = null }) {
               <Stamp tone="gold" size="sm">On-time guarantee</Stamp>
             </div>
             <p className="text-xs text-ink-muted mt-3 leading-relaxed text-center">
-              No hidden fees. Pay securely via Razorpay after document review.
+              No hidden fees. Pay securely after document review.
             </p>
             {product?.country_code ? (
               <p className="text-xs text-center mt-3">
@@ -199,16 +331,16 @@ function Metric({ label, value, icon }) {
         {icon}
         {label}
       </div>
-      <div className="font-semibold text-navy capitalize text-sm">{value}</div>
+      <div className="font-semibold text-navy text-sm">{value}</div>
     </Card>
   );
 }
 
 function FeeRow({ label, amount }) {
   return (
-    <div className="flex justify-between">
+    <div className="flex justify-between gap-3">
       <span className="text-ink-muted">{label}</span>
-      <span className="font-mono text-ink font-medium">{INR.format(amount || 0)}</span>
+      <span className="font-mono">{INR.format(amount || 0)}</span>
     </div>
   );
 }

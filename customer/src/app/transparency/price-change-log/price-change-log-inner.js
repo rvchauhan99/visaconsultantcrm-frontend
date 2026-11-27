@@ -288,11 +288,12 @@ export default function PriceChangeLogInner() {
 
               {items.length > 0 && (
                 <div className="overflow-x-auto" data-testid="transparency-table">
-                  <table className="w-full min-w-[880px] border-collapse text-left">
+                  <table className="w-full min-w-[1020px] border-collapse text-left">
                     <thead>
                       <tr className="border-b border-[#E8E8E6]">
                         {[
                           "Date",
+                          "Plan",
                           "Fee Type",
                           "From",
                           "To",
@@ -302,6 +303,7 @@ export default function PriceChangeLogInner() {
                           <th
                             key={label}
                             className="px-4 py-3.5 text-[13px] font-semibold text-[#8A8A8A] whitespace-nowrap"
+                            data-testid={label === "Plan" ? "transparency-plan-header" : undefined}
                           >
                             {label}
                           </th>
@@ -317,6 +319,12 @@ export default function PriceChangeLogInner() {
                         >
                           <td className="px-4 py-[18px] whitespace-nowrap text-[14px] font-medium text-[#111]">
                             {formatLogDate(row.changed_at)}
+                          </td>
+                          <td
+                            className="px-4 py-[18px] text-[14px] text-[#111] max-w-[200px]"
+                            data-testid={`transparency-plan-${idx}`}
+                          >
+                            {(row.variant_label || "").trim() || "—"}
                           </td>
                           <td className="px-4 py-[18px]">
                             <FeeTypePill feeType={row.fee_type} />

@@ -73,8 +73,13 @@ export default function ProductBuilder() {
             <div className="grid lg:grid-cols-[1fr_360px] gap-4">
                 <Tabs defaultValue="basic">
                     <TabsList className="bg-surface-card border border-border rounded-sm h-auto p-0.5">
-                        {["basic", "documents", "fields", "pricing"].map((t) => (
-                            <TabsTrigger key={t} value={t} className="text-xs uppercase font-mono tracking-widest px-3 py-1.5 rounded-sm data-[state=active]:bg-navy data-[state=active]:text-white" data-testid={`pb-tab-${t}`}>{t}</TabsTrigger>
+                        {[
+                            { key: "basic", label: "basic" },
+                            { key: "documents", label: "documents" },
+                            { key: "fields", label: "fields" },
+                            { key: "variants", label: "Plans & pricing" },
+                        ].map((t) => (
+                            <TabsTrigger key={t.key} value={t.key} className="text-xs uppercase font-mono tracking-widest px-3 py-1.5 rounded-sm data-[state=active]:bg-navy data-[state=active]:text-white" data-testid={`pb-tab-${t.key}`}>{t.label}</TabsTrigger>
                         ))}
                     </TabsList>
 
@@ -87,8 +92,8 @@ export default function ProductBuilder() {
                     <TabsContent value="fields">
                         <FieldsTab schema={schema} reload={load} />
                     </TabsContent>
-                    <TabsContent value="pricing">
-                        <PricingTab schema={schema} reload={load} />
+                    <TabsContent value="variants">
+                        <VariantsTab schema={schema} reload={load} />
                     </TabsContent>
                 </Tabs>
 
@@ -102,7 +107,13 @@ export default function ProductBuilder() {
     );
 }
 
+function activeVariantCount(schema) {
+    const rows = schema?.variants || [];
+    return rows.filter((v) => (v.status || "active") === "active").length;
+}
+
 function BasicTab({ schema, reload }) {
+    const multiSku = activeVariantCount(schema) > 1;
     const [form, setForm] = useState({
         country_code: schema.country_code, country_name: schema.country_name,
         visa_type: schema.visa_type,
@@ -127,6 +138,11 @@ function BasicTab({ schema, reload }) {
 
     return (
         <div className="bg-surface-card border border-border rounded-sm p-4 mt-3 space-y-3" data-testid="basic-tab">
+            {multiSku ? (
+                <div className="text-xs text-ink-muted border border-border rounded-sm p-2 bg-surface" data-testid="basic-multi-sku-note">
+                    This product has multiple plans. Edit validity, processing, and fees on the <span className="font-medium text-ink">Plans &amp; pricing</span> tab — Basic only covers product identity.
+                </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
                 <F label="Title"><input className={inp} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} data-testid="basic-title" /></F>
                 <F label="Country">
@@ -167,8 +183,16 @@ function BasicTab({ schema, reload }) {
                         data-testid="basic-sequence"
                     />
                 </F>
-                <F label="Validity (days)"><input type="number" className={inp} value={form.validity_days} onChange={(e) => setForm({ ...form, validity_days: Number(e.target.value) })} /></F>
-                <F label="Processing (days)"><input type="number" className={inp} value={form.processing_time_days} onChange={(e) => setForm({ ...form, processing_time_days: Number(e.target.value) })} /></F>
+                {!multiSku ? (
+                    <>
+                        <F label="Validity (days)">
+                            <input type="number" className={inp} value={form.validity_days} onChange={(e) => setForm({ ...form, validity_days: Number(e.target.value) })} data-testid="basic-validity" />
+                        </F>
+                        <F label="Processing (days)">
+                            <input type="number" className={inp} value={form.processing_time_days} onChange={(e) => setForm({ ...form, processing_time_days: Number(e.target.value) })} data-testid="basic-processing" />
+                        </F>
+                    </>
+                ) : null}
                 <F label="Passport min. validity (months)"><input type="number" className={inp} value={form.passport_min_validity_months} onChange={(e) => setForm({ ...form, passport_min_validity_months: Number(e.target.value) })} data-testid="basic-passport-validity" /></F>
                 <div className="col-span-2">
                     <BannerImageField
@@ -522,80 +546,344 @@ function FieldsTab({ schema, reload }) {
     );
 }
 
-function PricingTab({ schema, reload }) {
-    const [gov, setGov] = useState(schema.fees?.govt_fee || 0);
-    const [srv, setSrv] = useState(schema.fees?.service_fee || 0);
-    const [reason, setReason] = useState("");
-    const reasonLen = reason.trim().length;
+const ENTRY_OPTIONS = [
+    { value: "single", label: "Single" },
+    { value: "double", label: "Double" },
+    { value: "multiple", label: "Multiple" },
+];
+
+function emptyVariantForm() {
+    return {
+        label: "",
+        validity_days: 180,
+        max_stay_days: 180,
+        entry_type: "multiple",
+        processing_time_days: 15,
+        display_order: 0,
+        is_default: false,
+        govt_fee: 0,
+        service_fee: 0,
+        reason: "",
+    };
+}
+
+function emptyEditPlanForm(v) {
+    return {
+        label: v?.label || "",
+        validity_days: v?.validity_days ?? 180,
+        max_stay_days: v?.max_stay_days ?? v?.validity_days ?? 180,
+        entry_type: v?.entry_type || "multiple",
+        processing_time_days: v?.processing_time_days ?? 15,
+        display_order: v?.display_order ?? 0,
+    };
+}
+
+function VariantsTab({ schema, reload }) {
+    const rows = schema.variants || [];
+    const [form, setForm] = useState(emptyVariantForm);
+    const [pricingFor, setPricingFor] = useState(null);
+    const [priceForm, setPriceForm] = useState({ govt_fee: 0, service_fee: 0, reason: "" });
+    const [editingPlanId, setEditingPlanId] = useState(null);
+    const [editPlanForm, setEditPlanForm] = useState(emptyEditPlanForm());
+    const reasonLen = form.reason.trim().length;
     const reasonOk = reasonLen >= FEE_REASON_MIN_LEN;
-    const save = async () => {
+    const priceReasonLen = priceForm.reason.trim().length;
+    const priceReasonOk = priceReasonLen >= FEE_REASON_MIN_LEN;
+    const pricingRow = rows.find((v) => v.id === pricingFor);
+    const pricePerPerson = computeLineTotal({
+        govtFee: priceForm.govt_fee,
+        serviceFee: priceForm.service_fee,
+        gstPercent: DEFAULT_GST_PERCENT,
+        headcount: 1,
+    });
+    const priceServiceGst = Math.round((Number(priceForm.service_fee) || 0) * DEFAULT_GST_PERCENT / 100);
+
+    const closePanels = () => {
+        setPricingFor(null);
+        setEditingPlanId(null);
+        setPriceForm({ govt_fee: 0, service_fee: 0, reason: "" });
+    };
+
+    const add = async () => {
         if (!reasonOk) {
+            toast.error(`Fee reason required (min ${FEE_REASON_MIN_LEN} chars) when creating a priced plan`);
+            return;
+        }
+        try {
+            const { data: created } = await api.post(`/admin/visa-products/${schema.visa_product_id}/variants`, {
+                label: form.label.trim() || undefined,
+                validity_days: Number(form.validity_days),
+                max_stay_days: Number(form.max_stay_days),
+                entry_type: form.entry_type,
+                processing_time_days: Number(form.processing_time_days),
+                display_order: Number(form.display_order),
+                is_default: Boolean(form.is_default),
+                status: "active",
+            });
+            await api.post(`/admin/visa-products/${schema.visa_product_id}/variants/${created.id}/fees`, {
+                govt_fee: Number(form.govt_fee),
+                service_fee: Number(form.service_fee),
+                currency: "INR",
+                reason: form.reason.trim(),
+            });
+            toast.success("Plan added");
+            setForm(emptyVariantForm());
+            reload();
+        } catch (e) {
+            toast.error(e?.response?.data?.detail || "Failed to add plan");
+        }
+    };
+
+    const setDefault = async (variantId) => {
+        try {
+            await api.patch(`/admin/visa-products/${schema.visa_product_id}/variants/${variantId}`, {
+                is_default: true,
+            });
+            toast.success("Default plan updated");
+            reload();
+        } catch (e) {
+            toast.error(e?.response?.data?.detail || "Failed");
+        }
+    };
+
+    const deactivate = async (variantId) => {
+        try {
+            await api.delete(`/admin/visa-products/${schema.visa_product_id}/variants/${variantId}`);
+            toast.success("Plan deactivated");
+            reload();
+        } catch (e) {
+            toast.error(e?.response?.data?.detail || "Failed");
+        }
+    };
+
+    const saveVariantPrice = async () => {
+        if (!pricingFor || !priceReasonOk) {
             toast.error(`Enter a reason (minimum ${FEE_REASON_MIN_LEN} characters) — shown on the public fee change log`);
             return;
         }
         try {
-            await api.post(`/admin/visa-products/${schema.visa_product_id}/fees`, {
-                govt_fee: Number(gov),
-                service_fee: Number(srv),
+            await api.post(`/admin/visa-products/${schema.visa_product_id}/variants/${pricingFor}/fees`, {
+                govt_fee: Number(priceForm.govt_fee),
+                service_fee: Number(priceForm.service_fee),
                 currency: "INR",
-                reason: reason.trim(),
+                reason: priceForm.reason.trim(),
             });
             toast.success("New fees active — existing cases unaffected (snapshot rule)");
-            setReason("");
+            closePanels();
             reload();
-        } catch (e) { toast.error(e?.response?.data?.detail?.[0]?.msg || e?.response?.data?.detail || "Failed"); }
+        } catch (e) {
+            toast.error(e?.response?.data?.detail?.[0]?.msg || e?.response?.data?.detail || "Failed");
+        }
     };
-    const perPersonTotal = computeLineTotal({
-        govtFee: gov,
-        serviceFee: srv,
-        gstPercent: DEFAULT_GST_PERCENT,
-        headcount: 1,
-    });
-    const serviceGst = Math.round((Number(srv) || 0) * DEFAULT_GST_PERCENT / 100);
+
+    const saveEditPlan = async () => {
+        if (!editingPlanId) return;
+        try {
+            await api.patch(`/admin/visa-products/${schema.visa_product_id}/variants/${editingPlanId}`, {
+                label: editPlanForm.label.trim() || undefined,
+                validity_days: Number(editPlanForm.validity_days),
+                max_stay_days: Number(editPlanForm.max_stay_days),
+                entry_type: editPlanForm.entry_type,
+                processing_time_days: Number(editPlanForm.processing_time_days),
+                display_order: Number(editPlanForm.display_order),
+            });
+            toast.success("Plan updated");
+            closePanels();
+            reload();
+        } catch (e) {
+            toast.error(e?.response?.data?.detail || "Failed to update plan");
+        }
+    };
+
     return (
-        <div className="bg-surface-card border border-border rounded-sm p-4 mt-3 space-y-3" data-testid="pricing-tab">
-            <div className="text-xs text-ink-muted">Changing pricing does NOT affect existing cases — snapshot rule §8.3. Reason appears on the customer fee change history page.</div>
-            <div className="grid grid-cols-2 gap-3">
-                <F label={FEE_LABELS.govt}><input type="number" className={inp} value={gov} onChange={(e) => setGov(e.target.value)} data-testid="fee-govt" /></F>
-                <F label={FEE_LABELS.service}><input type="number" className={inp} value={srv} onChange={(e) => setSrv(e.target.value)} data-testid="fee-service" /></F>
+        <div className="bg-surface-card border border-border rounded-sm p-4 mt-3 space-y-4" data-testid="variants-tab">
+            <div className="text-xs text-ink-muted space-y-1">
+                <p>Every product has at least one <span className="font-medium text-ink">default plan</span>. This tab is the only place to set government/service fees and public change reasons.</p>
+                <p>Add a plan for each validity / processing option customers can choose.</p>
             </div>
-            <F label="Reason for fee change (required, public)">
-                <textarea
-                    className={inp}
-                    rows={2}
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="e.g. Govt fee updated by the Consulate"
-                    data-testid="fee-reason"
-                />
-                <div
-                    className="mt-1 text-[11px] font-mono text-ink-muted"
-                    data-testid="fee-reason-guideline"
-                >
-                    {reasonOk
-                        ? `Ready (${reasonLen}/${FEE_REASON_MIN_LEN})`
-                        : `Minimum ${FEE_REASON_MIN_LEN} characters (${reasonLen}/${FEE_REASON_MIN_LEN})`}
+
+            <div className="space-y-2" data-testid="variants-list">
+                {rows.length === 0 ? (
+                    <div className="text-sm text-ink-muted italic border border-border rounded-sm p-3" data-testid="variants-empty">
+                        No plans loaded yet. Refresh the product — a default plan is created automatically on deploy.
+                    </div>
+                ) : null}
+                {rows.map((v) => {
+                    const total = computeLineTotal({
+                        govtFee: v.fees?.govt_fee || 0,
+                        serviceFee: v.fees?.service_fee || 0,
+                        gstPercent: DEFAULT_GST_PERCENT,
+                        headcount: 1,
+                    });
+                    const active = (v.status || "active") === "active";
+                    return (
+                        <div key={v.id} className="border border-border rounded-sm p-3 flex flex-wrap gap-3 items-start justify-between" data-testid={`variant-row-${v.id}`}>
+                            <div>
+                                <div className="font-medium text-sm flex items-center gap-2">
+                                    {v.label}
+                                    {v.is_default ? <Stamp tone="gold" size="sm">Default</Stamp> : null}
+                                    {!active ? <Stamp tone="muted" size="sm">Inactive</Stamp> : null}
+                                </div>
+                                <div className="text-[11px] font-mono text-ink-muted mt-1">
+                                    Valid {v.validity_days}d · Stay {v.max_stay_days ?? "—"}d · {v.entry_type} · Process {v.processing_time_days}d
+                                </div>
+                                <div className="text-sm mt-1">{INR.format(total)}</div>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {active ? (
+                                    <button
+                                        type="button"
+                                        className="text-xs px-2 py-1 border border-border rounded-sm"
+                                        data-testid={`variant-edit-plan-${v.id}`}
+                                        onClick={() => {
+                                            setPricingFor(null);
+                                            setEditingPlanId(v.id);
+                                            setEditPlanForm(emptyEditPlanForm(v));
+                                        }}
+                                    >
+                                        Edit plan
+                                    </button>
+                                ) : null}
+                                {active ? (
+                                    <button
+                                        type="button"
+                                        className="text-xs px-2 py-1 border border-border rounded-sm"
+                                        data-testid={`variant-update-fees-${v.id}`}
+                                        onClick={() => {
+                                            setEditingPlanId(null);
+                                            setPricingFor(v.id);
+                                            setPriceForm({
+                                                govt_fee: v.fees?.govt_fee || 0,
+                                                service_fee: v.fees?.service_fee || 0,
+                                                reason: "",
+                                            });
+                                        }}
+                                    >
+                                        Update fees
+                                    </button>
+                                ) : null}
+                                {active && !v.is_default ? (
+                                    <button type="button" className="text-xs px-2 py-1 border border-border rounded-sm" onClick={() => setDefault(v.id)}>Make default</button>
+                                ) : null}
+                                {active && !v.is_default ? (
+                                    <button type="button" className="text-xs px-2 py-1 border border-border rounded-sm text-red-700" onClick={() => deactivate(v.id)}>Deactivate</button>
+                                ) : null}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {editingPlanId ? (
+                <div className="border border-border rounded-sm p-3 space-y-2 bg-surface" data-testid="variant-edit-plan-panel">
+                    <div className="text-xs font-mono uppercase tracking-widest text-ink-muted">Edit plan</div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <F label="Label"><input className={inp} value={editPlanForm.label} onChange={(e) => setEditPlanForm({ ...editPlanForm, label: e.target.value })} data-testid="variant-edit-label" /></F>
+                        <F label="Entry">
+                            <SearchableSelect
+                                clearable={false}
+                                value={editPlanForm.entry_type}
+                                onChange={(v) => setEditPlanForm({ ...editPlanForm, entry_type: v || "multiple" })}
+                                options={ENTRY_OPTIONS}
+                            />
+                        </F>
+                        <F label="Validity (days)"><input type="number" className={inp} value={editPlanForm.validity_days} onChange={(e) => setEditPlanForm({ ...editPlanForm, validity_days: Number(e.target.value) })} data-testid="variant-edit-validity" /></F>
+                        <F label="Max stay (days)"><input type="number" className={inp} value={editPlanForm.max_stay_days} onChange={(e) => setEditPlanForm({ ...editPlanForm, max_stay_days: Number(e.target.value) })} data-testid="variant-edit-max-stay" /></F>
+                        <F label="Processing (days)"><input type="number" className={inp} value={editPlanForm.processing_time_days} onChange={(e) => setEditPlanForm({ ...editPlanForm, processing_time_days: Number(e.target.value) })} data-testid="variant-edit-processing" /></F>
+                        <F label="Display order"><input type="number" className={inp} value={editPlanForm.display_order} onChange={(e) => setEditPlanForm({ ...editPlanForm, display_order: Number(e.target.value) })} data-testid="variant-edit-order" /></F>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                        <button type="button" className="text-sm px-3 py-1.5 border border-border rounded-sm" onClick={closePanels}>Cancel</button>
+                        <button type="button" className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm" data-testid="variant-edit-save" onClick={saveEditPlan}>Save plan</button>
+                    </div>
                 </div>
-            </F>
-            <div className="flex justify-between items-center flex-wrap gap-2">
-                <div className="text-sm text-ink-muted space-y-0.5">
-                    <div>Per person: <span className="font-mono">{INR.format(perPersonTotal)}</span></div>
-                    <div className="text-[11px]">Includes {INR.format(serviceGst)} GST on service fee ({DEFAULT_GST_PERCENT}%)</div>
+            ) : null}
+
+            {pricingFor ? (
+                <div className="border border-border rounded-sm p-3 space-y-2 bg-surface" data-testid="variant-pricing-panel">
+                    <div className="text-xs font-mono uppercase tracking-widest text-ink-muted">
+                        Update fees{pricingRow?.label ? ` · ${pricingRow.label}` : ""}
+                    </div>
+                    <div className="text-xs text-ink-muted">Changing pricing does NOT affect existing cases — snapshot rule §8.3. Reason appears on the customer fee change history page.</div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <F label={FEE_LABELS.govt}><input type="number" className={inp} value={priceForm.govt_fee} onChange={(e) => setPriceForm({ ...priceForm, govt_fee: e.target.value })} data-testid="variant-fee-govt" /></F>
+                        <F label={FEE_LABELS.service}><input type="number" className={inp} value={priceForm.service_fee} onChange={(e) => setPriceForm({ ...priceForm, service_fee: e.target.value })} data-testid="variant-fee-service" /></F>
+                    </div>
+                    <F label="Reason for fee change (required, public)">
+                        <textarea
+                            className={inp}
+                            rows={2}
+                            value={priceForm.reason}
+                            onChange={(e) => setPriceForm({ ...priceForm, reason: e.target.value })}
+                            placeholder="e.g. Govt fee updated by the Consulate"
+                            data-testid="variant-fee-reason"
+                        />
+                        <div className="mt-1 text-[11px] font-mono text-ink-muted" data-testid="variant-fee-reason-guideline">
+                            {priceReasonOk ? `Ready (${priceReasonLen}/${FEE_REASON_MIN_LEN})` : `Minimum ${FEE_REASON_MIN_LEN} characters (${priceReasonLen}/${FEE_REASON_MIN_LEN})`}
+                        </div>
+                    </F>
+                    <div className="flex justify-between items-center flex-wrap gap-2">
+                        <div className="text-sm text-ink-muted space-y-0.5">
+                            <div>Per person: <span className="font-mono">{INR.format(pricePerPerson)}</span></div>
+                            <div className="text-[11px]">Includes {INR.format(priceServiceGst)} GST on service fee ({DEFAULT_GST_PERCENT}%)</div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button type="button" className="text-sm px-3 py-1.5 border border-border rounded-sm" onClick={closePanels}>Cancel</button>
+                            <button
+                                type="button"
+                                disabled={!priceReasonOk}
+                                className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                                data-testid="variant-fee-save"
+                                onClick={saveVariantPrice}
+                            >
+                                Save new pricing
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <button
-                    onClick={save}
-                    disabled={!reasonOk}
-                    className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover disabled:opacity-40 disabled:cursor-not-allowed"
-                    data-testid="fee-save"
-                >
-                    Save new pricing
-                </button>
+            ) : null}
+
+            <div className="border border-border rounded-sm p-3 space-y-2" data-testid="variant-add-form">
+                <div className="text-xs font-mono uppercase tracking-widest text-ink-muted">Add plan</div>
+                <div className="grid grid-cols-2 gap-2">
+                    <F label="Label"><input className={inp} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="180 Days · Multi-entry" data-testid="variant-label" /></F>
+                    <F label="Entry">
+                        <SearchableSelect
+                            clearable={false}
+                            value={form.entry_type}
+                            onChange={(v) => setForm({ ...form, entry_type: v || "multiple" })}
+                            options={ENTRY_OPTIONS}
+                        />
+                    </F>
+                    <F label="Validity (days)"><input type="number" className={inp} value={form.validity_days} onChange={(e) => setForm({ ...form, validity_days: Number(e.target.value) })} /></F>
+                    <F label="Max stay (days)"><input type="number" className={inp} value={form.max_stay_days} onChange={(e) => setForm({ ...form, max_stay_days: Number(e.target.value) })} /></F>
+                    <F label="Processing (days)"><input type="number" className={inp} value={form.processing_time_days} onChange={(e) => setForm({ ...form, processing_time_days: Number(e.target.value) })} /></F>
+                    <F label="Display order"><input type="number" className={inp} value={form.display_order} onChange={(e) => setForm({ ...form, display_order: Number(e.target.value) })} /></F>
+                    <F label={FEE_LABELS.govt}><input type="number" className={inp} value={form.govt_fee} onChange={(e) => setForm({ ...form, govt_fee: e.target.value })} /></F>
+                    <F label={FEE_LABELS.service}><input type="number" className={inp} value={form.service_fee} onChange={(e) => setForm({ ...form, service_fee: e.target.value })} /></F>
+                </div>
+                <label className="text-xs flex items-center gap-1.5">
+                    <input type="checkbox" checked={form.is_default} onChange={(e) => setForm({ ...form, is_default: e.target.checked })} />
+                    Set as default plan
+                </label>
+                <F label="Fee reason (required, public)">
+                    <textarea className={inp} rows={2} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} data-testid="variant-add-fee-reason" />
+                    <div className="mt-1 text-[11px] font-mono text-ink-muted" data-testid="variant-add-fee-reason-guideline">
+                        {reasonOk ? `Ready (${reasonLen}/${FEE_REASON_MIN_LEN})` : `Minimum ${FEE_REASON_MIN_LEN} characters (${reasonLen}/${FEE_REASON_MIN_LEN})`}
+                    </div>
+                </F>
+                <div className="flex justify-end">
+                    <button type="button" disabled={!reasonOk} onClick={add} className="text-sm px-3 py-1.5 bg-navy text-white rounded-sm hover:bg-navy-hover disabled:opacity-40" data-testid="variant-add-btn">
+                        Add plan
+                    </button>
+                </div>
             </div>
         </div>
     );
 }
 
 function CustomerPreviewCard({ schema }) {
+    const multiSku = activeVariantCount(schema) > 1;
     const total = computeLineTotal({
         govtFee: schema.fees?.govt_fee || 0,
         serviceFee: schema.fees?.service_fee || 0,
@@ -611,11 +899,14 @@ function CustomerPreviewCard({ schema }) {
                 <div className="text-[10px] font-mono uppercase text-ink-muted mt-2">{schema.processing_time_days}d process · {schema.validity_days}d valid</div>
                 <div className="pt-3 mt-3 border-t border-border flex items-end justify-between">
                     <div>
-                        <div className="text-[9px] uppercase font-mono text-ink-muted">From</div>
+                        <div className="text-[9px] uppercase font-mono text-ink-muted">{multiSku ? "Default from" : "From"}</div>
                         <div className="font-display text-lg text-ink">{INR.format(total)}</div>
                     </div>
                     <Stamp tone="gold" size="sm">Guaranteed</Stamp>
                 </div>
+                {multiSku ? (
+                    <div className="mt-2 text-[11px] text-ink-muted" data-testid="preview-multi-sku-note">Customer sees a plan picker</div>
+                ) : null}
                 <div className="mt-3 text-xs text-ink-muted">{schema.documents.length} docs · {schema.fields.length} extra questions</div>
             </div>
         </div>
