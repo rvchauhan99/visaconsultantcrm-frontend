@@ -94,7 +94,11 @@ const COVER_FALLBACK =
   "https://images.unsplash.com/photo-1488646953014-85cb44e25828?crop=entropy&cs=srgb&fm=jpg&q=80&w=900";
 
 function VisaCard({ product, index }) {
-  const totalFee = (product.fees?.govt_fee || 0) + (product.fees?.service_fee || 0);
+  const multi = Number(product.variant_count || 0) > 1;
+  const from = product.from_price;
+  const totalFee = multi && from
+    ? (from.govt_fee || 0) + (from.service_fee || 0)
+    : (product.fees?.govt_fee || 0) + (product.fees?.service_fee || 0);
   const [cover, setCover] = useState(() => countryCoverUrl(product));
   const docsSummary = docsLabelForProduct(product);
   const primaryDoc = docsSummary.split(",")[0]?.trim() || "Passport";
@@ -140,7 +144,7 @@ function VisaCard({ product, index }) {
             <div className="grid grid-cols-3 gap-1 sm:gap-2 w-full px-0.5 sm:px-1">
               <CardMeta label="Type" value={formatVisaTypeShort(product)} />
               <CardMeta label="Valid" value={formatValidityShort(product.validity_days)} />
-              <CardMeta label="Fees" value={INR.format(totalFee)} />
+              <CardMeta label="Fees" value={multi ? `from ${INR.format(totalFee)}` : INR.format(totalFee)} />
             </div>
 
             {/* Hover-only expanded details */}

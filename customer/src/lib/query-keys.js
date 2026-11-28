@@ -1,6 +1,6 @@
 export const queryKeys = {
   visaProducts: (params) => ["visa-products", params],
-  visaProduct: (id) => ["visa-product", id],
+  visaProduct: (id, variantId = null) => ["visa-product", id, variantId],
   feeChangeLog: (search) => ["visa-products", "fee-change-log", search],
   countries: (q) => ["visa-products", "countries", q],
   me: ["customers", "me"],

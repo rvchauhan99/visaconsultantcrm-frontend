@@ -14,11 +14,13 @@ export function useVisaProducts(params = {}) {
   });
 }
 
-export function useVisaProduct(productId) {
+export function useVisaProduct(productId, variantId = null) {
   return useQuery({
-    queryKey: queryKeys.visaProduct(productId),
+    queryKey: queryKeys.visaProduct(productId, variantId || null),
     queryFn: async () => {
-      const r = await api.get(`/visa-products/${productId}`);
+      const params = {};
+      if (variantId) params.variant_id = variantId;
+      const r = await api.get(`/visa-products/${productId}`, { params });
       return r.data;
     },
     enabled: Boolean(productId),
